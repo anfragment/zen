@@ -10,19 +10,17 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"runtime/debug"
 	"strings"
 )
 
-// MitmProxy is a type implementing http.Handler that serves as a MITM proxy
-// for CONNECT tunnels. Create new instances of MitmProxy using createMitmProxy.
 type MitmProxy struct {
 	certManager *CertManager
 	// httpClient is the http.Client used to make requests to the backend.
 	httpClient *http.Client
+	filter     *Filter
 }
 
-func NewMitmProxy(certManager *CertManager) *MitmProxy {
+func NewMitmProxy(certManager *CertManager, filter *Filter) *MitmProxy {
 	proxy := &MitmProxy{
 		certManager: certManager,
 		httpClient: &http.Client{
@@ -31,17 +29,12 @@ func NewMitmProxy(certManager *CertManager) *MitmProxy {
 				return http.ErrUseLastResponse
 			},
 		},
+		filter: filter,
 	}
 	return proxy
 }
 
 func (p *MitmProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("panic serving %v: %v. stacktrace from panic: %s", req.URL, r, string(debug.Stack()))
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-		}
-	}()
 	if req.Method == http.MethodConnect {
 		err := p.proxyConnect(w, req)
 		if err != nil {
@@ -127,12 +120,22 @@ func removeConnectionHeaders(h http.Header) {
 }
 
 // proxyConnect implements the MITM proxy for CONNECT tunnels.
-// It is heavily inspired by the implementation in the Go standard library:
-// https://golang.org/src/net/http/httputil/reverseproxy.go
-func (p *MitmProxy) proxyConnect(w http.ResponseWriter, proxyReq *http.Request) (err error) {
-	log.Printf("CONNECT requested to %v (from %v)", proxyReq.Host, proxyReq.RemoteAddr)
+func (p *MitmProxy) proxyConnect(w http.ResponseWriter, req *http.Request) (err error) {
+	// proxyReq.Host will hold the CONNECT target host, which will typically have
+	// a port - e.g. example.org:443
+	host, _, err := net.SplitHostPort(req.Host)
+	if err != nil {
+		http.Error(w, "invalid host", http.StatusBadRequest)
+		return fmt.Errorf("error splitting host and port: %w", err)
+	}
 
-	// "Hijack" the client connection to get a TCP (or TLS) socket we can read
+	// Check if the CONNECT target host is allowed by the filter.
+	if p.filter.IsBlocked(host) {
+		log.Printf("%v blocked by filter", host)
+		http.Error(w, "blocked by Zen", http.StatusForbidden)
+		return nil
+	}
+
 	// and write arbitrary data to/from.
 	hj, ok := w.(http.Hijacker)
 	if !ok {
@@ -144,15 +147,6 @@ func (p *MitmProxy) proxyConnect(w http.ResponseWriter, proxyReq *http.Request) 
 		return fmt.Errorf("hijacking failed: %w", err)
 	}
 	defer clientConn.Close()
-
-	// proxyReq.Host will hold the CONNECT target host, which will typically have
-	// a port - e.g. example.org:443
-	// To generate a fake certificate for example.org, we have to first split off
-	// the host from the port.
-	host, _, err := net.SplitHostPort(proxyReq.Host)
-	if err != nil {
-		return fmt.Errorf("error splitting host and port: %w", err)
-	}
 
 	// Create a fake TLS certificate for the target host, signed by our CA. The
 	// certificate will be valid for 10 days - this number can be changed.
@@ -186,20 +180,16 @@ func (p *MitmProxy) proxyConnect(w http.ResponseWriter, proxyReq *http.Request) 
 	if err == io.EOF {
 		return nil
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		clientConn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
 		return fmt.Errorf("error reading request: %w", err)
 	}
 
-	err = changeRequestToTarget(r, proxyReq.Host)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
-		return fmt.Errorf("error changing request to target: %w", err)
-	}
+	changeRequestToTarget(r, req.Host)
 
 	resp, err := p.httpClient.Do(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
-		return fmt.Errorf("error proxying request: %w", err)
+		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
+		return fmt.Errorf("error sending request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -214,23 +204,13 @@ func (p *MitmProxy) proxyConnect(w http.ResponseWriter, proxyReq *http.Request) 
 // changeRequestToTarget modifies req to be re-routed to the given target;
 // the target should be taken from the Host of the original tunnel (CONNECT)
 // request.
-func changeRequestToTarget(req *http.Request, targetHost string) (err error) {
+func changeRequestToTarget(req *http.Request, targetHost string) {
 	targetUrl := addrToUrl(targetHost)
 	targetUrl.Path = req.URL.Path
 	targetUrl.RawQuery = req.URL.RawQuery
-	// Unescape the url - the client may have escaped it, but the target
-	// server will expect it unescaped since it's part of the HTTP request.
-	path, err := url.QueryUnescape(targetUrl.String())
-	if err != nil {
-		return err
-	}
-	req.URL, err = url.Parse(path)
-	if err != nil {
-		return err
-	}
+	req.URL = targetUrl
 	// Make sure this is unset for sending the request through a client
 	req.RequestURI = ""
-	return nil
 }
 
 func addrToUrl(addr string) *url.URL {
