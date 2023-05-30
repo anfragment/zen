@@ -38,7 +38,7 @@ func (p *MitmProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodConnect {
 		err := p.proxyConnect(w, req)
 		if err != nil {
-			log.Printf("error proxying CONNECT request: %v", err)
+			log.Printf("proxying CONNECT request: %v", err)
 		}
 	} else {
 		p.proxyHTTP(w, req)
@@ -64,7 +64,7 @@ func (p *MitmProxy) proxyHTTP(w http.ResponseWriter, req *http.Request) {
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("error proxying request: %v", err)
+		log.Printf("proxying request: %v", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -126,7 +126,7 @@ func (p *MitmProxy) proxyConnect(w http.ResponseWriter, req *http.Request) (err 
 	host, _, err := net.SplitHostPort(req.Host)
 	if err != nil {
 		http.Error(w, "invalid host", http.StatusBadRequest)
-		return fmt.Errorf("error splitting host and port: %w", err)
+		return fmt.Errorf("splitting host and port: %s - %w", req.Host, err)
 	}
 
 	// Check if the CONNECT target host is allowed by the filter.
@@ -152,14 +152,14 @@ func (p *MitmProxy) proxyConnect(w http.ResponseWriter, req *http.Request) (err 
 	// certificate will be valid for 10 days - this number can be changed.
 	tlsCert, err := p.certManager.CreateCert([]string{host}, 240)
 	if err != nil {
-		return fmt.Errorf("error creating cert: %w", err)
+		return fmt.Errorf("creating cert: %w", err)
 	}
 
 	// Send an HTTP OK response back to the client; this initiates the CONNECT
 	// tunnel. From this point on the client will assume it's connected directly
 	// to the target.
 	if _, err := clientConn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n")); err != nil {
-		return fmt.Errorf("error writing to client: %w", err)
+		return fmt.Errorf("writing to client for host %s: %w", host, err)
 	}
 
 	// Configure a new TLS server, pointing it at the client connection, using
@@ -181,7 +181,7 @@ func (p *MitmProxy) proxyConnect(w http.ResponseWriter, req *http.Request) (err 
 		return nil
 	} else if err != nil {
 		clientConn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
-		return fmt.Errorf("error reading request: %w", err)
+		return fmt.Errorf("reading request for host %s: %w", host, err)
 	}
 
 	changeRequestToTarget(r, req.Host)
@@ -189,13 +189,13 @@ func (p *MitmProxy) proxyConnect(w http.ResponseWriter, req *http.Request) (err 
 	resp, err := p.httpClient.Do(r)
 	if err != nil {
 		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
-		return fmt.Errorf("error sending request: %w", err)
+		return fmt.Errorf("error sending request for host %s: %w", host, err)
 	}
 	defer resp.Body.Close()
 
 	// Proxy the response back to the client.
 	if err := resp.Write(tlsConn); err != nil {
-		return fmt.Errorf("error writing response: %w", err)
+		return fmt.Errorf("error writing response for host %s: %w", host, err)
 	}
 
 	return nil

@@ -8,14 +8,17 @@ import (
 )
 
 func main() {
-	var addr = flag.String("addr", "127.0.0.1:9999", "proxy address")
+	addr := flag.String("addr", "127.0.0.1:9999", "proxy address")
 	caCertFile := flag.String("cacertfile", "", "certificate .pem file for trusted CA")
 	caKeyFile := flag.String("cakeyfile", "", "key .pem file for trusted CA")
 	flag.Parse()
 
 	filter := NewFilter()
-	if err := filter.AddRemoteHosts("https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"); err != nil {
-		log.Fatalf("error adding remote hosts: %v", err)
+	if err := filter.AddRemoteFilters([]string{
+		"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+		"https://easylist.to/easylist/easylist.txt",
+	}); err != nil {
+		log.Fatalf("error adding remote filters: %v", err)
 	}
 
 	certManager, err := NewCertManager(*caCertFile, *caKeyFile)
