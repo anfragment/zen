@@ -11,25 +11,27 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/anfragment/zen/filter"
 )
 
 type MitmProxy struct {
 	certManager *CertManager
 	// httpClient is the http.Client used to make requests to the backend.
 	httpClient *http.Client
-	filter     *Filter
+	filter     *filter.Filter
 }
 
-func NewMitmProxy(certManager *CertManager, filter *Filter) *MitmProxy {
+func NewMitmProxy(cm *CertManager, f *filter.Filter) *MitmProxy {
 	proxy := &MitmProxy{
-		certManager: certManager,
+		certManager: cm,
 		httpClient: &http.Client{
 			// let the client handle redirects
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 		},
-		filter: filter,
+		filter: f,
 	}
 	return proxy
 }
