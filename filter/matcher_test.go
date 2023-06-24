@@ -39,6 +39,7 @@ func TestMatcherByAddressParts(t *testing.T) {
 				{"http://example.com/banner/img/example", true},
 				{"http://example.com/banner-img", false},
 				{"https://example.com/banner?img", false},
+				{"http://example.com", false},
 				{"", false},
 			},
 		},
@@ -79,6 +80,7 @@ func TestTokenize(t *testing.T) {
 		{"https://example.com/subdir/doc?foo1=bar1&foo2=bar2", []string{"https", "://", "example", ".", "com", "/", "subdir", "/", "doc", "?", "foo1", "=", "bar1", "&", "foo2", "=", "bar2"}},
 		{"-banner-ad-", []string{"-", "banner", "-", "ad", "-"}},
 		{"banner", []string{"banner"}},
+		{"/banner/img", []string{"/", "banner", "/", "img"}},
 	}
 
 	for _, test := range tests {

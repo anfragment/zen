@@ -62,11 +62,14 @@ func (n *node) findChild(key nodeKey) *node {
 
 // match returns true if the node's subtree matches the given tokens.
 func (n *node) match(tokens []string) bool {
-	if n == nil || len(tokens) == 0 {
+	if n == nil {
 		return false
 	}
 	if n.isLeaf {
 		return true
+	}
+	if len(tokens) == 0 {
+		return false
 	}
 
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
@@ -104,6 +107,8 @@ func (m *Matcher) AddRule(rule string) {
 			rootKeyKind = nodeKindHostnameRoot
 			tokens = tokenize(host[1])
 		}
+	} else {
+		tokens = tokenize(rule)
 	}
 
 	// temporary
@@ -113,9 +118,9 @@ func (m *Matcher) AddRule(rule string) {
 
 	node := m.root.findOrAddChild(nodeKey{kind: rootKeyKind})
 	for i, token := range tokens {
-		// TODO: handle separators, wildcards, etc.
 		if i == len(tokens)-1 {
-			node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token}).isLeaf = true
+			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
+			node.isLeaf = true
 		} else {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
@@ -135,11 +140,17 @@ func (m *Matcher) Match(url string) bool {
 	if match := m.root.match(tokens); match {
 		return true
 	}
+	if len(tokens) == 0 {
+		return false
+	}
 	tokens = tokens[1:]
 
 	// protocol separator
 	if match := m.root.match(tokens); match {
 		return true
+	}
+	if len(tokens) == 0 {
+		return false
 	}
 	tokens = tokens[1:]
 
@@ -167,7 +178,7 @@ func (m *Matcher) Match(url string) bool {
 	// rest of the URL
 	// TODO: handle query parameters, etc.
 	for len(tokens) > 0 {
-		if match := m.root.match(tokens); match {
+		if match := m.root.findChild(nodeKey{kind: nodeKindExactMatch}).match(tokens); match {
 			return true
 		}
 		tokens = tokens[1:]
