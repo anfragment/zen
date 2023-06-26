@@ -67,6 +67,32 @@ func TestMatcherByAddressParts(t *testing.T) {
 	}
 }
 
+func TestMatcherHosts(t *testing.T) {
+	t.Parallel()
+	tests := []matchTest{
+		{
+			name: "hosts",
+			rule: "0.0.0.0 example.com",
+			urls: []matchTestCase{
+				{"http://example.com", true},
+				{"https://example.com", true},
+				{"http://example.com/", true},
+				{"http://example.com/?q=example", true},
+				{"https://example.com/subdir/doc?foo1=bar1&foo2=bar2", true},
+				{"http://example.com:8080", true},
+				{"https://example.co", false},
+				{"http://example.co", false},
+				{"http://example.com.co", false},
+				{"http://example.com.co/", false},
+				{"http://example.com.co/?q=example", false},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, test.run)
+	}
+}
+
 func TestTokenize(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -81,6 +107,7 @@ func TestTokenize(t *testing.T) {
 		{"-banner-ad-", []string{"-", "banner", "-", "ad", "-"}},
 		{"banner", []string{"banner"}},
 		{"/banner/img", []string{"/", "banner", "/", "img"}},
+		{"example.com", []string{"example", ".", "com"}},
 	}
 
 	for _, test := range tests {

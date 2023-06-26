@@ -61,15 +61,15 @@ func (n *node) findChild(key nodeKey) *node {
 }
 
 // match returns true if the node's subtree matches the given tokens.
-func (n *node) match(tokens []string) bool {
+func (n *node) match(tokens []string) (bool, []string) {
 	if n == nil {
-		return false
+		return false, nil
 	}
 	if n.isLeaf {
-		return true
+		return true, tokens
 	}
 	if len(tokens) == 0 {
-		return false
+		return false, nil
 	}
 
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
@@ -111,7 +111,6 @@ func (m *Matcher) AddRule(rule string) {
 		tokens = tokenize(rule)
 	}
 
-	// temporary
 	if len(tokens) == 0 {
 		return
 	}
@@ -134,10 +133,10 @@ func (m *Matcher) Match(url string) bool {
 	tokens := tokenize(url)
 
 	// address root
-	if match := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).match(tokens); match {
+	if match, _ := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).match(tokens); match {
 		return true
 	}
-	if match := m.root.match(tokens); match {
+	if match, _ := m.root.match(tokens); match {
 		return true
 	}
 	if len(tokens) == 0 {
@@ -146,7 +145,7 @@ func (m *Matcher) Match(url string) bool {
 	tokens = tokens[1:]
 
 	// protocol separator
-	if match := m.root.match(tokens); match {
+	if match, _ := m.root.match(tokens); match {
 		return true
 	}
 	if len(tokens) == 0 {
@@ -155,8 +154,11 @@ func (m *Matcher) Match(url string) bool {
 	tokens = tokens[1:]
 
 	// hostname root
-	if match := m.root.findChild(nodeKey{kind: nodeKindHostnameRoot}).match(tokens); match {
-		return true
+	if match, remainingTokens := m.root.findChild(nodeKey{kind: nodeKindHostnameRoot}).match(tokens); match {
+		if len(remainingTokens) == 0 || remainingTokens[0] != "." {
+			// hostname root matched the entire hostname
+			return true
+		}
 	}
 
 	// domain segments
@@ -165,11 +167,11 @@ func (m *Matcher) Match(url string) bool {
 			break
 		}
 		if tokens[0] != "." {
-			if match := m.root.findChild(nodeKey{kind: nodeKindDomain}).match(tokens); match {
+			if match, _ := m.root.findChild(nodeKey{kind: nodeKindDomain}).match(tokens); match {
 				return true
 			}
 		}
-		if match := m.root.match(tokens); match {
+		if match, _ := m.root.match(tokens); match {
 			return true
 		}
 		tokens = tokens[1:]
@@ -178,7 +180,7 @@ func (m *Matcher) Match(url string) bool {
 	// rest of the URL
 	// TODO: handle query parameters, etc.
 	for len(tokens) > 0 {
-		if match := m.root.findChild(nodeKey{kind: nodeKindExactMatch}).match(tokens); match {
+		if match, _ := m.root.findChild(nodeKey{kind: nodeKindExactMatch}).match(tokens); match {
 			return true
 		}
 		tokens = tokens[1:]
@@ -188,14 +190,21 @@ func (m *Matcher) Match(url string) bool {
 }
 
 var (
-	reTokenSep = regexp.MustCompile(`(^https|^http|\.|-|_|:\/\/|\/|\?|=|&)`)
+	reTokenSep = regexp.MustCompile(`(^https|^http|\.|-|_|:\/\/|\/|\?|=|&|:)`)
 )
 
 func tokenize(s string) []string {
 	tokenRanges := reTokenSep.FindAllStringIndex(s, -1)
 	// assume that each separator is followed by a token
 	// over-allocating is fine, since the token arrays will be short-lived
-	tokens := make([]string, 0, len(tokenRanges)*2)
+	tokens := make([]string, 0, len(tokenRanges)+1)
+
+	// check if the first range doesn't start at the beginning of the string
+	// if it doesn't, then the first token is the substring from the beginning
+	// of the string to the start of the first range
+	if len(tokenRanges) > 0 && tokenRanges[0][0] > 0 {
+		tokens = append(tokens, s[:tokenRanges[0][0]])
+	}
 
 	var nextStartIndex int
 	for i, tokenRange := range tokenRanges {
