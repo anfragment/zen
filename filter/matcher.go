@@ -31,9 +31,11 @@ type nodeKey struct {
 type node struct {
 	children   map[nodeKey]*node
 	childrenMu sync.RWMutex
-	// isLeaf is true if the node is a leaf node and should
-	// terminate the traversal in case of a match.
-	isLeaf bool
+	// isRule is true if the node represents a rule.
+	//
+	// Nodes with isRule set to true might have children and
+	// therefore should not necessarily terminate the matching process.
+	isRule bool
 }
 
 func (n *node) findOrAddChild(key nodeKey) *node {
@@ -61,22 +63,25 @@ func (n *node) findChild(key nodeKey) *node {
 }
 
 // match returns true if the node's subtree matches the given tokens.
-func (n *node) match(tokens []string) (bool, []string) {
+//
+// If a matching rule is found, it is returned along with the remaining tokens.
+// If no matching rule is found, nil is returned.
+func (n *node) match(tokens []string) (*node, []string) {
 	if n == nil {
-		return false, nil
+		return nil, nil
 	}
-	if n.isLeaf {
-		return true, tokens
+	if n.isRule {
+		return n, tokens
 	}
 	if len(tokens) == 0 {
-		return false, nil
+		return nil, nil
 	}
 
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
 }
 
 // Matcher is trie-based matcher for URLs that is capable of parsing
-// Adblock filter and hosts rules and matching URLs against them.
+// Adblock filters and hosts rules and matching URLs against them.
 //
 // The matcher is safe for concurrent use.
 type Matcher struct {
@@ -119,7 +124,7 @@ func (m *Matcher) AddRule(rule string) {
 	for i, token := range tokens {
 		if i == len(tokens)-1 {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
-			node.isLeaf = true
+			node.isRule = true
 		} else {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
@@ -133,10 +138,10 @@ func (m *Matcher) Match(url string) bool {
 	tokens := tokenize(url)
 
 	// address root
-	if match, _ := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).match(tokens); match {
+	if match, _ := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).match(tokens); match != nil {
 		return true
 	}
-	if match, _ := m.root.match(tokens); match {
+	if match, _ := m.root.match(tokens); match != nil {
 		return true
 	}
 	if len(tokens) == 0 {
@@ -145,7 +150,7 @@ func (m *Matcher) Match(url string) bool {
 	tokens = tokens[1:]
 
 	// protocol separator
-	if match, _ := m.root.match(tokens); match {
+	if match, _ := m.root.match(tokens); match != nil {
 		return true
 	}
 	if len(tokens) == 0 {
@@ -153,12 +158,24 @@ func (m *Matcher) Match(url string) bool {
 	}
 	tokens = tokens[1:]
 
-	// hostname root
-	if match, remainingTokens := m.root.findChild(nodeKey{kind: nodeKindHostnameRoot}).match(tokens); match {
-		if len(remainingTokens) == 0 || remainingTokens[0] != "." {
-			// hostname root matched the entire hostname
-			return true
+	var hostnameMatcher func(*node, []string) bool
+	hostnameMatcher = func(node *node, tokens []string) bool {
+		if match, remainingTokens := node.match(tokens); match != nil {
+			if len(remainingTokens) == 0 || remainingTokens[0] != "." {
+				// hostname matched the entire hostname
+				return true
+			}
+			if remainingTokens[0] == "." {
+				return hostnameMatcher(match.findChild(nodeKey{kind: nodeKindExactMatch, token: "."}), remainingTokens[1:])
+			}
 		}
+		return false
+	}
+
+	// hostname root
+	hostnameRootNode := m.root.findChild(nodeKey{kind: nodeKindHostnameRoot})
+	if hostnameRootNode != nil && hostnameMatcher(hostnameRootNode, tokens) {
+		return true
 	}
 
 	// domain segments
@@ -167,11 +184,11 @@ func (m *Matcher) Match(url string) bool {
 			break
 		}
 		if tokens[0] != "." {
-			if match, _ := m.root.findChild(nodeKey{kind: nodeKindDomain}).match(tokens); match {
+			if match, _ := m.root.findChild(nodeKey{kind: nodeKindDomain}).match(tokens); match != nil {
 				return true
 			}
 		}
-		if match, _ := m.root.match(tokens); match {
+		if match, _ := m.root.match(tokens); match != nil {
 			return true
 		}
 		tokens = tokens[1:]
@@ -180,7 +197,7 @@ func (m *Matcher) Match(url string) bool {
 	// rest of the URL
 	// TODO: handle query parameters, etc.
 	for len(tokens) > 0 {
-		if match, _ := m.root.findChild(nodeKey{kind: nodeKindExactMatch}).match(tokens); match {
+		if match, _ := m.root.findChild(nodeKey{kind: nodeKindExactMatch}).match(tokens); match != nil {
 			return true
 		}
 		tokens = tokens[1:]

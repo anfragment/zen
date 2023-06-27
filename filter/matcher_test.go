@@ -169,10 +169,16 @@ func TestMatcherHosts(t *testing.T) {
 			rules: []string{
 				"0.0.0.0 example.com",
 				"0.0.0.0 example.com.co",
+				"0.0.0.0 example.com.co.uk",
+				"0.0.0.0 example.com.co.uk.co.uk",
 			},
 			urls: []matchTestCase{
 				{"http://example.com", true},
 				{"http://example.com.co", true},
+				{"http://example.com.co.uk", true},
+				{"http://example.com.co.uk.co.uk", true},
+				{"http://example.com.co.uk.co", false},
+				{"http://example.edu", false},
 			},
 		},
 	}
