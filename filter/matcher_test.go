@@ -13,7 +13,7 @@ type matchTestCase struct {
 type matchTest struct {
 	name  string
 	rules []string
-	urls  []matchTestCase
+	cases []matchTestCase
 }
 
 func (mt *matchTest) run(t *testing.T) {
@@ -21,7 +21,7 @@ func (mt *matchTest) run(t *testing.T) {
 	for _, r := range mt.rules {
 		matcher.AddRule(r)
 	}
-	for _, u := range mt.urls {
+	for _, u := range mt.cases {
 		if got := matcher.Match(u.url); got != u.want {
 			t.Errorf("%s: Match(%q) = %v, want %v", mt.name, u.url, got, u.want)
 		}
@@ -34,7 +34,7 @@ func TestMatcherByAddressParts(t *testing.T) {
 		{
 			name:  "by address parts",
 			rules: []string{"/banner/img"},
-			urls: []matchTestCase{
+			cases: []matchTestCase{
 				{"http://example.com/banner/img", true},
 				{"https://example.com/banner/img", true},
 				{"http://example.com/example/banner/img", true},
@@ -48,7 +48,7 @@ func TestMatcherByAddressParts(t *testing.T) {
 		{
 			name:  "by segments",
 			rules: []string{"-banner-ad-"},
-			urls: []matchTestCase{
+			cases: []matchTestCase{
 				{"http://example.com/-banner-ad-", true},
 				{"https://example.com/-example-banner-ad-example", true},
 				{"http://example.com/-banner-ad-example", true},
@@ -75,7 +75,7 @@ func TestMatcherByAddressParts(t *testing.T) {
 				".html?ad_",
 				"/ad-top-",
 			},
-			urls: []matchTestCase{
+			cases: []matchTestCase{
 				{"http://example.com/-banner-ad-", true},
 				{"https://example.com/-ad-banner-", true},
 				{"http://example.com/-adfliction/", true},
@@ -107,7 +107,7 @@ func TestMatcherHosts(t *testing.T) {
 		{
 			name:  "single host",
 			rules: []string{"0.0.0.0 example.com"},
-			urls: []matchTestCase{
+			cases: []matchTestCase{
 				{"http://example.com", true},
 				{"https://example.com", true},
 				{"http://example.com/", true},
@@ -124,7 +124,7 @@ func TestMatcherHosts(t *testing.T) {
 		{
 			name:  "multiple components",
 			rules: []string{"0.0.0.0 sub.test.example.com"},
-			urls: []matchTestCase{
+			cases: []matchTestCase{
 				{"http://sub.test.example.com", true},
 				{"https://sub.test.example.com", true},
 				{"http://sub.test.example.com/", true},
@@ -145,7 +145,7 @@ func TestMatcherHosts(t *testing.T) {
 				"127.0.0.1 example.org",
 				"0.0.0.0 test.sub.foo.xyz",
 			},
-			urls: []matchTestCase{
+			cases: []matchTestCase{
 				{"http://example.com", true},
 				{"https://example.com", true},
 				{"http://example.org", true},
@@ -172,13 +172,40 @@ func TestMatcherHosts(t *testing.T) {
 				"0.0.0.0 example.com.co.uk",
 				"0.0.0.0 example.com.co.uk.co.uk",
 			},
-			urls: []matchTestCase{
+			cases: []matchTestCase{
 				{"http://example.com", true},
 				{"http://example.com.co", true},
 				{"http://example.com.co.uk", true},
 				{"http://example.com.co.uk.co.uk", true},
 				{"http://example.com.co.uk.co", false},
 				{"http://example.edu", false},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, test.run)
+	}
+}
+
+func TestMatcherByDomainName(t *testing.T) {
+	t.Parallel()
+	tests := []matchTest{
+		{
+			name: "single rule",
+			rules: []string{
+				"||example.org^",
+			},
+			cases: []matchTestCase{
+				{"http://example.org", true},
+				{"https://example.org", true},
+				{"http://example.org/", true},
+				{"http://example.org/?q=example", true},
+				{"https://example.org/subdir/doc?foo1=bar1&foo2=bar2", true},
+				{"http://example.org:8080", true},
+				{"https://example.com", false},
+				{"http://example.com", false},
+				{"http://example.com.co", false},
+				{"http://example.com.co/", false},
 			},
 		},
 	}

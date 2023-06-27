@@ -62,6 +62,13 @@ func (n *node) findChild(key nodeKey) *node {
 	return child
 }
 
+var (
+	// reSeparator is a regular expression that matches the separator token.
+	// according to the https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
+	// "Separator character is any character, but a letter, a digit, or one of the following: _ - . %. ... The end of the address is also accepted as separator."
+	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9]|[_\-.%]`)
+)
+
 // match returns true if the node's subtree matches the given tokens.
 //
 // If a matching rule is found, it is returned along with the remaining tokens.
@@ -74,7 +81,15 @@ func (n *node) match(tokens []string) (*node, []string) {
 		return n, tokens
 	}
 	if len(tokens) == 0 {
+		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.isRule {
+			return separator, tokens
+		}
 		return nil, nil
+	}
+	if reSeparator.MatchString(tokens[0]) {
+		if match, _ := n.findChild(nodeKey{kind: nodeKindSeparator}).match(tokens[1:]); match != nil {
+			return match, tokens
+		}
 	}
 
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
@@ -101,6 +116,7 @@ var (
 	hostnameCG    = `((?:[\da-z][\da-z_-]*\.)+[\da-z-]*[a-z])`
 	reHosts       = regexp.MustCompile(fmt.Sprintf(`^(?:0\.0\.0\.0|127\.0\.0\.1) %s`, hostnameCG))
 	reHostsIgnore = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
+	reDomainName  = regexp.MustCompile(fmt.Sprintf(`^\|\|%s\^`, hostnameCG))
 )
 
 func (m *Matcher) AddRule(rule string) {
@@ -112,6 +128,9 @@ func (m *Matcher) AddRule(rule string) {
 			rootKeyKind = nodeKindHostnameRoot
 			tokens = tokenize(host[1])
 		}
+	} else if match := reDomainName.MatchString(rule); match {
+		rootKeyKind = nodeKindDomain
+		tokens = tokenize(rule[2 : len(rule)-1])
 	} else {
 		tokens = tokenize(rule)
 	}
@@ -121,14 +140,14 @@ func (m *Matcher) AddRule(rule string) {
 	}
 
 	node := m.root.findOrAddChild(nodeKey{kind: rootKeyKind})
-	for i, token := range tokens {
-		if i == len(tokens)-1 {
-			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
-			node.isRule = true
+	for _, token := range tokens {
+		if token == "^" {
+			node = node.findOrAddChild(nodeKey{kind: nodeKindSeparator})
 		} else {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
 	}
+	node.isRule = true
 }
 
 // Match returns true if the given URL matches any of the rules.
@@ -207,7 +226,7 @@ func (m *Matcher) Match(url string) bool {
 }
 
 var (
-	reTokenSep = regexp.MustCompile(`(^https|^http|\.|-|_|:\/\/|\/|\?|=|&|:)`)
+	reTokenSep = regexp.MustCompile(`(^https|^http|\.|-|_|:\/\/|\/|\?|=|&|:|\^)`)
 )
 
 func tokenize(s string) []string {
