@@ -214,6 +214,29 @@ func TestMatcherByDomainName(t *testing.T) {
 	}
 }
 
+func TestMatcherByExactAddress(t *testing.T) {
+	t.Parallel()
+	tests := []matchTest{
+		{
+			name: "single rule",
+			rules: []string{
+				"|http://example.org/",
+			},
+			cases: []matchTestCase{
+				{"http://example.org", false},
+				{"https://example.org", false},
+				{"http://example.org/", true},
+				{"https://example.org/", false},
+				{"http://example.org/?q=example", false},
+				{"https://example.org/banner/img", false},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, test.run)
+	}
+}
+
 func TestTokenize(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

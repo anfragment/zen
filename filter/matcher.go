@@ -113,10 +113,12 @@ func NewMatcher() *Matcher {
 
 var (
 	// hostnameCG is a capture group for a hostname.
-	hostnameCG    = `((?:[\da-z][\da-z_-]*\.)+[\da-z-]*[a-z])`
-	reHosts       = regexp.MustCompile(fmt.Sprintf(`^(?:0\.0\.0\.0|127\.0\.0\.1) %s`, hostnameCG))
-	reHostsIgnore = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
-	reDomainName  = regexp.MustCompile(fmt.Sprintf(`^\|\|%s\^`, hostnameCG))
+	hostnameCG     = `((?:[\da-z][\da-z_-]*\.)+[\da-z-]*[a-z])`
+	urlCG          = `https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)`
+	reHosts        = regexp.MustCompile(fmt.Sprintf(`^(?:0\.0\.0\.0|127\.0\.0\.1) %s`, hostnameCG))
+	reHostsIgnore  = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
+	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|%s\^`, hostnameCG))
+	reExactAddress = regexp.MustCompile(fmt.Sprintf(`^\|%s$`, urlCG))
 )
 
 func (m *Matcher) AddRule(rule string) {
@@ -130,7 +132,10 @@ func (m *Matcher) AddRule(rule string) {
 		}
 	} else if match := reDomainName.MatchString(rule); match {
 		rootKeyKind = nodeKindDomain
-		tokens = tokenize(rule[2 : len(rule)-1])
+		tokens = tokenize(rule[2 : len(rule)-1]) // 2:len(rule)-1 to skip the leading || and trailing ^
+	} else if match := reExactAddress.MatchString(rule); match {
+		rootKeyKind = nodeKindAddressRoot
+		tokens = tokenize(rule[1:]) // 1: to skip the leading |
 	} else {
 		tokens = tokenize(rule)
 	}
@@ -157,7 +162,7 @@ func (m *Matcher) Match(url string) bool {
 	tokens := tokenize(url)
 
 	// address root
-	if match, _ := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).match(tokens); match != nil {
+	if match, remaingTokens := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).match(tokens); match != nil && len(remaingTokens) == 0 {
 		return true
 	}
 	if match, _ := m.root.match(tokens); match != nil {
