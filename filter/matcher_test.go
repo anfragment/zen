@@ -237,6 +237,47 @@ func TestMatcherByExactAddress(t *testing.T) {
 	}
 }
 
+func TestMatcherWildcard(t *testing.T) {
+	t.Parallel()
+	tests := []matchTest{
+		{
+			name: "single wildcard rule",
+			rules: []string{
+				"/beacon/track/*",
+			},
+			cases: []matchTestCase{
+				{"http://example.org/beacon/track/foo", true},
+				{"http://example.org/beacon/track/foo/bar", true},
+				{"http://example.org/beacon/track", false},
+				{"http://example.org/beacon/track/", false},
+				{"http://example.org/beacon", false},
+			},
+		},
+		{
+			name: "multiple wildcard rules",
+			rules: []string{
+				"/beacon/track/*",
+				"/beacon/*/events/*",
+			},
+			cases: []matchTestCase{
+				{"http://example.org/beacon/track/foo", true},
+				{"http://example.org/beacon/track/foo/bar", true},
+				{"http://example.org/beacon/track", false},
+				{"http://example.org/beacon/track/", false},
+				{"http://example.org/beacon", false},
+				{"http://example.org/beacon/foo/events/bar", true},
+				{"http://example.org/beacon/foo/events/bar/baz", true},
+				{"http://example.org/beacon/foo/events", false},
+				{"http://example.org/beacon/foo/events/", false},
+				{"http://example.org/beacon/foo", false},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, test.run)
+	}
+}
+
 func TestTokenize(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

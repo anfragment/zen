@@ -91,6 +91,11 @@ func (n *node) match(tokens []string) (*node, []string) {
 			return match, tokens
 		}
 	}
+	if wildcard := n.findChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
+		if match, _ := wildcard.match(tokens[1:]); match != nil {
+			return match, tokens
+		}
+	}
 
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
 }
@@ -148,6 +153,8 @@ func (m *Matcher) AddRule(rule string) {
 	for _, token := range tokens {
 		if token == "^" {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindSeparator})
+		} else if token == "*" {
+			node = node.findOrAddChild(nodeKey{kind: nodeKindWildcard})
 		} else {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
