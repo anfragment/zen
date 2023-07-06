@@ -4,9 +4,6 @@ package main
 import (
 	"flag"
 	"log"
-	"net/http"
-
-	"github.com/anfragment/zen/filter"
 )
 
 func main() {
@@ -15,22 +12,14 @@ func main() {
 	caKeyFile := flag.String("cakeyfile", "", "key .pem file for trusted CA")
 	flag.Parse()
 
-	f := filter.NewFilter()
-	if err := f.AddRemoteFilters([]string{
-		"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-		"https://easylist.to/easylist/easylist.txt",
-	}); err != nil {
-		log.Fatalf("error adding remote filters: %v", err)
-	}
-
-	certManager, err := NewCertManager(*caCertFile, *caKeyFile)
+	proxy := NewProxy()
+	err := proxy.ConfigureTLS(*caCertFile, *caKeyFile)
 	if err != nil {
-		log.Fatalf("error creating cert manager: %v", err)
+		log.Fatalf("failed to configure TLS: %v", err)
 	}
-	proxy := NewMitmProxy(certManager, f)
-
-	log.Println("Starting proxy server on", *addr)
-	if err := http.ListenAndServe(*addr, proxy); err != nil {
-		log.Panic("ListenAndServe:", err)
+	log.Printf("starting proxy on %s", *addr)
+	err = proxy.Start(*addr)
+	if err != nil {
+		log.Fatalf("failed to start proxy: %v", err)
 	}
 }
