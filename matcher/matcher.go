@@ -1,7 +1,11 @@
-package filter
+package matcher
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"regexp"
 	"sync"
 )
@@ -160,6 +164,35 @@ func (m *Matcher) AddRule(rule string) {
 		}
 	}
 	node.isRule = true
+}
+
+// AddRemoteFilters parses the rules files at the given URLs and adds them to
+// the filter.
+func (m *Matcher) AddRemoteFilters(urls []string) error {
+	c := 0
+	for _, url := range urls {
+		// download the rules file
+		file, err := http.Get(url)
+		if err != nil {
+			log.Printf("failed to download rules file %s: %v", url, err)
+		}
+		defer file.Body.Close()
+		// read the rules line by line and add each rule to the filter
+		reader := bufio.NewReader(file.Body)
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				log.Printf("failed to read line from rules file %s: %v", url, err)
+			}
+			m.AddRule(line)
+			c++
+		}
+	}
+	log.Printf("added %d rules", c)
+	return nil
 }
 
 // Match returns true if the given URL matches any of the rules.

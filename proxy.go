@@ -5,15 +5,19 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 
+	"github.com/anfragment/zen/matcher"
 	"github.com/elazarl/goproxy"
 )
 
-type Proxy struct{}
+type Proxy struct {
+	matcher *matcher.Matcher
+}
 
-func NewProxy() *Proxy {
-	return &Proxy{}
+func NewProxy(matcher *matcher.Matcher) *Proxy {
+	return &Proxy{matcher}
 }
 
 // ConfigureTLS configures the proxy to use the given certificate and key for
@@ -47,5 +51,13 @@ func (p *Proxy) ConfigureTLS(certFile, keyFile string) error {
 func (p *Proxy) Start(addr string) error {
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
+	proxy.OnRequest().DoFunc(func(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
+		if p.matcher.Match(req.URL.String()) {
+			log.Printf("blocked %s", req.URL.String())
+			return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
+		}
+		log.Printf("allowed %s", req.URL.String())
+		return req, nil
+	})
 	return http.ListenAndServe(addr, proxy)
 }

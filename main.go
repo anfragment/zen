@@ -1,9 +1,10 @@
-// https://github.com/eliben/code-for-blog/blob/master/2022/go-and-proxies/connect-mitm-proxy.go
 package main
 
 import (
 	"flag"
 	"log"
+
+	"github.com/anfragment/zen/matcher"
 )
 
 func main() {
@@ -12,7 +13,13 @@ func main() {
 	caKeyFile := flag.String("cakeyfile", "", "key .pem file for trusted CA")
 	flag.Parse()
 
-	proxy := NewProxy()
+	matcher := matcher.NewMatcher()
+	matcher.AddRemoteFilters([]string{
+		"https://cdn.statically.io/gh/uBlockOrigin/uAssetsCDN/main/thirdparties/easylist.txt",
+		"https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
+		"https://ublockorigin.pages.dev/thirdparties/easyprivacy.txt",
+	})
+	proxy := NewProxy(matcher)
 	err := proxy.ConfigureTLS(*caCertFile, *caKeyFile)
 	if err != nil {
 		log.Fatalf("failed to configure TLS: %v", err)
