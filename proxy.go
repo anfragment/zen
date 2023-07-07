@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/anfragment/zen/matcher"
 	"github.com/elazarl/goproxy"
@@ -39,24 +40,37 @@ func (p *Proxy) ConfigureTLS(certFile, keyFile string) error {
 		return fmt.Errorf("failed to parse CA certificate: %v", err)
 	}
 
+	tlsConfig := goproxy.TLSConfigFromCA(&goproxyCa)
 	goproxy.GoproxyCa = goproxyCa
-	goproxy.OkConnect = &goproxy.ConnectAction{Action: goproxy.ConnectAccept, TLSConfig: goproxy.TLSConfigFromCA(&goproxyCa)}
-	goproxy.MitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectMitm, TLSConfig: goproxy.TLSConfigFromCA(&goproxyCa)}
-	goproxy.HTTPMitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectHTTPMitm, TLSConfig: goproxy.TLSConfigFromCA(&goproxyCa)}
-	goproxy.RejectConnect = &goproxy.ConnectAction{Action: goproxy.ConnectReject, TLSConfig: goproxy.TLSConfigFromCA(&goproxyCa)}
+	goproxy.OkConnect = &goproxy.ConnectAction{Action: goproxy.ConnectAccept, TLSConfig: tlsConfig}
+	goproxy.MitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectMitm, TLSConfig: tlsConfig}
+	goproxy.HTTPMitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectHTTPMitm, TLSConfig: tlsConfig}
+	goproxy.RejectConnect = &goproxy.ConnectAction{Action: goproxy.ConnectReject, TLSConfig: tlsConfig}
+
 	return nil
 }
 
 // Start starts the proxy on the given address.
 func (p *Proxy) Start(addr string) error {
 	proxy := goproxy.NewProxyHttpServer()
+	// TODO: implement exclusions
+	// https://github.com/AdguardTeam/HttpsExclusions
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
 	proxy.OnRequest().DoFunc(func(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		if p.matcher.Match(req.URL.String()) {
-			log.Printf("blocked %s", req.URL.String())
+		host := req.URL.Hostname()
+		urlWithoutPort := url.URL{
+			Scheme:   req.URL.Scheme,
+			Host:     host,
+			Path:     req.URL.Path,
+			RawQuery: req.URL.RawQuery,
+			Fragment: req.URL.Fragment,
+		}
+		url := urlWithoutPort.String()
+		if p.matcher.Match(url) {
+			log.Printf("blocked request from %s", host)
 			return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
 		}
-		log.Printf("allowed %s", req.URL.String())
+		log.Printf("allowed request from %s", host)
 		return req, nil
 	})
 	return http.ListenAndServe(addr, proxy)

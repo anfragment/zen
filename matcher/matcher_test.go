@@ -284,7 +284,7 @@ func TestTokenize(t *testing.T) {
 		s      string
 		tokens []string
 	}{
-		// {"", []string{}},
+		{"", []string{}},
 		{"http://example.com", []string{"http", "://", "example", ".", "com"}},
 		{"http://example.com/", []string{"http", "://", "example", ".", "com", "/"}},
 		{"http://example.com/?q=example", []string{"http", "://", "example", ".", "com", "/", "?", "q", "=", "example"}},

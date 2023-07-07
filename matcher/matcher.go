@@ -31,15 +31,32 @@ type nodeKey struct {
 	token string
 }
 
+type ruleModifiers struct {
+	// generic is true if the rules does not have any modifiers
+	generic bool
+	// baisc modifiers
+	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-basic-modifiers
+	domain     string
+	thirdParty bool
+	header     string
+	important  bool
+	method     string
+	// content type modifiers
+	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#content-type-modifiers
+	document   bool
+	font       bool
+	image      bool
+	media      bool
+	other      bool
+	script     bool
+	stylesheet bool
+}
+
 // node is a node in the trie.
 type node struct {
 	children   map[nodeKey]*node
 	childrenMu sync.RWMutex
-	// isRule is true if the node represents a rule.
-	//
-	// Nodes with isRule set to true might have children and
-	// therefore should not necessarily terminate the matching process.
-	isRule bool
+	modifiers  *ruleModifiers
 }
 
 func (n *node) findOrAddChild(key nodeKey) *node {
@@ -81,11 +98,11 @@ func (n *node) match(tokens []string) (*node, []string) {
 	if n == nil {
 		return nil, nil
 	}
-	if n.isRule {
+	if n.modifiers != nil && n.modifiers.generic {
 		return n, tokens
 	}
 	if len(tokens) == 0 {
-		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.isRule {
+		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil && separator.modifiers.generic {
 			return separator, tokens
 		}
 		return nil, nil
@@ -122,8 +139,10 @@ func NewMatcher() *Matcher {
 
 var (
 	// hostnameCG is a capture group for a hostname.
-	hostnameCG     = `((?:[\da-z][\da-z_-]*\.)+[\da-z-]*[a-z])`
-	urlCG          = `https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)`
+	hostnameCG = `((?:[\da-z][\da-z_-]*\.)+[\da-z-]*[a-z])`
+	urlCG      = `https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)`
+	// Comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
+	reIgnoreRule   = regexp.MustCompile(`^(?:!|#|\[)`)
 	reHosts        = regexp.MustCompile(fmt.Sprintf(`^(?:0\.0\.0\.0|127\.0\.0\.1) %s`, hostnameCG))
 	reHostsIgnore  = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
 	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|%s\^`, hostnameCG))
@@ -134,6 +153,9 @@ func (m *Matcher) AddRule(rule string) {
 	rootKeyKind := nodeKindExactMatch
 	var tokens []string
 
+	if reIgnoreRule.MatchString(rule) {
+		return
+	}
 	if host := reHosts.FindStringSubmatch(rule); host != nil {
 		if !reHostsIgnore.MatchString(host[1]) {
 			rootKeyKind = nodeKindHostnameRoot
@@ -146,6 +168,7 @@ func (m *Matcher) AddRule(rule string) {
 		rootKeyKind = nodeKindAddressRoot
 		tokens = tokenize(rule[1:]) // 1: to skip the leading |
 	} else {
+		fmt.Print(rule)
 		tokens = tokenize(rule)
 	}
 
@@ -163,7 +186,10 @@ func (m *Matcher) AddRule(rule string) {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
 	}
-	node.isRule = true
+
+	node.modifiers = &ruleModifiers{
+		generic: true,
+	}
 }
 
 // AddRemoteFilters parses the rules files at the given URLs and adds them to
