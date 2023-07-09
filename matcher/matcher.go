@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -31,31 +32,11 @@ type nodeKey struct {
 	token string
 }
 
-type ruleModifiers struct {
-	// generic is true if the rules does not have any modifiers
-	generic bool
-	// baisc modifiers
-	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-basic-modifiers
-	domain     string
-	thirdParty bool
-	header     string
-	important  bool
-	method     string
-	// content type modifiers
-	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#content-type-modifiers
-	document   bool
-	font       bool
-	image      bool
-	media      bool
-	other      bool
-	script     bool
-	stylesheet bool
-}
-
 // node is a node in the trie.
 type node struct {
 	children   map[nodeKey]*node
 	childrenMu sync.RWMutex
+	isRule     bool
 	modifiers  *ruleModifiers
 }
 
@@ -98,11 +79,11 @@ func (n *node) match(tokens []string) (*node, []string) {
 	if n == nil {
 		return nil, nil
 	}
-	if n.modifiers != nil && n.modifiers.generic {
+	if n.modifiers != nil && n.isRule {
 		return n, tokens
 	}
 	if len(tokens) == 0 {
-		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil && separator.modifiers.generic {
+		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil && separator.isRule {
 			return separator, tokens
 		}
 		return nil, nil
@@ -119,6 +100,74 @@ func (n *node) match(tokens []string) (*node, []string) {
 	}
 
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
+}
+
+type modifierType int
+
+const (
+	modifierTypeNone modifierType = iota
+	modifierTypeInclude
+	modifierTypeExclude
+)
+
+// ruleModifiers represents modifiers of a rule.
+type ruleModifiers struct {
+	// basic modifiers
+	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-basic-modifiers
+	// domain     string
+	// thirdParty optionType
+	// header     string
+	// important  optionType
+	// method     string
+	// content type modifiers
+	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#content-type-modifiers
+	document   modifierType
+	font       modifierType
+	image      modifierType
+	media      modifierType
+	other      modifierType
+	script     modifierType
+	stylesheet modifierType
+}
+
+func parseModifiers(modifiers string) (*ruleModifiers, error) {
+	if modifiers == "" {
+		return nil, nil
+	}
+
+	m := &ruleModifiers{}
+	for _, modifier := range strings.Split(modifiers, ",") {
+		if strings.ContainsRune(modifier, '=') {
+			// TODO: handle key=value modifiers
+			return nil, fmt.Errorf("key=value modifiers are not supported")
+		}
+		t := modifierTypeInclude
+		if modifier[0] == '~' {
+			t = modifierTypeExclude
+			modifier = modifier[1:]
+		}
+		switch modifier {
+		case "document":
+			m.document = t
+		case "font":
+			m.font = t
+		case "image":
+			m.image = t
+		case "media":
+			m.media = t
+		case "other":
+			m.other = t
+		case "script":
+			m.script = t
+		case "stylesheet":
+			m.stylesheet = t
+		default:
+			// first, do no harm
+			// in case an unknown modifier is encountered, ignore the whole rule
+			return nil, fmt.Errorf("unknown modifier %q", modifier)
+		}
+	}
+	return m, nil
 }
 
 // Matcher is trie-based matcher for URLs that is capable of parsing
@@ -139,37 +188,51 @@ func NewMatcher() *Matcher {
 
 var (
 	// hostnameCG is a capture group for a hostname.
-	hostnameCG = `((?:[\da-z][\da-z_-]*\.)+[\da-z-]*[a-z])`
-	urlCG      = `https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)`
-	// Comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	reIgnoreRule   = regexp.MustCompile(`^(?:!|#|\[)`)
-	reHosts        = regexp.MustCompile(fmt.Sprintf(`^(?:0\.0\.0\.0|127\.0\.0\.1) %s`, hostnameCG))
-	reHostsIgnore  = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
-	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|%s\^`, hostnameCG))
-	reExactAddress = regexp.MustCompile(fmt.Sprintf(`^\|%s$`, urlCG))
+	hostnameCG  = `((?:[\da-z][\da-z_-]*\.)+[\da-z-]*[a-z])`
+	urlCG       = `(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*))`
+	modifiersCG = `(?:\$(.+))?`
+	// Ignore comments, cosmetic rules, [Adblock Plus 2.0]-style, and, temporarily, exception rules.
+	reIgnoreRule           = regexp.MustCompile(`^(?:!|#|\[|@@)|(##|#\?#|#\$#|#@#)`)
+	reHosts                = regexp.MustCompile(fmt.Sprintf(`^(?:0\.0\.0\.0|127\.0\.0\.1) %s`, hostnameCG))
+	reHostsIgnore          = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
+	reDomainName           = regexp.MustCompile(fmt.Sprintf(`^\|\|%s\^%s$`, hostnameCG, modifiersCG))
+	reExactAddress         = regexp.MustCompile(fmt.Sprintf(`^\|%s%s$`, urlCG, modifiersCG))
+	reAddressPartsModifier = regexp.MustCompile(fmt.Sprintf(`%s$`, modifiersCG))
 )
 
 func (m *Matcher) AddRule(rule string) {
-	rootKeyKind := nodeKindExactMatch
-	var tokens []string
-
 	if reIgnoreRule.MatchString(rule) {
 		return
 	}
+
+	var tokens []string
+	var modifiers *ruleModifiers
+	var err error
+	rootKeyKind := nodeKindExactMatch
 	if host := reHosts.FindStringSubmatch(rule); host != nil {
 		if !reHostsIgnore.MatchString(host[1]) {
 			rootKeyKind = nodeKindHostnameRoot
 			tokens = tokenize(host[1])
 		}
-	} else if match := reDomainName.MatchString(rule); match {
+	} else if match := reDomainName.FindStringSubmatch(rule); match != nil {
 		rootKeyKind = nodeKindDomain
-		tokens = tokenize(rule[2 : len(rule)-1]) // 2:len(rule)-1 to skip the leading || and trailing ^
-	} else if match := reExactAddress.MatchString(rule); match {
+		tokens = tokenize(match[1])
+		if modifiers, err = parseModifiers(match[2]); err != nil {
+			return
+		}
+	} else if match := reExactAddress.FindStringSubmatch(rule); match != nil {
 		rootKeyKind = nodeKindAddressRoot
-		tokens = tokenize(rule[1:]) // 1: to skip the leading |
+		tokens = tokenize(match[1])
+		if modifiers, err = parseModifiers(match[2]); err != nil {
+			return
+		}
 	} else {
-		fmt.Print(rule)
 		tokens = tokenize(rule)
+		if match := reAddressPartsModifier.FindStringSubmatch(rule); match != nil {
+			if modifiers, err = parseModifiers(match[1]); err != nil {
+				return
+			}
+		}
 	}
 
 	if len(tokens) == 0 {
@@ -186,10 +249,7 @@ func (m *Matcher) AddRule(rule string) {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
 	}
-
-	node.modifiers = &ruleModifiers{
-		generic: true,
-	}
+	node.modifiers = modifiers
 }
 
 // AddRemoteFilters parses the rules files at the given URLs and adds them to
@@ -197,13 +257,11 @@ func (m *Matcher) AddRule(rule string) {
 func (m *Matcher) AddRemoteFilters(urls []string) error {
 	c := 0
 	for _, url := range urls {
-		// download the rules file
 		file, err := http.Get(url)
 		if err != nil {
 			log.Printf("failed to download rules file %s: %v", url, err)
 		}
 		defer file.Body.Close()
-		// read the rules line by line and add each rule to the filter
 		reader := bufio.NewReader(file.Body)
 		for {
 			line, err := reader.ReadString('\n')
@@ -213,6 +271,7 @@ func (m *Matcher) AddRemoteFilters(urls []string) error {
 				}
 				log.Printf("failed to read line from rules file %s: %v", url, err)
 			}
+			line = line[:len(line)-1] // strip the trailing newline
 			m.AddRule(line)
 			c++
 		}
