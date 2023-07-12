@@ -5,9 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/anfragment/zen/matcher"
 	"github.com/elazarl/goproxy"
@@ -56,22 +54,6 @@ func (p *Proxy) Start(addr string) error {
 	// TODO: implement exclusions
 	// https://github.com/AdguardTeam/HttpsExclusions
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
-	proxy.OnRequest().DoFunc(func(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		host := req.URL.Hostname()
-		urlWithoutPort := url.URL{
-			Scheme:   req.URL.Scheme,
-			Host:     host,
-			Path:     req.URL.Path,
-			RawQuery: req.URL.RawQuery,
-			Fragment: req.URL.Fragment,
-		}
-		url := urlWithoutPort.String()
-		if p.matcher.Match(url) {
-			log.Printf("blocked request from %s", host)
-			return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
-		}
-		log.Printf("allowed request from %s", host)
-		return req, nil
-	})
+	proxy.OnRequest().DoFunc(p.matcher.Middleware)
 	return http.ListenAndServe(addr, proxy)
 }

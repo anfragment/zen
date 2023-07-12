@@ -6,9 +6,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/elazarl/goproxy"
 )
 
 // nodeKind is the type of a node in the trie.
@@ -26,7 +29,7 @@ const (
 // nodeKey identifies a node in the trie.
 // It is a combination of the node kind and the token that the node represents.
 // The token is only present for nodes with kind nodeKindExactMatch.
-// The other kinds of nodes only represent roots of subtrees.
+// Other kinds of nodes only represent roots of subtrees.
 type nodeKey struct {
 	kind  nodeKind
 	token string
@@ -36,8 +39,7 @@ type nodeKey struct {
 type node struct {
 	children   map[nodeKey]*node
 	childrenMu sync.RWMutex
-	isRule     bool
-	modifiers  *ruleModifiers
+	modifiers  []*ruleModifiers
 }
 
 func (n *node) findOrAddChild(key nodeKey) *node {
@@ -79,15 +81,17 @@ func (n *node) match(tokens []string) (*node, []string) {
 	if n == nil {
 		return nil, nil
 	}
-	if n.modifiers != nil && n.isRule {
+	log.Printf("matching %s, current node: children length=%d; modifiers length=%d", strings.Join(tokens, "|"), len(n.children), len(n.modifiers))
+	if n.modifiers != nil {
 		return n, tokens
 	}
 	if len(tokens) == 0 {
-		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil && separator.isRule {
+		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil {
 			return separator, tokens
 		}
 		return nil, nil
 	}
+	// TODO: return multiple matches if they exist
 	if reSeparator.MatchString(tokens[0]) {
 		if match, _ := n.findChild(nodeKey{kind: nodeKindSeparator}).match(tokens[1:]); match != nil {
 			return match, tokens
@@ -102,6 +106,16 @@ func (n *node) match(tokens []string) (*node, []string) {
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
 }
 
+func (n *node) handleRequest(req *http.Request) (*http.Request, *http.Response) {
+	for _, modifier := range n.modifiers {
+		req, resp := modifier.handleRequest(req)
+		if resp != nil {
+			return req, resp
+		}
+	}
+	return req, nil
+}
+
 type modifierType int
 
 const (
@@ -112,6 +126,8 @@ const (
 
 // ruleModifiers represents modifiers of a rule.
 type ruleModifiers struct {
+	rule    string
+	generic bool
 	// basic modifiers
 	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-basic-modifiers
 	// domain     string
@@ -125,9 +141,41 @@ type ruleModifiers struct {
 	font       modifierType
 	image      modifierType
 	media      modifierType
-	other      modifierType
 	script     modifierType
 	stylesheet modifierType
+	other      modifierType
+}
+
+func (m *ruleModifiers) handleRequest(req *http.Request) (*http.Request, *http.Response) {
+	blockResponse := goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
+
+	if m.generic {
+		log.Printf("blocking with rule %s", m.rule)
+		return req, blockResponse
+	}
+
+	modifiers := map[string]modifierType{
+		"document": m.document,
+		"font":     m.font,
+		"image":    m.image,
+		"audio":    m.media,
+		"video":    m.media,
+		"script":   m.script,
+		"style":    m.stylesheet,
+	}
+
+	dest := req.Header.Get("Sec-Fetch-Dest")
+	if val, ok := modifiers[dest]; ok {
+		if val == modifierTypeInclude {
+			log.Printf("blocking with rule %s", m.rule)
+			return req, blockResponse
+		}
+	} else if m.other == modifierTypeInclude {
+		log.Printf("blocking with rule %s", m.rule)
+		return req, blockResponse
+	}
+
+	return req, nil
 }
 
 func parseModifiers(modifiers string) (*ruleModifiers, error) {
@@ -234,7 +282,10 @@ func (m *Matcher) AddRule(rule string) {
 			}
 		}
 	}
-
+	if modifiers == nil {
+		modifiers = &ruleModifiers{generic: true}
+	}
+	modifiers.rule = rule
 	if len(tokens) == 0 {
 		return
 	}
@@ -249,7 +300,7 @@ func (m *Matcher) AddRule(rule string) {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
 	}
-	node.modifiers = modifiers
+	node.modifiers = append(node.modifiers, modifiers)
 }
 
 // AddRemoteFilters parses the rules files at the given URLs and adds them to
@@ -280,30 +331,53 @@ func (m *Matcher) AddRemoteFilters(urls []string) error {
 	return nil
 }
 
-// Match returns true if the given URL matches any of the rules.
-// It expects the URL to be in the fully qualified form.
-func (m *Matcher) Match(url string) bool {
+func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *http.Request, endRes *http.Response) {
+	defer func() {
+		if endRes != nil {
+			log.Printf("matched %s -> %s", req.URL.Hostname(), endRes.Status)
+		}
+	}()
+
+	host := req.URL.Hostname()
+	urlWithoutPort := url.URL{
+		Scheme:   req.URL.Scheme,
+		Host:     host,
+		Path:     req.URL.Path,
+		RawQuery: req.URL.RawQuery,
+		Fragment: req.URL.Fragment,
+	}
+
+	url := urlWithoutPort.String()
 	// address root -> hostname root -> domain -> etc.
 	tokens := tokenize(url)
 
 	// address root
 	if match, remaingTokens := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).match(tokens); match != nil && len(remaingTokens) == 0 {
-		return true
+		req, resp := match.handleRequest(req)
+		if resp != nil {
+			return req, resp
+		}
 	}
 	if match, _ := m.root.match(tokens); match != nil {
-		return true
+		req, resp := match.handleRequest(req)
+		if resp != nil {
+			return req, resp
+		}
 	}
 	if len(tokens) == 0 {
-		return false
+		return req, nil
 	}
 	tokens = tokens[1:]
 
 	// protocol separator
 	if match, _ := m.root.match(tokens); match != nil {
-		return true
+		req, resp := match.handleRequest(req)
+		if resp != nil {
+			return req, resp
+		}
 	}
 	if len(tokens) == 0 {
-		return false
+		return req, nil
 	}
 	tokens = tokens[1:]
 
@@ -324,7 +398,7 @@ func (m *Matcher) Match(url string) bool {
 	// hostname root
 	hostnameRootNode := m.root.findChild(nodeKey{kind: nodeKindHostnameRoot})
 	if hostnameRootNode != nil && hostnameMatcher(hostnameRootNode, tokens) {
-		return true
+		return req, nil
 	}
 
 	// domain segments
@@ -334,11 +408,17 @@ func (m *Matcher) Match(url string) bool {
 		}
 		if tokens[0] != "." {
 			if match, _ := m.root.findChild(nodeKey{kind: nodeKindDomain}).match(tokens); match != nil {
-				return true
+				req, resp := match.handleRequest(req)
+				if resp != nil {
+					return req, resp
+				}
 			}
 		}
 		if match, _ := m.root.match(tokens); match != nil {
-			return true
+			req, resp := match.handleRequest(req)
+			if resp != nil {
+				return req, resp
+			}
 		}
 		tokens = tokens[1:]
 	}
@@ -347,12 +427,15 @@ func (m *Matcher) Match(url string) bool {
 	// TODO: handle query parameters, etc.
 	for len(tokens) > 0 {
 		if match, _ := m.root.findChild(nodeKey{kind: nodeKindExactMatch}).match(tokens); match != nil {
-			return true
+			res, resp := match.handleRequest(req)
+			if resp != nil {
+				return res, resp
+			}
 		}
 		tokens = tokens[1:]
 	}
 
-	return false
+	return req, nil
 }
 
 var (
