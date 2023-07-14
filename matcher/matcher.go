@@ -81,7 +81,7 @@ func (n *node) match(tokens []string) (*node, []string) {
 	if n == nil {
 		return nil, nil
 	}
-	log.Printf("matching %s, current node: children length=%d; modifiers length=%d", strings.Join(tokens, "|"), len(n.children), len(n.modifiers))
+	// log.Printf("matching %s, current node: children length=%d; modifiers length=%d", strings.Join(tokens, "|"), len(n.children), len(n.modifiers))
 	if n.modifiers != nil {
 		return n, tokens
 	}
@@ -104,6 +104,45 @@ func (n *node) match(tokens []string) (*node, []string) {
 	}
 
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
+}
+
+func (n *node) traverseAndHandleReq(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) (*http.Request, *http.Response) {
+	if n == nil {
+		return nil, nil
+	}
+	if shouldUseNode == nil {
+		shouldUseNode = func(n *node, tokens []string) bool {
+			return true
+		}
+	}
+	if len(tokens) == 0 {
+		// end of an address is also accepted as a separator
+		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
+		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil && shouldUseNode(separator, tokens) {
+			return separator.handleRequest(req)
+		}
+		return nil, nil
+	}
+	if reSeparator.MatchString(tokens[0]) {
+		if match, remainingTokens := n.findChild(nodeKey{kind: nodeKindSeparator}).match(tokens[1:]); match != nil && match.modifiers != nil && shouldUseNode(match, remainingTokens) {
+			return match.handleRequest(req)
+		}
+	}
+	if wildcard := n.findChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
+		if match, remainingTokens := wildcard.match(tokens[1:]); match != nil && match.modifiers != nil && shouldUseNode(match, remainingTokens) {
+			return match.handleRequest(req)
+		}
+	}
+	if tokens[0] == "yadro" {
+		log.Printf("yadro: %+v", n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}))
+	}
+	if tokens[0] == "." {
+		log.Printf("dot: %+v", n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}))
+	}
+	if tokens[0] == "ru" {
+		log.Printf("ru: %+v", n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}))
+	}
+	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).traverseAndHandleReq(req, tokens[1:], shouldUseNode)
 }
 
 func (n *node) handleRequest(req *http.Request) (*http.Request, *http.Response) {
@@ -286,9 +325,6 @@ func (m *Matcher) AddRule(rule string) {
 		modifiers = &ruleModifiers{generic: true}
 	}
 	modifiers.rule = rule
-	if len(tokens) == 0 {
-		return
-	}
 
 	node := m.root.findOrAddChild(nodeKey{kind: rootKeyKind})
 	for _, token := range tokens {
@@ -323,6 +359,10 @@ func (m *Matcher) AddRemoteFilters(urls []string) error {
 				log.Printf("failed to read line from rules file %s: %v", url, err)
 			}
 			line = line[:len(line)-1] // strip the trailing newline
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
 			m.AddRule(line)
 			c++
 		}
@@ -352,53 +392,44 @@ func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *
 	tokens := tokenize(url)
 
 	// address root
-	if match, remaingTokens := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).match(tokens); match != nil && len(remaingTokens) == 0 {
-		req, resp := match.handleRequest(req)
-		if resp != nil {
-			return req, resp
-		}
+	if req, resp := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).traverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
+		return len(t) == 0
+	}); resp != nil {
+		return req, resp
 	}
-	if match, _ := m.root.match(tokens); match != nil {
-		req, resp := match.handleRequest(req)
-		if resp != nil {
-			return req, resp
-		}
-	}
-	if len(tokens) == 0 {
-		return req, nil
+
+	if req, resp := m.root.traverseAndHandleReq(req, tokens, nil); resp != nil {
+		return req, resp
 	}
 	tokens = tokens[1:]
 
 	// protocol separator
-	if match, _ := m.root.match(tokens); match != nil {
-		req, resp := match.handleRequest(req)
-		if resp != nil {
-			return req, resp
-		}
-	}
-	if len(tokens) == 0 {
-		return req, nil
+	if req, resp := m.root.traverseAndHandleReq(req, tokens, nil); resp != nil {
+		return req, resp
 	}
 	tokens = tokens[1:]
 
-	var hostnameMatcher func(*node, []string) bool
-	hostnameMatcher = func(node *node, tokens []string) bool {
-		if match, remainingTokens := node.match(tokens); match != nil {
-			if len(remainingTokens) == 0 || remainingTokens[0] != "." {
-				// hostname matched the entire hostname
-				return true
-			}
-			if remainingTokens[0] == "." {
-				return hostnameMatcher(match.findChild(nodeKey{kind: nodeKindExactMatch, token: "."}), remainingTokens[1:])
-			}
+	var hostnameMatcher func(*node, []string) (*http.Request, *http.Response)
+	hostnameMatcher = func(rootNode *node, tokens []string) (*http.Request, *http.Response) {
+		if req, resp := rootNode.traverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
+			return len(t) == 0 || t[0] != "."
+		}); resp != nil {
+			return req, resp
 		}
-		return false
+		if len(tokens) > 2 && tokens[1] == "." {
+			// try to match the next domain segment
+			tokens = tokens[2:]
+			return hostnameMatcher(rootNode, tokens)
+		}
+		return nil, nil
 	}
 
 	// hostname root
 	hostnameRootNode := m.root.findChild(nodeKey{kind: nodeKindHostnameRoot})
-	if hostnameRootNode != nil && hostnameMatcher(hostnameRootNode, tokens) {
-		return req, nil
+	if hostnameRootNode != nil {
+		if req, resp := hostnameMatcher(hostnameRootNode, tokens); resp != nil {
+			return req, resp
+		}
 	}
 
 	// domain segments
