@@ -148,14 +148,6 @@ func (n *node) handleRequest(req *http.Request) (*http.Request, *http.Response) 
 	return req, nil
 }
 
-type modifierType int
-
-const (
-	modifierTypeNone modifierType = iota
-	modifierTypeInclude
-	modifierTypeExclude
-)
-
 // ruleModifiers represents modifiers of a rule.
 type ruleModifiers struct {
 	rule    string
@@ -169,13 +161,13 @@ type ruleModifiers struct {
 	// method     string
 	// content type modifiers
 	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#content-type-modifiers
-	document   modifierType
-	font       modifierType
-	image      modifierType
-	media      modifierType
-	script     modifierType
-	stylesheet modifierType
-	other      modifierType
+	document   bool
+	font       bool
+	image      bool
+	media      bool
+	script     bool
+	stylesheet bool
+	other      bool
 }
 
 func (m *ruleModifiers) handleRequest(req *http.Request) (*http.Request, *http.Response) {
@@ -186,7 +178,7 @@ func (m *ruleModifiers) handleRequest(req *http.Request) (*http.Request, *http.R
 		return req, blockResponse
 	}
 
-	modifiers := map[string]modifierType{
+	modifiers := map[string]bool{
 		"document": m.document,
 		"font":     m.font,
 		"image":    m.image,
@@ -198,11 +190,11 @@ func (m *ruleModifiers) handleRequest(req *http.Request) (*http.Request, *http.R
 
 	dest := req.Header.Get("Sec-Fetch-Dest")
 	if val, ok := modifiers[dest]; ok {
-		if val == modifierTypeInclude {
+		if val {
 			log.Printf("blocking with rule %s", m.rule)
 			return req, blockResponse
 		}
-	} else if m.other == modifierTypeInclude {
+	} else if m.other {
 		log.Printf("blocking with rule %s", m.rule)
 		return req, blockResponse
 	}
@@ -211,42 +203,53 @@ func (m *ruleModifiers) handleRequest(req *http.Request) (*http.Request, *http.R
 }
 
 func parseModifiers(modifiers string) (*ruleModifiers, error) {
-	if modifiers == "" {
-		return nil, nil
-	}
-
 	m := &ruleModifiers{}
+
+	contentTypeInversed := false
 	for _, modifier := range strings.Split(modifiers, ",") {
 		if strings.ContainsRune(modifier, '=') {
 			// TODO: handle key=value modifiers
 			return nil, fmt.Errorf("key=value modifiers are not supported")
 		}
-		t := modifierTypeInclude
+		if contentTypeInversed && modifier[0] != '~' {
+			return nil, fmt.Errorf("mixing ~ and non-~ modifiers")
+		}
 		if modifier[0] == '~' {
-			t = modifierTypeExclude
+			contentTypeInversed = true
 			modifier = modifier[1:]
 		}
 		switch modifier {
 		case "document":
-			m.document = t
+			m.document = true
 		case "font":
-			m.font = t
+			m.font = true
 		case "image":
-			m.image = t
+			m.image = true
 		case "media":
-			m.media = t
+			m.media = true
 		case "other":
-			m.other = t
+			m.other = true
 		case "script":
-			m.script = t
+			m.script = true
 		case "stylesheet":
-			m.stylesheet = t
+			m.stylesheet = true
 		default:
 			// first, do no harm
 			// in case an unknown modifier is encountered, ignore the whole rule
 			return nil, fmt.Errorf("unknown modifier %q", modifier)
 		}
 	}
+
+	if contentTypeInversed {
+		m.document = !m.document
+		m.font = !m.font
+		m.image = !m.image
+		m.media = !m.media
+		m.other = !m.other
+		m.script = !m.script
+		m.stylesheet = !m.stylesheet
+	}
+
 	return m, nil
 }
 
