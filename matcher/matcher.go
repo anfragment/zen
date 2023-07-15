@@ -81,7 +81,6 @@ func (n *node) match(tokens []string) (*node, []string) {
 	if n == nil {
 		return nil, nil
 	}
-	// log.Printf("matching %s, current node: children length=%d; modifiers length=%d", strings.Join(tokens, "|"), len(n.children), len(n.modifiers))
 	if n.modifiers != nil {
 		return n, tokens
 	}
@@ -91,7 +90,6 @@ func (n *node) match(tokens []string) (*node, []string) {
 		}
 		return nil, nil
 	}
-	// TODO: return multiple matches if they exist
 	if reSeparator.MatchString(tokens[0]) {
 		if match, _ := n.findChild(nodeKey{kind: nodeKindSeparator}).match(tokens[1:]); match != nil {
 			return match, tokens
@@ -115,6 +113,9 @@ func (n *node) traverseAndHandleReq(req *http.Request, tokens []string, shouldUs
 			return true
 		}
 	}
+	if n.modifiers != nil && shouldUseNode(n, tokens) {
+		return n.handleRequest(req)
+	}
 	if len(tokens) == 0 {
 		// end of an address is also accepted as a separator
 		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
@@ -133,15 +134,7 @@ func (n *node) traverseAndHandleReq(req *http.Request, tokens []string, shouldUs
 			return match.handleRequest(req)
 		}
 	}
-	if tokens[0] == "yadro" {
-		log.Printf("yadro: %+v", n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}))
-	}
-	if tokens[0] == "." {
-		log.Printf("dot: %+v", n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}))
-	}
-	if tokens[0] == "ru" {
-		log.Printf("ru: %+v", n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}))
-	}
+
 	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).traverseAndHandleReq(req, tokens[1:], shouldUseNode)
 }
 
@@ -274,17 +267,14 @@ func NewMatcher() *Matcher {
 }
 
 var (
-	// hostnameCG is a capture group for a hostname.
-	hostnameCG  = `((?:[\da-z][\da-z_-]*\.)+[\da-z-]*[a-z])`
-	urlCG       = `(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*))`
 	modifiersCG = `(?:\$(.+))?`
-	// Ignore comments, cosmetic rules, [Adblock Plus 2.0]-style, and, temporarily, exception rules.
-	reIgnoreRule           = regexp.MustCompile(`^(?:!|#|\[|@@)|(##|#\?#|#\$#|#@#)`)
-	reHosts                = regexp.MustCompile(fmt.Sprintf(`^(?:0\.0\.0\.0|127\.0\.0\.1) %s`, hostnameCG))
-	reHostsIgnore          = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
-	reDomainName           = regexp.MustCompile(fmt.Sprintf(`^\|\|%s\^%s$`, hostnameCG, modifiersCG))
-	reExactAddress         = regexp.MustCompile(fmt.Sprintf(`^\|%s%s$`, urlCG, modifiersCG))
-	reAddressPartsModifier = regexp.MustCompile(fmt.Sprintf(`%s$`, modifiersCG))
+	// Ignore comments, cosmetic rules, [Adblock Plus 2.0]-style headers, and, temporarily, exception rules.
+	reIgnoreRule   = regexp.MustCompile(`^(?:!|#|\[|@@)|(##|#\?#|#\$#|#@#)`)
+	reHosts        = regexp.MustCompile(`^(?:0\.0\.0\.0|127\.0\.0\.1) (.+)`)
+	reHostsIgnore  = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
+	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|(.+?)%s$`, modifiersCG))
+	reExactAddress = regexp.MustCompile(fmt.Sprintf(`^\|(.+?)%s$`, modifiersCG))
+	reGeneric      = regexp.MustCompile(fmt.Sprintf(`^(.+?)%s$`, modifiersCG))
 )
 
 func (m *Matcher) AddRule(rule string) {
@@ -293,9 +283,8 @@ func (m *Matcher) AddRule(rule string) {
 	}
 
 	var tokens []string
-	var modifiers *ruleModifiers
-	var err error
-	rootKeyKind := nodeKindExactMatch
+	var modifiersStr string
+	var rootKeyKind nodeKind
 	if host := reHosts.FindStringSubmatch(rule); host != nil {
 		if !reHostsIgnore.MatchString(host[1]) {
 			rootKeyKind = nodeKindHostnameRoot
@@ -304,29 +293,38 @@ func (m *Matcher) AddRule(rule string) {
 	} else if match := reDomainName.FindStringSubmatch(rule); match != nil {
 		rootKeyKind = nodeKindDomain
 		tokens = tokenize(match[1])
-		if modifiers, err = parseModifiers(match[2]); err != nil {
-			return
-		}
+		modifiersStr = match[2]
 	} else if match := reExactAddress.FindStringSubmatch(rule); match != nil {
 		rootKeyKind = nodeKindAddressRoot
 		tokens = tokenize(match[1])
-		if modifiers, err = parseModifiers(match[2]); err != nil {
+		modifiersStr = match[2]
+	} else if match := reGeneric.FindStringSubmatch(rule); match != nil {
+		rootKeyKind = nodeKindExactMatch
+		tokens = tokenize(match[1])
+		modifiersStr = match[2]
+	} else {
+		log.Printf("unknown rule %q", rule)
+		return
+	}
+
+	var modifiers *ruleModifiers
+	if modifiersStr != "" {
+		var err error
+		modifiers, err = parseModifiers(modifiersStr)
+		if err != nil {
 			return
 		}
 	} else {
-		tokens = tokenize(rule)
-		if match := reAddressPartsModifier.FindStringSubmatch(rule); match != nil {
-			if modifiers, err = parseModifiers(match[1]); err != nil {
-				return
-			}
-		}
-	}
-	if modifiers == nil {
 		modifiers = &ruleModifiers{generic: true}
 	}
 	modifiers.rule = rule
 
-	node := m.root.findOrAddChild(nodeKey{kind: rootKeyKind})
+	var node *node
+	if rootKeyKind == nodeKindExactMatch {
+		node = m.root
+	} else {
+		node = m.root.findOrAddChild(nodeKey{kind: rootKeyKind})
+	}
 	for _, token := range tokens {
 		if token == "^" {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindSeparator})
@@ -358,7 +356,6 @@ func (m *Matcher) AddRemoteFilters(urls []string) error {
 				}
 				log.Printf("failed to read line from rules file %s: %v", url, err)
 			}
-			line = line[:len(line)-1] // strip the trailing newline
 			line = strings.TrimSpace(line)
 			if line == "" {
 				continue
@@ -374,7 +371,7 @@ func (m *Matcher) AddRemoteFilters(urls []string) error {
 func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *http.Request, endRes *http.Response) {
 	defer func() {
 		if endRes != nil {
-			log.Printf("matched %s -> %s", req.URL.Hostname(), endRes.Status)
+			log.Printf("blocked %s", req.URL)
 		}
 	}()
 
@@ -438,18 +435,12 @@ func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *
 			break
 		}
 		if tokens[0] != "." {
-			if match, _ := m.root.findChild(nodeKey{kind: nodeKindDomain}).match(tokens); match != nil {
-				req, resp := match.handleRequest(req)
-				if resp != nil {
-					return req, resp
-				}
-			}
-		}
-		if match, _ := m.root.match(tokens); match != nil {
-			req, resp := match.handleRequest(req)
-			if resp != nil {
+			if req, resp := m.root.findChild(nodeKey{kind: nodeKindDomain}).traverseAndHandleReq(req, tokens, nil); resp != nil {
 				return req, resp
 			}
+		}
+		if req, resp := m.root.traverseAndHandleReq(req, tokens, nil); resp != nil {
+			return req, resp
 		}
 		tokens = tokens[1:]
 	}
@@ -457,11 +448,8 @@ func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *
 	// rest of the URL
 	// TODO: handle query parameters, etc.
 	for len(tokens) > 0 {
-		if match, _ := m.root.findChild(nodeKey{kind: nodeKindExactMatch}).match(tokens); match != nil {
-			res, resp := match.handleRequest(req)
-			if resp != nil {
-				return res, resp
-			}
+		if req, resp := m.root.traverseAndHandleReq(req, tokens, nil); resp != nil {
+			return req, resp
 		}
 		tokens = tokens[1:]
 	}
