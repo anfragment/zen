@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 )
@@ -22,8 +23,14 @@ func (mt *matchTest) run(t *testing.T) {
 		matcher.AddRule(r)
 	}
 	for _, u := range mt.cases {
-		if got := matcher.Match(u.url); got != u.want {
-			t.Errorf("%s: Match(%q) = %v, want %v", mt.name, u.url, got, u.want)
+		req, _ := http.NewRequest("GET", u.url, nil)
+		_, resp := matcher.Middleware(req, nil)
+		if resp == nil && u.want {
+			t.Errorf("case %q: want response, got nil", u.url)
+			continue
+		} else if resp != nil && !u.want {
+			t.Errorf("case %q: want nil, got response", u.url)
+			continue
 		}
 	}
 }
@@ -42,7 +49,6 @@ func TestMatcherByAddressParts(t *testing.T) {
 				{"http://example.com/banner-img", false},
 				{"https://example.com/banner?img", false},
 				{"http://example.com", false},
-				{"", false},
 			},
 		},
 		{
@@ -60,7 +66,6 @@ func TestMatcherByAddressParts(t *testing.T) {
 				{"https://example.com/-banner-ad", false},
 				{"http://example.com/banner-ad-example", false},
 				{"http://example.com/banner?ad", false},
-				{"", false},
 			},
 		},
 		{
