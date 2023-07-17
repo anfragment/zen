@@ -35,18 +35,20 @@ type ruleModifiers struct {
 }
 
 func (m *ruleModifiers) HandleRequest(req *http.Request) (*http.Request, *http.Response) {
-	shouldBlock := false
+	blockResponse := goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
+	if m.generic {
+		return req, blockResponse
+	}
 
 	if len(m.domain) > 0 {
 		referer := req.Header.Get("Referer")
 		if url, err := url.Parse(referer); err == nil {
 			hostname := url.Hostname()
 			if !m.domain.MatchDomain(hostname) {
-				shouldBlock = true
+				return req, nil
 			}
 		}
 	}
-
 	if m.contentType {
 		modifiers := map[string]bool{
 			"document": m.document,
@@ -59,19 +61,19 @@ func (m *ruleModifiers) HandleRequest(req *http.Request) (*http.Request, *http.R
 		}
 
 		dest := req.Header.Get("Sec-Fetch-Dest")
-		if val, ok := modifiers[dest]; ok {
-			if !val {
+		if dest == "" {
+			dest = "document"
+		}
+		if block, ok := modifiers[dest]; ok {
+			if !block {
 				return req, nil
 			}
 		} else if !m.other {
-			log.Printf("blocking with rule %s", m.rule)
 			return req, nil
 		}
 	}
-	if !m.generic {
-		return req, nil
-	}
 
+	log.Printf("blocked with rule %s", m.rule)
 	return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
 }
 
@@ -199,6 +201,7 @@ func parseDomainModifiers(rule string) (domainModifiers, error) {
 		} else {
 			m.regular = entry
 		}
+		modifiers = append(modifiers, m)
 	}
 	return modifiers, nil
 }
