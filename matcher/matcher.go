@@ -59,7 +59,7 @@ func (n *node) findOrAddChild(key nodeKey) *node {
 	return child
 }
 
-func (n *node) findChild(key nodeKey) *node {
+func (n *node) FindChild(key nodeKey) *node {
 	n.childrenMu.RLock()
 	child := n.children[key]
 	n.childrenMu.RUnlock()
@@ -73,11 +73,11 @@ var (
 	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9]|[_\-.%]`)
 )
 
-// match returns true if the node's subtree matches the given tokens.
+// Match returns true if the node's subtree matches the given tokens.
 //
 // If a matching rule is found, it is returned along with the remaining tokens.
 // If no matching rule is found, nil is returned.
-func (n *node) match(tokens []string) (*node, []string) {
+func (n *node) Match(tokens []string) (*node, []string) {
 	if n == nil {
 		return nil, nil
 	}
@@ -85,26 +85,26 @@ func (n *node) match(tokens []string) (*node, []string) {
 		return n, tokens
 	}
 	if len(tokens) == 0 {
-		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil {
+		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil {
 			return separator, tokens
 		}
 		return nil, nil
 	}
 	if reSeparator.MatchString(tokens[0]) {
-		if match, _ := n.findChild(nodeKey{kind: nodeKindSeparator}).match(tokens[1:]); match != nil {
+		if match, _ := n.FindChild(nodeKey{kind: nodeKindSeparator}).Match(tokens[1:]); match != nil {
 			return match, tokens
 		}
 	}
-	if wildcard := n.findChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
-		if match, _ := wildcard.match(tokens[1:]); match != nil {
+	if wildcard := n.FindChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
+		if match, _ := wildcard.Match(tokens[1:]); match != nil {
 			return match, tokens
 		}
 	}
 
-	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).match(tokens[1:])
+	return n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).Match(tokens[1:])
 }
 
-func (n *node) traverseAndHandleReq(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) (*http.Request, *http.Response) {
+func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) (*http.Request, *http.Response) {
 	if n == nil {
 		return nil, nil
 	}
@@ -114,143 +114,38 @@ func (n *node) traverseAndHandleReq(req *http.Request, tokens []string, shouldUs
 		}
 	}
 	if n.modifiers != nil && shouldUseNode(n, tokens) {
-		return n.handleRequest(req)
+		return n.HandleRequest(req)
 	}
 	if len(tokens) == 0 {
 		// end of an address is also accepted as a separator
 		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
-		if separator := n.findChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil && shouldUseNode(separator, tokens) {
-			return separator.handleRequest(req)
+		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.modifiers != nil && shouldUseNode(separator, tokens) {
+			return separator.HandleRequest(req)
 		}
 		return nil, nil
 	}
 	if reSeparator.MatchString(tokens[0]) {
-		if match, remainingTokens := n.findChild(nodeKey{kind: nodeKindSeparator}).match(tokens[1:]); match != nil && match.modifiers != nil && shouldUseNode(match, remainingTokens) {
-			return match.handleRequest(req)
+		if match, remainingTokens := n.FindChild(nodeKey{kind: nodeKindSeparator}).Match(tokens[1:]); match != nil && match.modifiers != nil && shouldUseNode(match, remainingTokens) {
+			return match.HandleRequest(req)
 		}
 	}
-	if wildcard := n.findChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
-		if match, remainingTokens := wildcard.match(tokens[1:]); match != nil && match.modifiers != nil && shouldUseNode(match, remainingTokens) {
-			return match.handleRequest(req)
+	if wildcard := n.FindChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
+		if match, remainingTokens := wildcard.Match(tokens[1:]); match != nil && match.modifiers != nil && shouldUseNode(match, remainingTokens) {
+			return match.HandleRequest(req)
 		}
 	}
 
-	return n.findChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).traverseAndHandleReq(req, tokens[1:], shouldUseNode)
+	return n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).TraverseAndHandleReq(req, tokens[1:], shouldUseNode)
 }
 
-func (n *node) handleRequest(req *http.Request) (*http.Request, *http.Response) {
+func (n *node) HandleRequest(req *http.Request) (*http.Request, *http.Response) {
 	for _, modifier := range n.modifiers {
-		req, resp := modifier.handleRequest(req)
+		req, resp := modifier.HandleRequest(req)
 		if resp != nil {
 			return req, resp
 		}
 	}
 	return req, nil
-}
-
-// ruleModifiers represents modifiers of a rule.
-type ruleModifiers struct {
-	rule    string
-	generic bool
-	// basic modifiers
-	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-basic-modifiers
-	// domain     string
-	// thirdParty optionType
-	// header     string
-	// important  optionType
-	// method     string
-	// content type modifiers
-	// https://adguard.com/kb/general/ad-filtering/create-own-filters/#content-type-modifiers
-	document   bool
-	font       bool
-	image      bool
-	media      bool
-	script     bool
-	stylesheet bool
-	other      bool
-}
-
-func (m *ruleModifiers) handleRequest(req *http.Request) (*http.Request, *http.Response) {
-	blockResponse := goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
-
-	if m.generic {
-		log.Printf("blocking with rule %s", m.rule)
-		return req, blockResponse
-	}
-
-	modifiers := map[string]bool{
-		"document": m.document,
-		"font":     m.font,
-		"image":    m.image,
-		"audio":    m.media,
-		"video":    m.media,
-		"script":   m.script,
-		"style":    m.stylesheet,
-	}
-
-	dest := req.Header.Get("Sec-Fetch-Dest")
-	if val, ok := modifiers[dest]; ok {
-		if val {
-			log.Printf("blocking with rule %s", m.rule)
-			return req, blockResponse
-		}
-	} else if m.other {
-		log.Printf("blocking with rule %s", m.rule)
-		return req, blockResponse
-	}
-
-	return req, nil
-}
-
-func parseModifiers(modifiers string) (*ruleModifiers, error) {
-	m := &ruleModifiers{}
-
-	contentTypeInversed := false
-	for _, modifier := range strings.Split(modifiers, ",") {
-		if strings.ContainsRune(modifier, '=') {
-			// TODO: handle key=value modifiers
-			return nil, fmt.Errorf("key=value modifiers are not supported")
-		}
-		if contentTypeInversed && modifier[0] != '~' {
-			return nil, fmt.Errorf("mixing ~ and non-~ modifiers")
-		}
-		if modifier[0] == '~' {
-			contentTypeInversed = true
-			modifier = modifier[1:]
-		}
-		switch modifier {
-		case "document":
-			m.document = true
-		case "font":
-			m.font = true
-		case "image":
-			m.image = true
-		case "media":
-			m.media = true
-		case "other":
-			m.other = true
-		case "script":
-			m.script = true
-		case "stylesheet":
-			m.stylesheet = true
-		default:
-			// first, do no harm
-			// in case an unknown modifier is encountered, ignore the whole rule
-			return nil, fmt.Errorf("unknown modifier %q", modifier)
-		}
-	}
-
-	if contentTypeInversed {
-		m.document = !m.document
-		m.font = !m.font
-		m.image = !m.image
-		m.media = !m.media
-		m.other = !m.other
-		m.script = !m.script
-		m.stylesheet = !m.stylesheet
-	}
-
-	return m, nil
 }
 
 // Matcher is trie-based matcher for URLs that is capable of parsing
@@ -392,26 +287,26 @@ func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *
 	tokens := tokenize(url)
 
 	// address root
-	if req, resp := m.root.findChild(nodeKey{kind: nodeKindAddressRoot}).traverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
+	if req, resp := m.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
 		return len(t) == 0
 	}); resp != nil {
 		return req, resp
 	}
 
-	if req, resp := m.root.traverseAndHandleReq(req, tokens, nil); resp != nil {
+	if req, resp := m.root.TraverseAndHandleReq(req, tokens, nil); resp != nil {
 		return req, resp
 	}
 	tokens = tokens[1:]
 
 	// protocol separator
-	if req, resp := m.root.traverseAndHandleReq(req, tokens, nil); resp != nil {
+	if req, resp := m.root.TraverseAndHandleReq(req, tokens, nil); resp != nil {
 		return req, resp
 	}
 	tokens = tokens[1:]
 
 	var hostnameMatcher func(*node, []string) (*http.Request, *http.Response)
 	hostnameMatcher = func(rootNode *node, tokens []string) (*http.Request, *http.Response) {
-		if req, resp := rootNode.traverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
+		if req, resp := rootNode.TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
 			return len(t) == 0 || t[0] != "."
 		}); resp != nil {
 			return req, resp
@@ -425,7 +320,7 @@ func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *
 	}
 
 	// hostname root
-	hostnameRootNode := m.root.findChild(nodeKey{kind: nodeKindHostnameRoot})
+	hostnameRootNode := m.root.FindChild(nodeKey{kind: nodeKindHostnameRoot})
 	if hostnameRootNode != nil {
 		if req, resp := hostnameMatcher(hostnameRootNode, tokens); resp != nil {
 			return req, resp
@@ -438,11 +333,11 @@ func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *
 			break
 		}
 		if tokens[0] != "." {
-			if req, resp := m.root.findChild(nodeKey{kind: nodeKindDomain}).traverseAndHandleReq(req, tokens, nil); resp != nil {
+			if req, resp := m.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseAndHandleReq(req, tokens, nil); resp != nil {
 				return req, resp
 			}
 		}
-		if req, resp := m.root.traverseAndHandleReq(req, tokens, nil); resp != nil {
+		if req, resp := m.root.TraverseAndHandleReq(req, tokens, nil); resp != nil {
 			return req, resp
 		}
 		tokens = tokens[1:]
@@ -451,7 +346,7 @@ func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *
 	// rest of the URL
 	// TODO: handle query parameters, etc.
 	for len(tokens) > 0 {
-		if req, resp := m.root.traverseAndHandleReq(req, tokens, nil); resp != nil {
+		if req, resp := m.root.TraverseAndHandleReq(req, tokens, nil); resp != nil {
 			return req, resp
 		}
 		tokens = tokens[1:]
