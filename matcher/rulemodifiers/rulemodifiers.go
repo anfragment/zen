@@ -51,7 +51,7 @@ func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
 				ruleType = ruleType[1:]
 			}
 			switch ruleType {
-			case "document", "font", "image", "media", "object", "other", "ping", "script", "stylesheet", "subdocument", "xmlhttprequest":
+			case "document", "xmlhttprequest", "font", "subdocument", "image", "object", "script", "stylesheet", "media", "websocket":
 				ctm := &contentTypeModifier{}
 				if err := ctm.Parse(ruleType); err != nil {
 					return err
@@ -67,9 +67,9 @@ func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
 func (rm *RuleModifiers) HandleRequest(req *http.Request) (*http.Request, *http.Response) {
 	for _, modifier := range rm.modifiers {
 		if !modifier.ShouldBlock(req) {
-			log.Printf("rule %s matched", rm.rule)
-			return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
+			return req, nil
 		}
 	}
-	return req, nil
+	log.Printf("rule %s matched", rm.rule)
+	return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
 }
