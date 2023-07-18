@@ -9,17 +9,17 @@ import (
 )
 
 type domainModifier struct {
-	entries []*domainModifierEntry
+	entries []domainModifierEntry
 }
 
 func (m *domainModifier) Parse(modifier string) error {
 	entries := strings.Split(modifier, "|")
-	m.entries = make([]*domainModifierEntry, 0, len(entries))
+	m.entries = make([]domainModifierEntry, 0, len(entries))
 	for _, entry := range entries {
 		if entry == "" {
 			return fmt.Errorf("empty domain modifier entry")
 		}
-		dme := &domainModifierEntry{}
+		dme := domainModifierEntry{}
 		if err := dme.Parse(entry); err != nil {
 			return err
 		}

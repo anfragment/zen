@@ -20,7 +20,7 @@ type matchTest struct {
 func (mt *matchTest) run(t *testing.T) {
 	matcher := NewMatcher()
 	for _, r := range mt.rules {
-		matcher.AddRule(r)
+		matcher.addRule(r)
 	}
 	for _, u := range mt.cases {
 		req, _ := http.NewRequest("GET", u.url, nil)

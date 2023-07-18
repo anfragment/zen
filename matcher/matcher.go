@@ -176,7 +176,7 @@ var (
 	reGeneric      = regexp.MustCompile(fmt.Sprintf(`^(.+?)%s$`, modifiersCG))
 )
 
-func (m *Matcher) AddRule(rule string) {
+func (m *Matcher) addRule(rule string) {
 	if reIgnoreRule.MatchString(rule) {
 		return
 	}
@@ -208,7 +208,7 @@ func (m *Matcher) AddRule(rule string) {
 
 	modifiers := &rulemodifiers.RuleModifiers{}
 	if err := modifiers.Parse(rule, modifiersStr); err != nil {
-		log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
+		// log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
 		return
 	}
 
@@ -230,35 +230,18 @@ func (m *Matcher) AddRule(rule string) {
 	node.modifiers = append(node.modifiers, modifiers)
 }
 
-// AddRemoteFilters parses the rules files at the given URLs and adds them to
-// the filter.
-func (m *Matcher) AddRemoteFilters(urls []string) error {
-	c := 0
-	for _, url := range urls {
-		file, err := http.Get(url)
-		if err != nil {
-			log.Printf("failed to download rules file %s: %v", url, err)
+func (m *Matcher) AddRules(reader io.Reader) int {
+	var count int
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		rule := strings.TrimSpace(scanner.Text())
+		if rule == "" {
+			continue
 		}
-		defer file.Body.Close()
-		reader := bufio.NewReader(file.Body)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				log.Printf("failed to read line from rules file %s: %v", url, err)
-			}
-			line = strings.TrimSpace(line)
-			if line == "" {
-				continue
-			}
-			m.AddRule(line)
-			c++
-		}
+		m.addRule(rule)
+		count++
 	}
-	log.Printf("added %d rules", c)
-	return nil
+	return count
 }
 
 func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (endReq *http.Request, endRes *http.Response) {

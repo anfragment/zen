@@ -42,6 +42,12 @@ func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
 					return err
 				}
 				rm.modifiers = append(rm.modifiers, dm)
+			case "method":
+				mm := &methodModifier{}
+				if err := mm.Parse(value); err != nil {
+					return err
+				}
+				rm.modifiers = append(rm.modifiers, mm)
 			default:
 				return fmt.Errorf("unknown modifier %q", rule)
 			}
