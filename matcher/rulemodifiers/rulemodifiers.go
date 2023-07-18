@@ -57,6 +57,14 @@ func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
 					return err
 				}
 				rm.modifiers = append(rm.modifiers, ctm)
+			case "third-party":
+				tpm := &thirdPartyModifier{}
+				if err := tpm.Parse(ruleType); err != nil {
+					return err
+				}
+				rm.modifiers = append(rm.modifiers, tpm)
+			default:
+				return fmt.Errorf("unknown modifier %q", ruleType)
 			}
 		}
 	}
