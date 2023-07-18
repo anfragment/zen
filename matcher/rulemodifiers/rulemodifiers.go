@@ -1,0 +1,75 @@
+package rulemodifiers
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"strings"
+
+	"github.com/elazarl/goproxy"
+)
+
+// RuleModifiers represents modifiers of a rule.
+type RuleModifiers struct {
+	rule      string
+	generic   bool
+	modifiers []modifier
+}
+
+type modifier interface {
+	Parse(modifier string) error
+	ShouldBlock(req *http.Request) bool
+}
+
+func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
+	rm.rule = rule
+	if modifiers == "" {
+		rm.generic = true
+		return nil
+	}
+
+	for _, modifier := range strings.Split(modifiers, ",") {
+		if len(modifier) == 0 {
+			return fmt.Errorf("empty modifier")
+		}
+
+		if eqIndex := strings.IndexByte(modifier, '='); eqIndex != -1 {
+			rule, value := modifier[:eqIndex], modifier[eqIndex+1:]
+			switch rule {
+			case "domain":
+				dm := &domainModifier{}
+				if err := dm.Parse(value); err != nil {
+					return err
+				}
+				rm.modifiers = append(rm.modifiers, dm)
+			default:
+				return fmt.Errorf("unknown modifier %q", rule)
+			}
+		} else {
+			ruleType := modifier
+			if ruleType[0] == '~' {
+				ruleType = ruleType[1:]
+			}
+			switch ruleType {
+			case "document", "font", "image", "media", "object", "other", "ping", "script", "stylesheet", "subdocument", "xmlhttprequest":
+				ctm := &contentTypeModifier{}
+				if err := ctm.Parse(ruleType); err != nil {
+					return err
+				}
+				rm.modifiers = append(rm.modifiers, ctm)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (rm *RuleModifiers) HandleRequest(req *http.Request) (*http.Request, *http.Response) {
+	for _, modifier := range rm.modifiers {
+		if !modifier.ShouldBlock(req) {
+			log.Printf("rule %s matched", rm.rule)
+			return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
+		}
+	}
+	return req, nil
+}

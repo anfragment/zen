@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/anfragment/zen/matcher/rulemodifiers"
 	"github.com/elazarl/goproxy"
 )
 
@@ -39,7 +40,7 @@ type nodeKey struct {
 type node struct {
 	children   map[nodeKey]*node
 	childrenMu sync.RWMutex
-	modifiers  []*ruleModifiers
+	modifiers  []*rulemodifiers.RuleModifiers
 }
 
 func (n *node) findOrAddChild(key nodeKey) *node {
@@ -205,17 +206,11 @@ func (m *Matcher) AddRule(rule string) {
 		return
 	}
 
-	var modifiers *ruleModifiers
-	if modifiersStr != "" {
-		var err error
-		modifiers, err = parseModifiers(modifiersStr)
-		if err != nil {
-			return
-		}
-	} else {
-		modifiers = &ruleModifiers{generic: true}
+	modifiers := &rulemodifiers.RuleModifiers{}
+	if err := modifiers.Parse(rule, modifiersStr); err != nil {
+		log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
+		return
 	}
-	modifiers.rule = rule
 
 	var node *node
 	if rootKeyKind == nodeKindExactMatch {
