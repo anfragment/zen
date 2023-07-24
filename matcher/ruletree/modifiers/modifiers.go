@@ -1,4 +1,4 @@
-package rulemodifiers
+package modifiers
 
 import (
 	"fmt"
@@ -49,7 +49,7 @@ func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
 				}
 				rm.modifiers = append(rm.modifiers, mm)
 			default:
-				return fmt.Errorf("unknown modifier %q", rule)
+				return fmt.Errorf("unknown modifier %s", rule)
 			}
 		} else {
 			ruleType := modifier
@@ -70,7 +70,7 @@ func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
 				}
 				rm.modifiers = append(rm.modifiers, tpm)
 			default:
-				return fmt.Errorf("unknown modifier %q", ruleType)
+				return fmt.Errorf("unknown modifier %s", ruleType)
 			}
 		}
 	}

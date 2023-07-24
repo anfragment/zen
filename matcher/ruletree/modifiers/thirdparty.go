@@ -1,4 +1,4 @@
-package rulemodifiers
+package modifiers
 
 import (
 	"net/http"
