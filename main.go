@@ -20,17 +20,15 @@ func main() {
 		"https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
 		"https://ublockorigin.pages.dev/thirdparties/easyprivacy.txt",
 	}
-	var count int
 	for _, filter := range filters {
 		file, err := http.Get(filter)
 		if err != nil {
 			log.Fatalf("failed to get filter %s: %v", filter, err)
 		}
 		defer file.Body.Close()
-		count += matcher.AddRules(file.Body)
+		matcher.AddRules(file.Body)
 	}
 
-	log.Printf("added %d rules", count)
 	proxy := NewProxy(matcher)
 	err := proxy.ConfigureTLS(*caCertFile, *caKeyFile)
 	if err != nil {

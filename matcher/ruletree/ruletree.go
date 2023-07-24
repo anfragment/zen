@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/anfragment/zen/matcher/ruletree/modifiers"
+	"github.com/anfragment/zen/matcher/ruletree/rule"
 	"github.com/anfragment/zen/matcher/ruletree/tokenize"
 	"github.com/elazarl/goproxy"
 )
@@ -36,28 +36,28 @@ func NewRuleTree() *RuleTree {
 	}
 }
 
-func (rt *RuleTree) AddRule(rule string) error {
-	if reIgnoreRule.MatchString(rule) {
+func (rt *RuleTree) AddRule(r string) error {
+	if reIgnoreRule.MatchString(r) {
 		return nil
 	}
 
 	var tokens []string
 	var modifiersStr string
 	var rootKeyKind nodeKind
-	if host := reHosts.FindStringSubmatch(rule); host != nil {
+	if host := reHosts.FindStringSubmatch(r); host != nil {
 		if !reHostsIgnore.MatchString(host[1]) {
 			rootKeyKind = nodeKindHostnameRoot
 			tokens = tokenize.Tokenize(host[1])
 		}
-	} else if match := reDomainName.FindStringSubmatch(rule); match != nil {
+	} else if match := reDomainName.FindStringSubmatch(r); match != nil {
 		rootKeyKind = nodeKindDomain
 		tokens = tokenize.Tokenize(match[1])
 		modifiersStr = match[2]
-	} else if match := reExactAddress.FindStringSubmatch(rule); match != nil {
+	} else if match := reExactAddress.FindStringSubmatch(r); match != nil {
 		rootKeyKind = nodeKindAddressRoot
 		tokens = tokenize.Tokenize(match[1])
 		modifiersStr = match[2]
-	} else if match := reGeneric.FindStringSubmatch(rule); match != nil {
+	} else if match := reGeneric.FindStringSubmatch(r); match != nil {
 		rootKeyKind = nodeKindExactMatch
 		tokens = tokenize.Tokenize(match[1])
 		modifiersStr = match[2]
@@ -65,8 +65,8 @@ func (rt *RuleTree) AddRule(rule string) error {
 		return fmt.Errorf("unknown rule format")
 	}
 
-	modifiers := &modifiers.RuleModifiers{}
-	if err := modifiers.Parse(rule, modifiersStr); err != nil {
+	rule := &rule.Rule{}
+	if err := rule.Parse(r, modifiersStr); err != nil {
 		// log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
 		return fmt.Errorf("failed to parse modifiers: %w", err)
 	}
@@ -86,12 +86,12 @@ func (rt *RuleTree) AddRule(rule string) error {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
 	}
-	node.modifiers = append(node.modifiers, modifiers)
+	node.rules = append(node.rules, rule)
 
 	return nil
 }
 
-func (rt *RuleTree) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
+func (rt *RuleTree) HandleRequest(req *http.Request, ctx *goproxy.ProxyCtx) rule.RequestAction {
 	host := req.URL.Hostname()
 	urlWithoutPort := url.URL{
 		Scheme:   req.URL.Scheme,
@@ -106,43 +106,43 @@ func (rt *RuleTree) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (*http.
 	tokens := tokenize.Tokenize(url)
 
 	// address root
-	if req, resp := rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
+	if action := rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
 		return len(t) == 0
-	}); resp != nil {
-		return req, resp
+	}); action != rule.ActionAllow {
+		return action
 	}
 
-	if req, resp := rt.root.TraverseAndHandleReq(req, tokens, nil); resp != nil {
-		return req, resp
+	if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action != rule.ActionAllow {
+		return action
 	}
 	tokens = tokens[1:]
 
 	// protocol separator
-	if req, resp := rt.root.TraverseAndHandleReq(req, tokens, nil); resp != nil {
-		return req, resp
+	if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action != rule.ActionAllow {
+		return action
 	}
 	tokens = tokens[1:]
 
-	var hostnameMatcher func(*node, []string) (*http.Request, *http.Response)
-	hostnameMatcher = func(rootNode *node, tokens []string) (*http.Request, *http.Response) {
-		if req, resp := rootNode.TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
+	var hostnameMatcher func(*node, []string) rule.RequestAction
+	hostnameMatcher = func(rootNode *node, tokens []string) rule.RequestAction {
+		if action := rootNode.TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
 			return len(t) == 0 || t[0] != "."
-		}); resp != nil {
-			return req, resp
+		}); action != rule.ActionAllow {
+			return action
 		}
 		if len(tokens) > 2 && tokens[1] == "." {
 			// try to match the next domain segment
 			tokens = tokens[2:]
 			return hostnameMatcher(rootNode, tokens)
 		}
-		return nil, nil
+		return rule.ActionAllow
 	}
 
 	// hostname root
 	hostnameRootNode := rt.root.FindChild(nodeKey{kind: nodeKindHostnameRoot})
 	if hostnameRootNode != nil {
-		if req, resp := hostnameMatcher(hostnameRootNode, tokens); resp != nil {
-			return req, resp
+		if action := hostnameMatcher(hostnameRootNode, tokens); action != rule.ActionAllow {
+			return action
 		}
 	}
 
@@ -152,12 +152,12 @@ func (rt *RuleTree) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (*http.
 			break
 		}
 		if tokens[0] != "." {
-			if req, resp := rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseAndHandleReq(req, tokens, nil); resp != nil {
-				return req, resp
+			if action := rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseAndHandleReq(req, tokens, nil); action != rule.ActionAllow {
+				return action
 			}
 		}
-		if req, resp := rt.root.TraverseAndHandleReq(req, tokens, nil); resp != nil {
-			return req, resp
+		if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action != rule.ActionAllow {
+			return action
 		}
 		tokens = tokens[1:]
 	}
@@ -165,11 +165,11 @@ func (rt *RuleTree) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (*http.
 	// rest of the URL
 	// TODO: handle query parameters, etc.
 	for len(tokens) > 0 {
-		if req, resp := rt.root.TraverseAndHandleReq(req, tokens, nil); resp != nil {
-			return req, resp
+		if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action != rule.ActionAllow {
+			return action
 		}
 		tokens = tokens[1:]
 	}
 
-	return req, nil
+	return rule.ActionAllow
 }

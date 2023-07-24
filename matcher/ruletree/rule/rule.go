@@ -1,17 +1,16 @@
-package modifiers
+package rule
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
-
-	"github.com/elazarl/goproxy"
 )
 
-// RuleModifiers represents modifiers of a rule.
-type RuleModifiers struct {
-	rule      string
+// Rule represents modifiers of a rule.
+type Rule struct {
+	// rule is the original rule string.
+	rule string
+	// generic is true if the rule is a generic rule.
 	generic   bool
 	modifiers []modifier
 }
@@ -21,7 +20,7 @@ type modifier interface {
 	ShouldBlock(req *http.Request) bool
 }
 
-func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
+func (rm *Rule) Parse(rule string, modifiers string) error {
 	rm.rule = rule
 	if modifiers == "" {
 		rm.generic = true
@@ -78,12 +77,18 @@ func (rm *RuleModifiers) Parse(rule string, modifiers string) error {
 	return nil
 }
 
-func (rm *RuleModifiers) HandleRequest(req *http.Request) (*http.Request, *http.Response) {
+type RequestAction int
+
+const (
+	ActionAllow RequestAction = iota
+	ActionBlock
+)
+
+func (rm *Rule) HandleRequest(req *http.Request) RequestAction {
 	for _, modifier := range rm.modifiers {
 		if !modifier.ShouldBlock(req) {
-			return req, nil
+			return ActionAllow
 		}
 	}
-	log.Printf("rule %s matched", rm.rule)
-	return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "blocked by zen")
+	return ActionBlock
 }
