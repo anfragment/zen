@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/matcher"
 )
 
@@ -15,12 +16,7 @@ func main() {
 	flag.Parse()
 
 	matcher := matcher.NewMatcher()
-	filters := []string{
-		"https://cdn.statically.io/gh/uBlockOrigin/uAssetsCDN/main/thirdparties/easylist.txt",
-		"https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
-		"https://ublockorigin.pages.dev/thirdparties/easyprivacy.txt",
-	}
-	for _, filter := range filters {
+	for _, filter := range config.Config.Filter.FilterLists {
 		file, err := http.Get(filter)
 		if err != nil {
 			log.Fatalf("failed to get filter %s: %v", filter, err)
