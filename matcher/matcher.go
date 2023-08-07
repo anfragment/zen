@@ -64,7 +64,7 @@ func (m *Matcher) Middleware(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 	action := m.ruleTree.HandleRequest(req, ctx)
 	switch action {
 	case rule.ActionBlock:
-		return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "Blocked by Zen")
+		return req, goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "")
 	case rule.ActionAllow:
 		return req, nil
 	default:

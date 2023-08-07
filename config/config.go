@@ -14,6 +14,8 @@ var Config struct {
 	Filter struct {
 		FilterLists []string `json:"filterLists"`
 	} `json:"matcher"`
+	ConfigDir string
+	DataDir   string
 }
 
 //go:embed default-config.json
@@ -21,6 +23,10 @@ var defaultConfig embed.FS
 
 func init() {
 	configDir, err := getConfigDir()
+	if err != nil {
+		panic(err)
+	}
+	dataDir, err := getDataDir()
 	if err != nil {
 		panic(err)
 	}
@@ -47,6 +53,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	Config.ConfigDir = configDir
+	Config.DataDir = dataDir
 }
 
 func getConfigDir() (string, error) {
@@ -61,6 +69,28 @@ func getConfigDir() (string, error) {
 	} else {
 		// unix, linux, macos
 		dir = path.Join(homeDir, ".config", APP_NAME)
+	}
+
+	err = os.MkdirAll(dir, 0755)
+	if err != nil {
+		return "", err
+	}
+
+	return dir, nil
+}
+
+func getDataDir() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	var dir string
+	if runtime.GOOS == "windows" {
+		dir = path.Join(homeDir, "AppData", "Local", APP_NAME)
+	} else {
+		// unix, linux, macos
+		dir = path.Join(homeDir, ".local", "share", APP_NAME)
 	}
 
 	err = os.MkdirAll(dir, 0755)
