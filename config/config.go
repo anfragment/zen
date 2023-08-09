@@ -10,12 +10,28 @@ import (
 
 const APP_NAME = "zen"
 
-var Config struct {
+var Config config
+
+type config struct {
 	Filter struct {
 		FilterLists []string `json:"filterLists"`
 	} `json:"matcher"`
-	ConfigDir string
-	DataDir   string
+	CAInstalled bool `json:"caInstalled"`
+	ConfigDir   string
+	DataDir     string
+}
+
+func (c *config) Save() error {
+	configData, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	configFile := path.Join(c.ConfigDir, "config.json")
+	err = os.WriteFile(configFile, configData, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 //go:embed default-config.json

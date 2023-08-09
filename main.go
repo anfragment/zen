@@ -5,14 +5,13 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/matcher"
 )
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:9999", "proxy address")
-	caCertFile := flag.String("cacertfile", "", "certificate .pem file for trusted CA")
-	caKeyFile := flag.String("cakeyfile", "", "key .pem file for trusted CA")
 	flag.Parse()
 
 	matcher := matcher.NewMatcher()
@@ -25,8 +24,13 @@ func main() {
 		matcher.AddRules(file.Body)
 	}
 
+	certmanager, err := certmanager.NewCertManager()
+	if err != nil {
+		log.Fatalf("failed to initialize certmanager: %v", err)
+	}
+
 	proxy := NewProxy(matcher)
-	err := proxy.ConfigureTLS(*caCertFile, *caKeyFile)
+	err = proxy.ConfigureTLS(certmanager.CertData, certmanager.KeyData)
 	if err != nil {
 		log.Fatalf("failed to configure TLS: %v", err)
 	}

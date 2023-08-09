@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/anfragment/zen/matcher"
@@ -19,18 +18,9 @@ func NewProxy(matcher *matcher.Matcher) *Proxy {
 	return &Proxy{matcher}
 }
 
-// ConfigureTLS configures the proxy to use the given certificate and key for
-// TLS connections.
-func (p *Proxy) ConfigureTLS(certFile, keyFile string) error {
-	caCert, err := ioutil.ReadFile(certFile)
-	if err != nil {
-		return fmt.Errorf("failed to read CA certificate: %v", err)
-	}
-	caKey, err := ioutil.ReadFile(keyFile)
-	if err != nil {
-		return fmt.Errorf("failed to read CA key: %v", err)
-	}
-	goproxyCa, err := tls.X509KeyPair(caCert, caKey)
+// ConfigureTLS configures the proxy to use the given certificate and key for TLS connections.
+func (p *Proxy) ConfigureTLS(certData, keyData []byte) error {
+	goproxyCa, err := tls.X509KeyPair(certData, keyData)
 	if err != nil {
 		return fmt.Errorf("failed to parse CA certificate and key: %v", err)
 	}

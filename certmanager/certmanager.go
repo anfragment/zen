@@ -18,24 +18,86 @@ import (
 	"github.com/anfragment/zen/config"
 )
 
-// CertManager manages certificates for the proxy.
+// CertManager manages the root CA certificate and key for the proxy.
 type CertManager struct {
-	caCert *x509.Certificate
-	caKey  crypto.PrivateKey
+	CertData []byte
+	KeyData  []byte
+	certPath string
+	cert     *x509.Certificate
+	keyPath  string
+	key      crypto.PrivateKey
 }
 
 const caName = "rootCA.pem"
 const keyName = "rootCA-key.pem"
 
+// NewCertManager creates a new CertManager.
+func NewCertManager() (*CertManager, error) {
+	cm := &CertManager{
+		certPath: path.Join(config.Config.DataDir, caName),
+		keyPath:  path.Join(config.Config.DataDir, keyName),
+	}
+	err := cm.loadCA()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load CA: %v", err)
+	}
+	if !config.Config.CAInstalled {
+		err = cm.install()
+		if err != nil {
+			return nil, fmt.Errorf("failed to install CA: %v", err)
+		}
+		config.Config.CAInstalled = true
+		config.Config.Save()
+	}
+	return cm, nil
+}
+
 // loadCA loads the CA from the data directory.
 // If the CA does not exist, it is created.
 func (cm *CertManager) loadCA() error {
-	caPath := path.Join(config.Config.DataDir, caName)
-	keyPath := path.Join(config.Config.DataDir, keyName)
+	_, err := os.Stat(cm.certPath)
+	if os.IsNotExist(err) {
+		err = cm.newCA()
+		if err != nil {
+			return fmt.Errorf("failed to create new CA: %v", err)
+		}
+	}
+	_, err = os.Stat(cm.keyPath)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("CA certificate exists but private key does not")
+	}
+
+	cm.CertData, err = os.ReadFile(cm.certPath)
+	if err != nil {
+		return fmt.Errorf("failed to read CA certificate: %v", err)
+	}
+	certDERBlock, _ := pem.Decode(cm.CertData)
+	if certDERBlock == nil || certDERBlock.Type != "CERTIFICATE" {
+		return fmt.Errorf("failed to decode CA certificate: unexpected content")
+	}
+	cm.cert, err = x509.ParseCertificate(certDERBlock.Bytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse CA certificate: %v", err)
+	}
+
+	cm.KeyData, err = os.ReadFile(cm.keyPath)
+	if err != nil {
+		return fmt.Errorf("failed to read CA certificate: %v", err)
+	}
+	keyDERBlock, _ := pem.Decode(cm.KeyData)
+	if keyDERBlock == nil || keyDERBlock.Type != "PRIVATE KEY" {
+		return fmt.Errorf("failed to decode CA certificate: unexpected content")
+	}
+	cm.key, err = x509.ParsePKCS8PrivateKey(keyDERBlock.Bytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse CA certificate: %v", err)
+	}
+
+	return nil
 }
 
 // newCA creates a new CA and writes it to the data directory.
-func (cm *CertManager) newCA(caPath, keyPath string) error {
+func (cm *CertManager) newCA() error {
 	priv, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
 		return fmt.Errorf("failed to generate private key: %v", err)
@@ -91,13 +153,13 @@ func (cm *CertManager) newCA(caPath, keyPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal private key: %v", err)
 	}
-	err = os.WriteFile(keyPath, pem.EncodeToMemory(
+	err = os.WriteFile(cm.keyPath, pem.EncodeToMemory(
 		&pem.Block{Type: "PRIVATE KEY", Bytes: privDER}), 0400)
 	if err != nil {
 		return fmt.Errorf("failed to save private key: %v", err)
 	}
 
-	err = os.WriteFile(caPath, pem.EncodeToMemory(
+	err = os.WriteFile(cm.certPath, pem.EncodeToMemory(
 		&pem.Block{Type: "CERTIFICATE", Bytes: cert}), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to save certificate: %v", err)
