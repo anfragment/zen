@@ -1,7 +1,6 @@
 package certmanager
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,15 +24,13 @@ func (cm *CertManager) install() error {
 	}
 
 	filename := fmt.Sprintf(systemTrustPath, "zen-rootCA")
-	cmd := exec.Command("sudo", "tee", filename)
-	cmd.Stdin = bytes.NewReader(cm.CertData)
-	out, err := cmd.CombinedOutput()
+	err := os.WriteFile(filename, cm.CertData, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to install CA: %v\n%s", err, out)
+		return fmt.Errorf("failed to install CA: %v", err)
 	}
 
-	cmd = exec.Command("sudo", systemTrustCommand...)
-	out, err = cmd.CombinedOutput()
+	cmd := exec.Command("sudo", systemTrustCommand...)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to install CA: %v\n%s", err, out)
 	}
