@@ -16,9 +16,9 @@ type config struct {
 	Filter struct {
 		FilterLists []string `json:"filterLists"`
 	} `json:"matcher"`
-	CAInstalled bool `json:"caInstalled"`
-	ConfigDir   string
-	DataDir     string
+	CAInstalled bool   `json:"caInstalled"`
+	ConfigDir   string `json:"-"`
+	DataDir     string `json:"-"`
 }
 
 func (c *config) Save() error {
