@@ -32,7 +32,7 @@ func (cm *CertManager) install() error {
 		return fmt.Errorf("failed to install CA: %v\n%s", err, out)
 	}
 
-	cmd = exec.Command(systemTrustCommand...)
+	cmd = exec.Command("sudo", systemTrustCommand...)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to install CA: %v\n%s", err, out)
