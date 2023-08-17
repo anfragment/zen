@@ -2,6 +2,7 @@ package certmanager
 
 import (
 	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"math/big"
 	"syscall"
@@ -19,12 +20,18 @@ var (
 )
 
 func (cm *CertManager) install() error {
+	var cert []byte
+	if certBlock, _ := pem.Decode(cm.CertData); certBlock == nil || certBlock.Type != "CERTIFICATE" {
+		return fmt.Errorf("failed to decode certificate")
+	} else {
+		cert = certBlock.Bytes
+	}
 	store, err := openWindowsRootStore()
 	if err != nil {
 		return fmt.Errorf("failed to open windows root store: %v", err)
 	}
 	defer store.close()
-	err = store.addCert(cm.CertData)
+	err = store.addCert(cert)
 	if err != nil {
 		return fmt.Errorf("failed to add cert: %v", err)
 	}
