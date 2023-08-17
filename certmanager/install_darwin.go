@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 
 	"github.com/getlantern/elevate"
 	"howett.net/plist"
@@ -40,7 +41,8 @@ var trustSettingsData = []byte(`
 `)
 
 func (cm *CertManager) install() error {
-	cmd := elevate.Command("security", "add-trusted-cert", "-d", "-k", "/Library/Keychains/System.keychain", cm.certPath)
+	cmd := elevate.WithPrompt("Please authorize Zen to install a certificate").Command(
+		"security", "add-trusted-cert", "-d", "-k", "/Library/Keychains/System.keychain", cm.certPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to install CA: %v\n%s", err, out)
@@ -55,7 +57,7 @@ func (cm *CertManager) install() error {
 	}
 	defer os.Remove(plistFile.Name())
 
-	cmd = elevate.Command("security", "trust-settings-export", "-d", plistFile.Name())
+	cmd = exec.Command("security", "trust-settings-export", "-d", plistFile.Name())
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to export trust settings: %v\n%s", err, out)
@@ -98,7 +100,7 @@ func (cm *CertManager) install() error {
 	if err != nil {
 		return fmt.Errorf("failed to write trust settings: %v", err)
 	}
-	cmd = elevate.Command("security", "trust-settings-import", "-d", plistFile.Name())
+	cmd = exec.Command("security", "trust-settings-import", "-d", plistFile.Name())
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to import trust settings: %v\n%s", err, out)
