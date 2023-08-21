@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/elazarl/goproxy v0.0.0-20230808193330-2592e75ae04a
 	github.com/getlantern/elevate v0.0.0-20220903142053-479ab992b264
+	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
 	golang.org/x/sys v0.11.0
 	howett.net/plist v1.0.0
 )

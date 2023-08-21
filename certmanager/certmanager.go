@@ -13,9 +13,11 @@ import (
 	"math/big"
 	"os"
 	"path"
+	"runtime"
 	"time"
 
 	"github.com/anfragment/zen/config"
+	"github.com/hectane/go-acl"
 )
 
 // CertManager manages the root CA certificate and key for the proxy.
@@ -158,11 +160,21 @@ func (cm *CertManager) newCA() error {
 	if err != nil {
 		return fmt.Errorf("failed to save private key: %v", err)
 	}
+	if runtime.GOOS == "windows" {
+		if err := acl.Chmod(cm.keyPath, 0400); err != nil {
+			return fmt.Errorf("failed to set permissions on private key: %v", err)
+		}
+	}
 
 	err = os.WriteFile(cm.certPath, pem.EncodeToMemory(
 		&pem.Block{Type: "CERTIFICATE", Bytes: cert}), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to save certificate: %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		if err := acl.Chmod(cm.certPath, 0644); err != nil {
+			return fmt.Errorf("failed to set permissions on certificate: %v", err)
+		}
 	}
 
 	return nil
