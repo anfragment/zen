@@ -23,6 +23,7 @@ func (p *Proxy) setSystemProxy() error {
 				return fmt.Errorf("%s: %v\n%s", strings.Join(command, " "), err, out)
 			}
 		}
+		return nil
 	}
 	// Proxy configuration on non-GNOME systems is finicky
 	// and I don't have the expertise to figure it out.
