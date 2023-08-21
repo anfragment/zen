@@ -3,6 +3,7 @@ package proxy
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
 func (p *Proxy) setSystemProxy() error {
@@ -12,7 +13,7 @@ func (p *Proxy) setSystemProxy() error {
 			[]string{"gsettings", "set", "org.gnome.system.proxy.http", "host", p.host},
 			[]string{"gsettings", "set", "org.gnome.system.proxy.http", "port", fmt.Sprint(p.port)},
 			[]string{"gsettings", "set", "org.gnome.system.proxy.https", "host", p.host},
-			[]string{"gsettings", "set", "org.gnome.system.proxy.https", "port", fmt.Sprint(p.port)}
+			[]string{"gsettings", "set", "org.gnome.system.proxy.https", "port", fmt.Sprint(p.port)},
 		}
 
 		for _, command := range commands {
