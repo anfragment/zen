@@ -1,19 +1,16 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"net/http"
 
 	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/matcher"
+	"github.com/anfragment/zen/proxy"
 )
 
 func main() {
-	addr := flag.String("addr", "127.0.0.1:9999", "proxy address")
-	flag.Parse()
-
 	matcher := matcher.NewMatcher()
 	for _, filter := range config.Config.Filter.FilterLists {
 		file, err := http.Get(filter)
@@ -29,14 +26,12 @@ func main() {
 		log.Fatalf("failed to initialize certmanager: %v", err)
 	}
 
-	proxy := NewProxy(matcher)
-	err = proxy.ConfigureTLS(certmanager.CertData, certmanager.KeyData)
-	if err != nil {
+	proxy := proxy.NewProxy("127.0.0.1", 8080, matcher)
+	if err := proxy.ConfigureTLS(certmanager.CertData, certmanager.KeyData); err != nil {
 		log.Fatalf("failed to configure TLS: %v", err)
 	}
-	log.Printf("starting proxy on %s", *addr)
-	err = proxy.Start(*addr)
-	if err != nil {
+	log.Println("starting proxy")
+	if err := proxy.Start(); err != nil {
 		log.Fatalf("failed to start proxy: %v", err)
 	}
 }

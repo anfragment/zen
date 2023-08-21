@@ -1,21 +1,26 @@
-package main
+package proxy
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
 
 	"github.com/anfragment/zen/matcher"
 	"github.com/elazarl/goproxy"
 )
 
 type Proxy struct {
+	host    string
+	port    int
 	matcher *matcher.Matcher
 }
 
-func NewProxy(matcher *matcher.Matcher) *Proxy {
-	return &Proxy{matcher}
+func NewProxy(host string, port int, matcher *matcher.Matcher) *Proxy {
+	return &Proxy{host, port, matcher}
 }
 
 // ConfigureTLS configures the proxy to use the given certificate and key for TLS connections.
@@ -39,11 +44,35 @@ func (p *Proxy) ConfigureTLS(certData, keyData []byte) error {
 }
 
 // Start starts the proxy on the given address.
-func (p *Proxy) Start(addr string) error {
+func (p *Proxy) Start() error {
 	proxy := goproxy.NewProxyHttpServer()
 	// TODO: implement exclusions
 	// https://github.com/AdguardTeam/HttpsExclusions
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
 	proxy.OnRequest().DoFunc(p.matcher.Middleware)
-	return http.ListenAndServe(addr, proxy)
+	errC := make(chan error, 1)
+	go func() {
+		errC <- http.ListenAndServe(fmt.Sprintf("%s:%d", p.host, p.port), proxy)
+	}()
+
+	if err := p.setSystemProxy(); err != nil {
+		return fmt.Errorf("failed to set system proxy: %v", err)
+	}
+	defer func() {
+		log.Println("unsetting system proxy")
+		if err := p.unsetSystemProxy(); err != nil {
+			log.Printf("failed to unset system proxy: %v", err)
+		} else {
+			log.Println("system proxy unset")
+		}
+	}()
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt)
+	select {
+	case err := <-errC:
+		return err
+	case <-signals:
+		return nil
+	}
 }
