@@ -3,9 +3,9 @@ package config
 import (
 	"embed"
 	"encoding/json"
+	"log"
 	"os"
 	"path"
-	"runtime"
 )
 
 const APP_NAME = "zen"
@@ -16,9 +16,11 @@ type config struct {
 	Filter struct {
 		FilterLists []string `json:"filterLists"`
 	} `json:"matcher"`
-	CAInstalled bool   `json:"caInstalled"`
-	ConfigDir   string `json:"-"`
-	DataDir     string `json:"-"`
+	Certmanager struct {
+		CAInstalled bool `json:"caInstalled"`
+	} `json:"certmanager"`
+	ConfigDir string `json:"-"`
+	DataDir   string `json:"-"`
 }
 
 func (c *config) Save() error {
@@ -40,79 +42,41 @@ var defaultConfig embed.FS
 func init() {
 	configDir, err := getConfigDir()
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to get config dir: %v", err)
 	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		log.Fatalf("failed to create config dir: %v", err)
+	}
+
 	dataDir, err := getDataDir()
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to get data dir: %v", err)
+	}
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Fatalf("failed to create data dir: %v", err)
 	}
 
 	configFile := path.Join(configDir, "config.json")
 	var configData []byte
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		configData, err = defaultConfig.ReadFile("default-config.json")
-		if err != nil {
-			panic(err)
-		}
-		err = os.WriteFile(configFile, configData, 0644)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// config file exists, read it
+	if _, err := os.Stat(configFile); !os.IsNotExist(err) {
 		configData, err = os.ReadFile(configFile)
 		if err != nil {
-			panic(err)
+			log.Fatalf("failed to read config: %v", err)
+		}
+	} else {
+		configData, err = defaultConfig.ReadFile("default-config.json")
+		if err != nil {
+			log.Fatalf("failed to read default config: %v", err)
+		}
+		if err := os.WriteFile(configFile, configData, 0644); err != nil {
+			log.Fatalf("failed to write default config: %v", err)
 		}
 	}
-	err = json.Unmarshal(configData, &Config)
-	if err != nil {
-		panic(err)
+
+	if err := json.Unmarshal(configData, &Config); err != nil {
+		log.Fatalf("failed to parse config: %v", err)
 	}
+
 	Config.ConfigDir = configDir
 	Config.DataDir = dataDir
-}
-
-func getConfigDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	var dir string
-	if runtime.GOOS == "windows" {
-		dir = path.Join(homeDir, "AppData", "Roaming", APP_NAME)
-	} else {
-		// unix, linux, macos
-		dir = path.Join(homeDir, ".config", APP_NAME)
-	}
-
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
-		return "", err
-	}
-
-	return dir, nil
-}
-
-func getDataDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	var dir string
-	if runtime.GOOS == "windows" {
-		dir = path.Join(homeDir, "AppData", "Local", APP_NAME)
-	} else {
-		// unix, linux, macos
-		dir = path.Join(homeDir, ".local", "share", APP_NAME)
-	}
-
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
-		return "", err
-	}
-
-	return dir, nil
 }

@@ -6,5 +6,7 @@
       "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext"
     ]
   },
-  "caInstalled": false
+  "certmanager": {
+    "caInstalled": false
+  }
 }

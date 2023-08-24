@@ -30,45 +30,60 @@ type CertManager struct {
 	key      crypto.PrivateKey
 }
 
-const caName = "rootCA.pem"
-const keyName = "rootCA-key.pem"
+const (
+	caName  = "rootCA.pem"
+	keyName = "rootCA-key.pem"
+)
 
-// NewCertManager creates a new CertManager.
+// NewCertManager creates and initializes a new CertManager.
 func NewCertManager() (*CertManager, error) {
+	folderName := path.Join(config.Config.DataDir, certsFolderName())
+
 	cm := &CertManager{
-		certPath: path.Join(config.Config.DataDir, caName),
-		keyPath:  path.Join(config.Config.DataDir, keyName),
+		certPath: path.Join(folderName, caName),
+		keyPath:  path.Join(folderName, keyName),
 	}
-	err := cm.loadCA()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load CA: %v", err)
-	}
-	if !config.Config.CAInstalled {
-		err = cm.install()
-		if err != nil {
-			return nil, fmt.Errorf("failed to install CA: %v", err)
+
+	if config.Config.Certmanager.CAInstalled {
+		if err := cm.loadCA(); err != nil {
+			return nil, fmt.Errorf("failed to load CA: %v", err)
 		}
-		config.Config.CAInstalled = true
+	} else {
+		if err := os.Remove(cm.certPath); err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to remove old CA certificate: %v", err)
+		}
+		if err := os.Remove(cm.keyPath); err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to remove old CA key: %v", err)
+		}
+		if err := os.MkdirAll(folderName, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create certs folder: %v", err)
+		}
+		if err := cm.newCA(); err != nil {
+			return nil, fmt.Errorf("failed to generate CA: %v", err)
+		}
+		if err := cm.loadCA(); err != nil {
+			return nil, fmt.Errorf("failed to load CA: %v", err)
+		}
+		if err := cm.install(); err != nil {
+			return nil, fmt.Errorf("failed to install CA into system trust store: %v", err)
+		}
+		config.Config.Certmanager.CAInstalled = true
 		config.Config.Save()
 	}
+
 	return cm, nil
 }
 
-// loadCA loads the CA from the data directory.
-// If the CA does not exist, it is created.
+// loadCA loads the existing CA certificate and key into memory.
 func (cm *CertManager) loadCA() error {
-	_, err := os.Stat(cm.certPath)
-	if os.IsNotExist(err) {
-		err = cm.newCA()
-		if err != nil {
-			return fmt.Errorf("failed to create new CA: %v", err)
-		}
+	if _, err := os.Stat(cm.certPath); os.IsNotExist(err) {
+		return fmt.Errorf("CA certificate not found at %s", cm.certPath)
 	}
-	_, err = os.Stat(cm.keyPath)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("CA certificate exists but private key does not")
+	if _, err := os.Stat(cm.keyPath); os.IsNotExist(err) {
+		return fmt.Errorf("CA key not found at %s", cm.keyPath)
 	}
 
+	var err error
 	cm.CertData, err = os.ReadFile(cm.certPath)
 	if err != nil {
 		return fmt.Errorf("failed to read CA certificate: %v", err)
@@ -98,7 +113,7 @@ func (cm *CertManager) loadCA() error {
 	return nil
 }
 
-// newCA creates a new CA and writes it to the data directory.
+// newCA creates a new CA certificate/key pair and saves it to disk.
 func (cm *CertManager) newCA() error {
 	priv, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
@@ -131,8 +146,9 @@ func (cm *CertManager) newCA() error {
 	tpl := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization:       []string{"Zen proxy"},
-			OrganizationalUnit: []string{"Zen proxy CA"},
+			Organization:       []string{"Zen Proxy"},
+			OrganizationalUnit: []string{"Zen Proxy CA"},
+			CommonName:         "Zen Proxy CA",
 		},
 		SubjectKeyId: skid[:],
 
@@ -178,4 +194,12 @@ func (cm *CertManager) newCA() error {
 	}
 
 	return nil
+}
+
+func certsFolderName() string {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		// following a general convention of using capitalized folder names on Windows and macOS
+		return "Certs"
+	}
+	return "certs"
 }
