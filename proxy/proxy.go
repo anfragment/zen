@@ -27,10 +27,10 @@ func NewProxy(host string, port int, matcher *matcher.Matcher) *Proxy {
 func (p *Proxy) ConfigureTLS(certData, keyData []byte) error {
 	goproxyCa, err := tls.X509KeyPair(certData, keyData)
 	if err != nil {
-		return fmt.Errorf("failed to parse CA certificate and key: %v", err)
+		return fmt.Errorf("parse certificate: %v", err)
 	}
 	if goproxyCa.Leaf, err = x509.ParseCertificate(goproxyCa.Certificate[0]); err != nil {
-		return fmt.Errorf("failed to parse CA certificate: %v", err)
+		return fmt.Errorf("parse leaf certificate: %v", err)
 	}
 
 	tlsConfig := goproxy.TLSConfigFromCA(&goproxyCa)
@@ -56,7 +56,7 @@ func (p *Proxy) Start() error {
 	}()
 
 	if err := p.setSystemProxy(); err != nil {
-		return fmt.Errorf("failed to set system proxy: %v", err)
+		return fmt.Errorf("set system proxy: %v", err)
 	}
 	defer func() {
 		log.Println("unsetting system proxy")

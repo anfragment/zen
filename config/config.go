@@ -61,20 +61,20 @@ func init() {
 	if _, err := os.Stat(configFile); !os.IsNotExist(err) {
 		configData, err = os.ReadFile(configFile)
 		if err != nil {
-			log.Fatalf("failed to read config: %v", err)
+			log.Fatalf("failed to read config file: %v", err)
 		}
 	} else {
 		configData, err = defaultConfig.ReadFile("default-config.json")
 		if err != nil {
-			log.Fatalf("failed to read default config: %v", err)
+			log.Fatalf("failed to read default config file: %v", err)
 		}
 		if err := os.WriteFile(configFile, configData, 0644); err != nil {
-			log.Fatalf("failed to write default config: %v", err)
+			log.Fatalf("failed to write config file: %v", err)
 		}
 	}
 
 	if err := json.Unmarshal(configData, &Config); err != nil {
-		log.Fatalf("failed to parse config: %v", err)
+		log.Fatalf("failed to parse config file: %v", err)
 	}
 
 	Config.ConfigDir = configDir

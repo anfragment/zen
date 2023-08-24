@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/asn1"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 
@@ -41,11 +40,11 @@ var trustSettingsData = []byte(`
 `)
 
 func (cm *CertManager) install() error {
-	cmd := elevate.WithPrompt("Please authorize Zen to install a certificate").Command(
+	cmd := elevate.WithPrompt("Authorize Zen to install the root CA certificate")
 		"security", "add-trusted-cert", "-d", "-k", "/Library/Keychains/System.keychain", cm.certPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to install CA: %v\n%s", err, out)
+		return fmt.Errorf("add-trusted-cert: %v\n%s", err, out)
 	}
 
 	// Make trustSettings explicit, as older Go does not know the defaults.
@@ -53,30 +52,30 @@ func (cm *CertManager) install() error {
 
 	plistFile, err := os.CreateTemp("", "trust-settings")
 	if err != nil {
-		return fmt.Errorf("failed to create temporary file: %v", err)
+		return fmt.Errorf("create temporary plist file: %v", err)
 	}
 	defer os.Remove(plistFile.Name())
 
 	cmd = exec.Command("security", "trust-settings-export", "-d", plistFile.Name())
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to export trust settings: %v\n%s", err, out)
+		return fmt.Errorf("trust-settings-export: %v\n%s", err, out)
 	}
 
 	plistData, err := os.ReadFile(plistFile.Name())
 	if err != nil {
-		return fmt.Errorf("failed to read trust settings: %v", err)
+		return fmt.Errorf("read plist file: %v", err)
 	}
 	var plistRoot map[string]interface{}
 	_, err = plist.Unmarshal(plistData, &plistRoot)
 	if err != nil {
-		return fmt.Errorf("failed to parse trust settings: %v", err)
+		return fmt.Errorf("parse plist file: %v", err)
 	}
 
 	rootSubjectASN1, _ := asn1.Marshal(cm.cert.Subject.ToRDNSequence())
 
 	if plistRoot["trustVersion"].(uint64) != 1 {
-		log.Fatalln("ERROR: unsupported trust settings version:", plistRoot["trustVersion"])
+		return fmt.Errorf("unexpected trustVersion: %v", plistRoot["trustVersion"])
 	}
 	trustList := plistRoot["trustList"].(map[string]interface{})
 	for key := range trustList {
@@ -94,16 +93,16 @@ func (cm *CertManager) install() error {
 
 	plistData, err = plist.MarshalIndent(plistRoot, plist.XMLFormat, "\t")
 	if err != nil {
-		return fmt.Errorf("failed to serialize trust settings: %v", err)
+		return fmt.Errorf("create plist data: %v", err)
 	}
 	err = os.WriteFile(plistFile.Name(), plistData, 0600)
 	if err != nil {
-		return fmt.Errorf("failed to write trust settings: %v", err)
+		return fmt.Errorf("write plist file: %v", err)
 	}
 	cmd = exec.Command("security", "trust-settings-import", "-d", plistFile.Name())
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to import trust settings: %v\n%s", err, out)
+		return fmt.Errorf("trust-settings-import: %v\n%s", err, out)
 	}
 
 	return nil

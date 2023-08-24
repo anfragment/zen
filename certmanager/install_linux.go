@@ -29,13 +29,13 @@ func (cm *CertManager) install() error {
 	cmd.Stdin = bytes.NewReader(cm.CertData)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to install CA: %v\n%s", err, out)
+		return fmt.Errorf("write cert to %s: %v\n%s", filename, err, out)
 	}
 
 	cmd = exec.Command("pkexec", systemTrustCommand...)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to install CA: %v\n%s", err, out)
+		return fmt.Errorf("system trust command: %v\n%s", err, out)
 	}
 
 	return nil

@@ -46,26 +46,26 @@ func NewCertManager() (*CertManager, error) {
 
 	if config.Config.Certmanager.CAInstalled {
 		if err := cm.loadCA(); err != nil {
-			return nil, fmt.Errorf("failed to load CA: %v", err)
+			return nil, fmt.Errorf("CA load: %v", err)
 		}
 	} else {
 		if err := os.Remove(cm.certPath); err != nil && !os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to remove old CA certificate: %v", err)
+			return nil, fmt.Errorf("remove existing CA cert: %v", err)
 		}
 		if err := os.Remove(cm.keyPath); err != nil && !os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to remove old CA key: %v", err)
+			return nil, fmt.Errorf("remove existing CA key: %v", err)
 		}
 		if err := os.MkdirAll(folderName, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create certs folder: %v", err)
+			return nil, fmt.Errorf("create certs folder: %v", err)
 		}
 		if err := cm.newCA(); err != nil {
-			return nil, fmt.Errorf("failed to generate CA: %v", err)
+			return nil, fmt.Errorf("create new CA: %v", err)
 		}
 		if err := cm.loadCA(); err != nil {
-			return nil, fmt.Errorf("failed to load CA: %v", err)
+			return nil, fmt.Errorf("CA load: %v", err)
 		}
 		if err := cm.install(); err != nil {
-			return nil, fmt.Errorf("failed to install CA into system trust store: %v", err)
+			return nil, fmt.Errorf("install CA: %v", err)
 		}
 		config.Config.Certmanager.CAInstalled = true
 		config.Config.Save()
@@ -77,37 +77,37 @@ func NewCertManager() (*CertManager, error) {
 // loadCA loads the existing CA certificate and key into memory.
 func (cm *CertManager) loadCA() error {
 	if _, err := os.Stat(cm.certPath); os.IsNotExist(err) {
-		return fmt.Errorf("CA certificate not found at %s", cm.certPath)
+		return fmt.Errorf("CA cert does not exist at %s", cm.certPath)
 	}
 	if _, err := os.Stat(cm.keyPath); os.IsNotExist(err) {
-		return fmt.Errorf("CA key not found at %s", cm.keyPath)
+		return fmt.Errorf("CA key does not exist at %s", cm.keyPath)
 	}
 
 	var err error
 	cm.CertData, err = os.ReadFile(cm.certPath)
 	if err != nil {
-		return fmt.Errorf("failed to read CA certificate: %v", err)
+		return fmt.Errorf("read CA cert: %v", err)
 	}
 	certDERBlock, _ := pem.Decode(cm.CertData)
 	if certDERBlock == nil || certDERBlock.Type != "CERTIFICATE" {
-		return fmt.Errorf("failed to decode CA certificate: unexpected content")
+		return fmt.Errorf("invalid CA cert: type mismatch")
 	}
 	cm.cert, err = x509.ParseCertificate(certDERBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("failed to parse CA certificate: %v", err)
+		return fmt.Errorf("parse CA cert: %v", err)
 	}
 
 	cm.KeyData, err = os.ReadFile(cm.keyPath)
 	if err != nil {
-		return fmt.Errorf("failed to read CA certificate: %v", err)
+		return fmt.Errorf("read CA key: %v", err)
 	}
 	keyDERBlock, _ := pem.Decode(cm.KeyData)
 	if keyDERBlock == nil || keyDERBlock.Type != "PRIVATE KEY" {
-		return fmt.Errorf("failed to decode CA certificate: unexpected content")
+		return fmt.Errorf("invalid CA key: type mismatch")
 	}
 	cm.key, err = x509.ParsePKCS8PrivateKey(keyDERBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("failed to parse CA certificate: %v", err)
+		return fmt.Errorf("parse CA key: %v", err)
 	}
 
 	return nil
@@ -117,13 +117,13 @@ func (cm *CertManager) loadCA() error {
 func (cm *CertManager) newCA() error {
 	priv, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
-		return fmt.Errorf("failed to generate private key: %v", err)
+		return fmt.Errorf("generate key: %v", err)
 	}
 	pub := priv.Public()
 
 	spkiASN1, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
-		return fmt.Errorf("failed to marshal public key: %v", err)
+		return fmt.Errorf("marshal public key: %v", err)
 	}
 
 	var spki struct {
@@ -132,7 +132,7 @@ func (cm *CertManager) newCA() error {
 	}
 	_, err = asn1.Unmarshal(spkiASN1, &spki)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal public key: %v", err)
+		return fmt.Errorf("unmarshal public key: %v", err)
 	}
 
 	skid := sha1.Sum(spki.SubjectPublicKey.Bytes)
@@ -140,7 +140,7 @@ func (cm *CertManager) newCA() error {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return fmt.Errorf("failed to generate serial number: %v", err)
+		return fmt.Errorf("generate serial number: %v", err)
 	}
 
 	tpl := &x509.Certificate{
@@ -164,32 +164,32 @@ func (cm *CertManager) newCA() error {
 
 	cert, err := x509.CreateCertificate(rand.Reader, tpl, tpl, pub, priv)
 	if err != nil {
-		return fmt.Errorf("failed to create certificate: %v", err)
+		return fmt.Errorf("create certificate: %v", err)
 	}
 
 	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
 	if err != nil {
-		return fmt.Errorf("failed to marshal private key: %v", err)
+		return fmt.Errorf("marshal private key: %v", err)
 	}
 	err = os.WriteFile(cm.keyPath, pem.EncodeToMemory(
 		&pem.Block{Type: "PRIVATE KEY", Bytes: privDER}), 0400)
 	if err != nil {
-		return fmt.Errorf("failed to save private key: %v", err)
+		return fmt.Errorf("write private key at %s: %v", cm.keyPath, err)
 	}
 	if runtime.GOOS == "windows" {
 		if err := acl.Chmod(cm.keyPath, 0400); err != nil {
-			return fmt.Errorf("failed to set permissions on private key: %v", err)
+			return fmt.Errorf("chmod private key at %s: %v", cm.keyPath, err)
 		}
 	}
 
 	err = os.WriteFile(cm.certPath, pem.EncodeToMemory(
 		&pem.Block{Type: "CERTIFICATE", Bytes: cert}), 0644)
 	if err != nil {
-		return fmt.Errorf("failed to save certificate: %v", err)
+		return fmt.Errorf("write certificate at %s: %v", cm.certPath, err)
 	}
 	if runtime.GOOS == "windows" {
 		if err := acl.Chmod(cm.certPath, 0644); err != nil {
-			return fmt.Errorf("failed to set permissions on certificate: %v", err)
+			return fmt.Errorf("chmod certificate at %s: %v", cm.certPath, err)
 		}
 	}
 
