@@ -40,7 +40,7 @@ var trustSettingsData = []byte(`
 `)
 
 func (cm *CertManager) install() error {
-	cmd := elevate.WithPrompt("Authorize Zen to install the root CA certificate")
+	cmd := elevate.WithPrompt("Authorize Zen to install the root CA certificate").Command(
 		"security", "add-trusted-cert", "-d", "-k", "/Library/Keychains/System.keychain", cm.certPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
