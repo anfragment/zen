@@ -22,8 +22,8 @@ import (
 
 // CertManager manages the root CA certificate and key for the proxy.
 type CertManager struct {
-	CertData []byte
-	KeyData  []byte
+	certData []byte
+	keyData  []byte
 	certPath string
 	cert     *x509.Certificate
 	keyPath  string
@@ -84,11 +84,11 @@ func (cm *CertManager) loadCA() error {
 	}
 
 	var err error
-	cm.CertData, err = os.ReadFile(cm.certPath)
+	cm.certData, err = os.ReadFile(cm.certPath)
 	if err != nil {
 		return fmt.Errorf("read CA cert: %v", err)
 	}
-	certDERBlock, _ := pem.Decode(cm.CertData)
+	certDERBlock, _ := pem.Decode(cm.certData)
 	if certDERBlock == nil || certDERBlock.Type != "CERTIFICATE" {
 		return fmt.Errorf("invalid CA cert: type mismatch")
 	}
@@ -97,11 +97,11 @@ func (cm *CertManager) loadCA() error {
 		return fmt.Errorf("parse CA cert: %v", err)
 	}
 
-	cm.KeyData, err = os.ReadFile(cm.keyPath)
+	cm.keyData, err = os.ReadFile(cm.keyPath)
 	if err != nil {
 		return fmt.Errorf("read CA key: %v", err)
 	}
-	keyDERBlock, _ := pem.Decode(cm.KeyData)
+	keyDERBlock, _ := pem.Decode(cm.keyData)
 	if keyDERBlock == nil || keyDERBlock.Type != "PRIVATE KEY" {
 		return fmt.Errorf("invalid CA key: type mismatch")
 	}

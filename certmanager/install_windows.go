@@ -21,7 +21,7 @@ var (
 
 func (cm *CertManager) install() error {
 	var cert []byte
-	if certBlock, _ := pem.Decode(cm.CertData); certBlock == nil || certBlock.Type != "CERTIFICATE" {
+	if certBlock, _ := pem.Decode(cm.certData); certBlock == nil || certBlock.Type != "CERTIFICATE" {
 		return fmt.Errorf("invalid certificate: type mismatch")
 	} else {
 		cert = certBlock.Bytes

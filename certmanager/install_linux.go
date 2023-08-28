@@ -26,7 +26,7 @@ func (cm *CertManager) install() error {
 
 	filename := fmt.Sprintf(systemTrustPath, "zen-rootCA")
 	cmd := exec.Command("pkexec", "tee", filename)
-	cmd.Stdin = bytes.NewReader(cm.CertData)
+	cmd.Stdin = bytes.NewReader(cm.certData)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("write cert to %s: %v\n%s", filename, err, out)
