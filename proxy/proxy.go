@@ -27,11 +27,6 @@ func NewProxy(host string, port int, matcher *matcher.Matcher, certmanager *cert
 	return &Proxy{host, port, matcher, certmanager}
 }
 
-// ConfigureTLS configures the proxy to use the given certificate and key for TLS connections.
-func (p *Proxy) ConfigureTLS(certData, keyData []byte) error {
-	return nil
-}
-
 // Start starts the proxy on the given address.
 func (p *Proxy) Start() error {
 	errC := make(chan error, 1)
@@ -152,18 +147,10 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 	tlsConn := tls.Server(clientConn, tlsConfig)
 	defer tlsConn.Close()
-	if err := tlsConn.Handshake(); err != nil {
-		if err != io.EOF {
-			log.Printf("handshake(%s): %v", r.Host, err)
-		}
-		return
-	}
 
 	for {
 		req, err := http.ReadRequest(bufio.NewReader(tlsConn))
-		if err == io.EOF {
-			break
-		} else if err != nil {
+		if err != nil {
 			log.Printf("reading request(%s): %v", r.Host, err)
 			break
 		}
