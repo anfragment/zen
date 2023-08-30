@@ -124,7 +124,13 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 	defer clientConn.Close()
 
 	host, _, err := net.SplitHostPort(r.Host)
-	if err != nil || r.Header.Get("Upgrade") == "websocket" {
+	if err != nil {
+		log.Printf("splitting host and port(%s): %v", r.Host, err)
+		return
+	}
+	if net.ParseIP(host) != nil || r.Header.Get("Upgrade") == "websocket" {
+		// TODO: implement upstream certificate sniffing
+		// https://docs.mitmproxy.org/stable/concepts-howmitmproxyworks/#complication-1-whats-the-remote-hostname
 		p.tunnel(clientConn, r)
 		return
 	}
@@ -146,8 +152,10 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 	tlsConn := tls.Server(clientConn, tlsConfig)
 	defer tlsConn.Close()
-	if err := tlsConn.Handshake(); err != nil && !isCloseable(err) {
-		log.Printf("handshake(%s): %v", r.Host, err)
+	if err := tlsConn.Handshake(); err != nil {
+		if err != io.EOF {
+			log.Printf("handshake(%s): %v", r.Host, err)
+		}
 		return
 	}
 
