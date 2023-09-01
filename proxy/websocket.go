@@ -47,7 +47,7 @@ func (p *Proxy) proxyWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doneC := make(chan bool, 2)
+	doneC := make(chan struct{}, 2)
 	go tunnelConn(targetConn, clientConn, doneC)
 	go tunnelConn(clientConn, targetConn, doneC)
 	<-doneC

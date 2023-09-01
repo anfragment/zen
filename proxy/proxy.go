@@ -2,15 +2,16 @@ package proxy
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
+	"time"
 
 	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/matcher"
@@ -21,39 +22,55 @@ type Proxy struct {
 	port        int
 	matcher     *matcher.Matcher
 	certmanager *certmanager.CertManager
+	server      *http.Server
 }
 
 func NewProxy(host string, port int, matcher *matcher.Matcher, certmanager *certmanager.CertManager) *Proxy {
-	return &Proxy{host, port, matcher, certmanager}
+	return &Proxy{host, port, matcher, certmanager, nil}
 }
 
 // Start starts the proxy on the given address.
 func (p *Proxy) Start() error {
-	errC := make(chan error, 1)
+	p.server = &http.Server{
+		Handler: p,
+	}
+
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", p.host, p.port))
+	if err != nil {
+		return fmt.Errorf("listen: %v", err)
+	}
+
 	go func() {
-		errC <- http.ListenAndServe(fmt.Sprintf("%s:%d", p.host, p.port), p)
+		if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("serve: %v", err)
+		}
 	}()
 
 	if err := p.setSystemProxy(); err != nil {
 		return fmt.Errorf("set system proxy: %v", err)
 	}
-	defer func() {
-		log.Println("unsetting system proxy")
-		if err := p.unsetSystemProxy(); err != nil {
-			log.Printf("failed to unset system proxy: %v", err)
-		} else {
-			log.Println("system proxy unset")
-		}
-	}()
 
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt)
-	select {
-	case err := <-errC:
-		return err
-	case <-signals:
-		return nil
+	return nil
+}
+
+// Stop stops the proxy.
+func (p *Proxy) Stop() error {
+	if p.server == nil {
+		return errors.New("proxy not started")
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := p.server.Shutdown(ctx); err != nil {
+		log.Printf("shutdown failed: %v", err)
+	}
+
+	if err := p.unsetSystemProxy(); err != nil {
+		return fmt.Errorf("unset system proxy: %v", err)
+	}
+
+	return nil
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +213,7 @@ func (p *Proxy) tunnel(w net.Conn, r *http.Request) {
 		log.Printf("writing 200 OK to client(%s): %v", r.Host, err)
 	}
 
-	doneC := make(chan bool, 2)
+	doneC := make(chan struct{}, 2)
 	go tunnelConn(remoteConn, w, doneC)
 	go tunnelConn(w, remoteConn, doneC)
 	<-doneC
@@ -204,11 +221,11 @@ func (p *Proxy) tunnel(w net.Conn, r *http.Request) {
 }
 
 // tunnelConn tunnels the data between src and dst.
-func tunnelConn(dst io.Writer, src io.Reader, done chan<- bool) {
+func tunnelConn(dst io.Writer, src io.Reader, done chan<- struct{}) {
 	if _, err := io.Copy(dst, src); err != nil && !isCloseable(err) {
 		log.Printf("copying: %v", err)
 	}
-	done <- true
+	done <- struct{}{}
 }
 
 // isCloseable returns true if the error is one that indicates the connection
