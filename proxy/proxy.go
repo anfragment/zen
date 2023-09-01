@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -56,13 +55,16 @@ func (p *Proxy) Start() error {
 // Stop stops the proxy.
 func (p *Proxy) Stop() error {
 	if p.server == nil {
-		return errors.New("proxy not started")
+		return fmt.Errorf("proxy not started")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := p.server.Shutdown(ctx); err != nil {
+		// As per documentation:
+		// Shutdown does not attempt to close nor wait for hijacked connections such as WebSockets. The caller of Shutdown should separately notify such long-lived connections of shutdown and wait for them to close, if desired. See RegisterOnShutdown for a way to register shutdown notification functions.
+		// TODO: implement websocket shutdown
 		log.Printf("shutdown failed: %v", err)
 	}
 
@@ -131,7 +133,8 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 	clientConn, _, err := hj.Hijack()
 	if err != nil {
-		log.Fatalf("hijacking connection(%s): %v", r.Host, err)
+		log.Printf("hijacking connection(%s): %v", r.Host, err)
+		return
 	}
 	defer clientConn.Close()
 
@@ -147,10 +150,10 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pemCert, pemKey := p.certmanager.GetCertificate(host)
-	tlsCert, err := tls.X509KeyPair(pemCert, pemKey)
+	tlsCert, err := p.certmanager.GetCertificate(host)
 	if err != nil {
-		log.Fatalf("failed to load key pair: %v", err)
+		log.Printf("getting certificate(%s): %v", r.Host, err)
+		return
 	}
 
 	if _, err := clientConn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n")); err != nil {
@@ -159,7 +162,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{tlsCert},
+		Certificates: []tls.Certificate{*tlsCert},
 	}
 
 	tlsConn := tls.Server(clientConn, tlsConfig)
@@ -168,7 +171,9 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 	for {
 		req, err := http.ReadRequest(bufio.NewReader(tlsConn))
 		if err != nil {
-			log.Printf("reading request(%s): %v", r.Host, err)
+			if err != io.EOF {
+				log.Printf("reading request(%s): %v", r.Host, err)
+			}
 			break
 		}
 

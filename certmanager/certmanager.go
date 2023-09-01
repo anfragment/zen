@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/anfragment/zen/config"
@@ -22,12 +24,14 @@ import (
 
 // CertManager manages the root CA certificate and key for the proxy.
 type CertManager struct {
-	certData []byte
-	keyData  []byte
-	certPath string
-	cert     *x509.Certificate
-	keyPath  string
-	key      crypto.PrivateKey
+	certData    []byte
+	keyData     []byte
+	certPath    string
+	cert        *x509.Certificate
+	keyPath     string
+	key         crypto.PrivateKey
+	certCache   map[string]tls.Certificate
+	certCacheMu sync.RWMutex
 }
 
 const (
@@ -40,8 +44,9 @@ func NewCertManager() (*CertManager, error) {
 	folderName := path.Join(config.Config.DataDir, certsFolderName())
 
 	cm := &CertManager{
-		certPath: path.Join(folderName, caName),
-		keyPath:  path.Join(folderName, keyName),
+		certPath:  path.Join(folderName, caName),
+		keyPath:   path.Join(folderName, keyName),
+		certCache: make(map[string]tls.Certificate),
 	}
 
 	if config.Config.Certmanager.CAInstalled {
