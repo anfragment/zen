@@ -17,7 +17,7 @@ func (m *thirdPartyModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *thirdPartyModifier) ShouldBlock(req *http.Request) bool {
+func (m *thirdPartyModifier) ShouldMatch(req *http.Request) bool {
 	if req.Header.Get("Sec-Fetch-Site") == "cross-site" {
 		return !m.invert
 	}

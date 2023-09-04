@@ -38,7 +38,7 @@ var (
 	}
 )
 
-func (m *contentTypeModifier) ShouldBlock(req *http.Request) bool {
+func (m *contentTypeModifier) ShouldMatch(req *http.Request) bool {
 	contentType, ok := secFetchDestMap[req.Header.Get("Sec-Fetch-Dest")]
 	if m.contentType == "other" {
 		if m.invert {

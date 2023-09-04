@@ -1,5 +1,5 @@
 {
-  "matcher": {
+  "filter": {
     "filterLists": [
       "https://easylist.to/easylist/easylist.txt",
       "https://easylist.to/easylist/easyprivacy.txt",

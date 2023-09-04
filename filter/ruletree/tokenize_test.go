@@ -1,4 +1,4 @@
-package tokenize
+package ruletree
 
 import (
 	"reflect"

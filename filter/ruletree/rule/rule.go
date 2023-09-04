@@ -2,6 +2,7 @@ package rule
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -17,7 +18,7 @@ type Rule struct {
 
 type modifier interface {
 	Parse(modifier string) error
-	ShouldBlock(req *http.Request) bool
+	ShouldMatch(req *http.Request) bool
 }
 
 func (rm *Rule) Parse(rule string, modifiers string) error {
@@ -86,9 +87,10 @@ const (
 
 func (rm *Rule) HandleRequest(req *http.Request) RequestAction {
 	for _, modifier := range rm.modifiers {
-		if !modifier.ShouldBlock(req) {
+		if !modifier.ShouldMatch(req) {
 			return ActionAllow
 		}
 	}
+	log.Printf("rule %q matched request %q", rm.rule, req.URL.String())
 	return ActionBlock
 }

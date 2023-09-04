@@ -1,4 +1,4 @@
-package tokenize
+package ruletree
 
 import "regexp"
 
@@ -6,7 +6,7 @@ var (
 	reTokenSep = regexp.MustCompile(`(^https|^http|\.|-|_|:\/\/|\/|\?|=|&|:|\^)`)
 )
 
-func Tokenize(s string) []string {
+func tokenize(s string) []string {
 	tokenRanges := reTokenSep.FindAllStringIndex(s, -1)
 	// assume that each separator is followed by a token
 	// over-allocating is fine, since the token arrays will be short-lived

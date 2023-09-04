@@ -13,19 +13,25 @@ import (
 	"time"
 
 	"github.com/anfragment/zen/certmanager"
-	"github.com/anfragment/zen/matcher"
+	"github.com/anfragment/zen/filter"
+	"github.com/anfragment/zen/filter/ruletree/rule"
 )
 
 type Proxy struct {
 	host        string
 	port        int
-	matcher     *matcher.Matcher
+	filter      *filter.Filter
 	certmanager *certmanager.CertManager
 	server      *http.Server
 }
 
-func NewProxy(host string, port int, matcher *matcher.Matcher, certmanager *certmanager.CertManager) *Proxy {
-	return &Proxy{host, port, matcher, certmanager, nil}
+func NewProxy(host string, port int, filter *filter.Filter, certmanager *certmanager.CertManager) *Proxy {
+	return &Proxy{
+		host:        host,
+		port:        port,
+		filter:      filter,
+		certmanager: certmanager,
+	}
 }
 
 // Start starts the proxy on the given address.
@@ -101,6 +107,10 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 
 	removeConnectionHeaders(r.Header)
 	removeHopHeaders(r.Header)
+	if res := p.filterRequest(r); res != nil {
+		res.Write(w)
+		return
+	}
 
 	resp, err := client.Do(r)
 	if err != nil {
@@ -176,9 +186,13 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		}
-
 		req.URL.Scheme = "https"
 		req.URL.Host = r.Host
+
+		if res := p.filterRequest(req); res != nil {
+			res.Write(tlsConn)
+			break
+		}
 
 		resp, err := http.DefaultTransport.RoundTrip(req)
 		if err != nil {
@@ -201,6 +215,23 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+}
+
+// filterRequest returns a response if the request should be blocked according
+// to the filter.
+func (p *Proxy) filterRequest(r *http.Request) *http.Response {
+	if p.filter.HandleRequest(r) == rule.ActionBlock {
+		return &http.Response{
+			StatusCode: http.StatusForbidden,
+			Status:     http.StatusText(http.StatusForbidden),
+			Header:     make(http.Header),
+			Proto:      r.Proto,
+			ProtoMajor: r.ProtoMajor,
+			ProtoMinor: r.ProtoMinor,
+			Request:    r,
+		}
+	}
+	return nil
 }
 
 // tunnel tunnels the connection between the client and the remote server

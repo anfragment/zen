@@ -28,7 +28,7 @@ func (m *domainModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *domainModifier) ShouldBlock(req *http.Request) bool {
+func (m *domainModifier) ShouldMatch(req *http.Request) bool {
 	referer := req.Header.Get("Referer")
 	if url, err := url.Parse(referer); err == nil {
 		hostname := url.Hostname()

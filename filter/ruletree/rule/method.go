@@ -26,7 +26,7 @@ func (m *methodModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *methodModifier) ShouldBlock(req *http.Request) bool {
+func (m *methodModifier) ShouldMatch(req *http.Request) bool {
 	method := req.Method
 	for _, entry := range m.entries {
 		if entry.MatchMethod(method) {

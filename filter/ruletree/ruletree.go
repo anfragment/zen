@@ -5,16 +5,15 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 
-	"github.com/anfragment/zen/matcher/ruletree/rule"
-	"github.com/anfragment/zen/matcher/ruletree/tokenize"
-	"github.com/elazarl/goproxy"
+	"github.com/anfragment/zen/filter/ruletree/rule"
 )
 
-// RuleTree is a trie-based matcher that is capable of parsing
+// RuleTree is a trie-based filter that is capable of parsing
 // Adblock-style and hosts rules and matching URLs against thert.
 //
-// The matcher is safe for concurrent use.
+// The filter is safe for concurrent use.
 type RuleTree struct {
 	root *node
 }
@@ -44,22 +43,36 @@ func (rt *RuleTree) AddRule(r string) error {
 	var tokens []string
 	var modifiersStr string
 	var rootKeyKind nodeKind
-	if host := reHosts.FindStringSubmatch(r); host != nil {
-		if !reHostsIgnore.MatchString(host[1]) {
-			rootKeyKind = nodeKindHostnameRoot
-			tokens = tokenize.Tokenize(host[1])
+	if reHosts.MatchString(r) {
+		// strip the # and any characters after it
+		if commentIndex := strings.IndexByte(r, '#'); commentIndex != -1 {
+			r = r[:commentIndex]
 		}
+
+		host := reHosts.FindStringSubmatch(r)[1]
+		if strings.ContainsRune(host, ' ') {
+			for _, host := range strings.Split(host, " ") {
+				rt.AddRule(fmt.Sprintf("127.0.0.1 %s", host))
+			}
+			return nil
+		}
+		if reHostsIgnore.MatchString(host) {
+			return nil
+		}
+
+		rootKeyKind = nodeKindHostnameRoot
+		tokens = tokenize(host)
 	} else if match := reDomainName.FindStringSubmatch(r); match != nil {
 		rootKeyKind = nodeKindDomain
-		tokens = tokenize.Tokenize(match[1])
+		tokens = tokenize(match[1])
 		modifiersStr = match[2]
 	} else if match := reExactAddress.FindStringSubmatch(r); match != nil {
 		rootKeyKind = nodeKindAddressRoot
-		tokens = tokenize.Tokenize(match[1])
+		tokens = tokenize(match[1])
 		modifiersStr = match[2]
 	} else if match := reGeneric.FindStringSubmatch(r); match != nil {
 		rootKeyKind = nodeKindExactMatch
-		tokens = tokenize.Tokenize(match[1])
+		tokens = tokenize(match[1])
 		modifiersStr = match[2]
 	} else {
 		return fmt.Errorf("unknown rule format")
@@ -91,7 +104,7 @@ func (rt *RuleTree) AddRule(r string) error {
 	return nil
 }
 
-func (rt *RuleTree) HandleRequest(req *http.Request, ctx *goproxy.ProxyCtx) rule.RequestAction {
+func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
 	host := req.URL.Hostname()
 	urlWithoutPort := url.URL{
 		Scheme:   req.URL.Scheme,
@@ -103,7 +116,7 @@ func (rt *RuleTree) HandleRequest(req *http.Request, ctx *goproxy.ProxyCtx) rule
 
 	url := urlWithoutPort.String()
 	// address root -> hostname root -> domain -> etc.
-	tokens := tokenize.Tokenize(url)
+	tokens := tokenize(url)
 
 	// address root
 	if action := rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
@@ -123,8 +136,8 @@ func (rt *RuleTree) HandleRequest(req *http.Request, ctx *goproxy.ProxyCtx) rule
 	}
 	tokens = tokens[1:]
 
-	var hostnameMatcher func(*node, []string) rule.RequestAction
-	hostnameMatcher = func(rootNode *node, tokens []string) rule.RequestAction {
+	var hostnameFilter func(*node, []string) rule.RequestAction
+	hostnameFilter = func(rootNode *node, tokens []string) rule.RequestAction {
 		if action := rootNode.TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
 			return len(t) == 0 || t[0] != "."
 		}); action != rule.ActionAllow {
@@ -133,7 +146,7 @@ func (rt *RuleTree) HandleRequest(req *http.Request, ctx *goproxy.ProxyCtx) rule
 		if len(tokens) > 2 && tokens[1] == "." {
 			// try to match the next domain segment
 			tokens = tokens[2:]
-			return hostnameMatcher(rootNode, tokens)
+			return hostnameFilter(rootNode, tokens)
 		}
 		return rule.ActionAllow
 	}
@@ -141,7 +154,7 @@ func (rt *RuleTree) HandleRequest(req *http.Request, ctx *goproxy.ProxyCtx) rule
 	// hostname root
 	hostnameRootNode := rt.root.FindChild(nodeKey{kind: nodeKindHostnameRoot})
 	if hostnameRootNode != nil {
-		if action := hostnameMatcher(hostnameRootNode, tokens); action != rule.ActionAllow {
+		if action := hostnameFilter(hostnameRootNode, tokens); action != rule.ActionAllow {
 			return action
 		}
 	}

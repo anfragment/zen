@@ -5,11 +5,11 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/anfragment/zen/matcher/ruletree/rule"
+	"github.com/anfragment/zen/filter/ruletree/rule"
 )
 
 // nodeKind is the type of a node in the trie.
-type nodeKind int
+type nodeKind int8
 
 const (
 	nodeKindExactMatch   nodeKind = iota

@@ -15,7 +15,7 @@ var Config config
 type config struct {
 	Filter struct {
 		FilterLists []string `json:"filterLists"`
-	} `json:"matcher"`
+	} `json:"filter"`
 	Certmanager struct {
 		CAInstalled bool `json:"caInstalled"`
 	} `json:"certmanager"`

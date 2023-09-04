@@ -1,4 +1,4 @@
-package matcher
+package filter
 
 // import (
 // 	"net/http"
@@ -17,13 +17,13 @@ package matcher
 // }
 
 // func (mt *matchTest) run(t *testing.T) {
-// 	matcher := NewMatcher()
+// 	filter := NewFilter()
 // 	for _, r := range mt.rules {
-// 		matcher.addRule(r)
+// 		filter.addRule(r)
 // 	}
 // 	for _, u := range mt.cases {
 // 		req, _ := http.NewRequest("GET", u.url, nil)
-// 		_, resp := matcher.Middleware(req, nil)
+// 		_, resp := filter.Middleware(req, nil)
 // 		if resp == nil && u.want {
 // 			t.Errorf("case %q: want response, got nil", u.url)
 // 			continue
@@ -34,7 +34,7 @@ package matcher
 // 	}
 // }
 
-// func TestMatcherByAddressParts(t *testing.T) {
+// func TestFilterByAddressParts(t *testing.T) {
 // 	t.Parallel()
 // 	tests := []matchTest{
 // 		{
@@ -105,7 +105,7 @@ package matcher
 // 	}
 // }
 
-// func TestMatcherHosts(t *testing.T) {
+// func TestFilterHosts(t *testing.T) {
 // 	t.Parallel()
 // 	tests := []matchTest{
 // 		{
@@ -191,7 +191,7 @@ package matcher
 // 	}
 // }
 
-// func TestMatcherByDomainName(t *testing.T) {
+// func TestFilterByDomainName(t *testing.T) {
 // 	t.Parallel()
 // 	tests := []matchTest{
 // 		{
@@ -218,7 +218,7 @@ package matcher
 // 	}
 // }
 
-// func TestMatcherByExactAddress(t *testing.T) {
+// func TestFilterByExactAddress(t *testing.T) {
 // 	t.Parallel()
 // 	tests := []matchTest{
 // 		{
@@ -241,7 +241,7 @@ package matcher
 // 	}
 // }
 
-// func TestMatcherWildcard(t *testing.T) {
+// func TestFilterWildcard(t *testing.T) {
 // 	t.Parallel()
 // 	tests := []matchTest{
 // 		{
