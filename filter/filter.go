@@ -21,8 +21,8 @@ import (
 //
 // The filter is safe for concurrent use.
 type Filter struct {
-	ruleTree          *ruletree.RuleTree
-	exceptionRuleTree *ruletree.RuleTree
+	ruleTree          ruletree.RuleTree
+	exceptionRuleTree ruletree.RuleTree
 }
 
 func NewFilter() *Filter {

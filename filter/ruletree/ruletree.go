@@ -15,7 +15,7 @@ import (
 //
 // The filter is safe for concurrent use.
 type RuleTree struct {
-	root *node
+	root node
 }
 
 var (
@@ -29,9 +29,9 @@ var (
 	reGeneric      = regexp.MustCompile(fmt.Sprintf(`^(.+?)%s$`, modifiersCG))
 )
 
-func NewRuleTree() *RuleTree {
-	return &RuleTree{
-		root: &node{},
+func NewRuleTree() RuleTree {
+	return RuleTree{
+		root: node{},
 	}
 }
 
@@ -86,7 +86,7 @@ func (rt *RuleTree) AddRule(r string) error {
 
 	var node *node
 	if rootKeyKind == nodeKindExactMatch {
-		node = rt.root
+		node = &rt.root
 	} else {
 		node = rt.root.findOrAddChild(nodeKey{kind: rootKeyKind})
 	}
