@@ -78,7 +78,7 @@ func (rt *RuleTree) AddRule(r string) error {
 		return fmt.Errorf("unknown rule format")
 	}
 
-	rule := &rule.Rule{}
+	rule := rule.Rule{}
 	if err := rule.Parse(r, modifiersStr); err != nil {
 		// log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
 		return fmt.Errorf("parse modifiers: %w", err)

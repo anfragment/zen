@@ -33,7 +33,9 @@ type nodeKey struct {
 type node struct {
 	children   map[nodeKey]*node
 	childrenMu sync.RWMutex
-	rules      []*rule.Rule
+	// rules is the list of rules that match the node's subtree.
+	// If it is empty, the node is not a leaf.
+	rules []rule.Rule
 }
 
 func (n *node) findOrAddChild(key nodeKey) *node {
@@ -76,11 +78,11 @@ func (n *node) Match(tokens []string) (*node, []string) {
 	if n == nil {
 		return nil, nil
 	}
-	if n.rules != nil {
+	if len(n.rules) > 0 {
 		return n, tokens
 	}
 	if len(tokens) == 0 {
-		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.rules != nil {
+		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && len(separator.rules) > 0 {
 			return separator, tokens
 		}
 		return nil, nil
@@ -108,24 +110,24 @@ func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUs
 			return true
 		}
 	}
-	if n.rules != nil && shouldUseNode(n, tokens) {
+	if len(n.rules) > 0 && shouldUseNode(n, tokens) {
 		return n.HandleRequest(req)
 	}
 	if len(tokens) == 0 {
 		// end of an address is also accepted as a separator
 		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
-		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && separator.rules != nil && shouldUseNode(separator, tokens) {
+		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && len(separator.rules) > 0 && shouldUseNode(separator, tokens) {
 			return separator.HandleRequest(req)
 		}
 		return rule.ActionAllow
 	}
 	if reSeparator.MatchString(tokens[0]) {
-		if match, remainingTokens := n.FindChild(nodeKey{kind: nodeKindSeparator}).Match(tokens[1:]); match != nil && match.rules != nil && shouldUseNode(match, remainingTokens) {
+		if match, remainingTokens := n.FindChild(nodeKey{kind: nodeKindSeparator}).Match(tokens[1:]); match != nil && len(match.rules) > 0 && shouldUseNode(match, remainingTokens) {
 			return match.HandleRequest(req)
 		}
 	}
 	if wildcard := n.FindChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
-		if match, remainingTokens := wildcard.Match(tokens[1:]); match != nil && match.rules != nil && shouldUseNode(match, remainingTokens) {
+		if match, remainingTokens := wildcard.Match(tokens[1:]); match != nil && len(match.rules) > 0 && shouldUseNode(match, remainingTokens) {
 			return match.HandleRequest(req)
 		}
 	}

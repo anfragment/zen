@@ -6,6 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/filter"
 	"github.com/anfragment/zen/proxy"
@@ -24,6 +27,10 @@ func main() {
 	if err := proxy.Start(); err != nil {
 		log.Fatalf("failed to start proxy: %v", err)
 	}
+
+	go func() {
+		http.ListenAndServe(":6060", nil)
+	}()
 
 	// Wait for SIGINT or SIGTERM.
 	sig := make(chan os.Signal, 1)

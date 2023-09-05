@@ -78,7 +78,7 @@ func (rm *Rule) Parse(rule string, modifiers string) error {
 	return nil
 }
 
-type RequestAction int
+type RequestAction int8
 
 const (
 	ActionAllow RequestAction = iota
