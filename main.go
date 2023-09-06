@@ -1,43 +1,36 @@
 package main
 
 import (
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
+	"embed"
 
-	"net/http"
-	_ "net/http/pprof"
-
-	"github.com/anfragment/zen/certmanager"
-	"github.com/anfragment/zen/filter"
-	"github.com/anfragment/zen/proxy"
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
+//go:embed all:frontend/dist
+var assets embed.FS
+
 func main() {
-	filter := filter.NewFilter()
+	// Create an instance of the app structure
+	app := NewApp()
 
-	certmanager, err := certmanager.NewCertManager()
+	// Create application with options
+	err := wails.Run(&options.App{
+		Title:  "Zen",
+		Width:  1024,
+		Height: 768,
+		AssetServer: &assetserver.Options{
+			Assets: assets,
+		},
+		BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 1},
+		OnStartup:        app.startup,
+		Bind: []interface{}{
+			app,
+		},
+	})
+
 	if err != nil {
-		log.Fatalf("failed to initialize certmanager: %v", err)
+		println("Error:", err.Error())
 	}
-
-	proxy := proxy.NewProxy("127.0.0.1", 8080, filter, certmanager)
-	log.Println("starting proxy")
-	if err := proxy.Start(); err != nil {
-		log.Fatalf("failed to start proxy: %v", err)
-	}
-
-	go func() {
-		http.ListenAndServe(":6060", nil)
-	}()
-
-	// Wait for SIGINT or SIGTERM.
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	<-sig
-	if err := proxy.Stop(); err != nil {
-		log.Fatalf("failed to stop proxy: %v", err)
-	}
-	log.Println("proxy stopped")
 }
