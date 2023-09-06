@@ -1,0 +1,27 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "extends": [
+    "airbnb",
+    "airbnb-typescript"
+  ],
+  "rules": {
+    "no-console": 1,
+    "react/react-in-jsx-scope": 0,
+    "react/jsx-max-props-per-line": ["error", { "maximum": 2 }],
+    "import/order": ["error", {
+      "newlines-between": "always",
+      "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
+      "alphabetize": {
+        "order": "asc",
+        "caseInsensitive": true
+      }
+    }]
+  },
+  "parserOptions": {
+    "project": "./frontend/tsconfig.json"
+  }
+}

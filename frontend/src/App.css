@@ -2,3 +2,16 @@
     height: 100vh;
     text-align: center;
 }
+
+.heading {
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+    font-weight: 900;
+    border-bottom: 1px dotted #ccc;
+}
+
+.footer {
+    position: absolute !important;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+}

@@ -1,16 +1,14 @@
-html {
-    background-color: rgba(27, 38, 54, 1);
-    text-align: center;
-    color: white;
-}
+@import "normalize.css";
+@import "@blueprintjs/core/lib/css/blueprint.css";
+@import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
 body {
-    margin: 0;
-    color: white;
-    font-family: Helvetica, Arial, system-ui, sans-serif;
+    margin: 0 12px;
+    font-family: Inter, Roboto, 'Helvetica Neue', 'Arial Nova', 'Nimbus Sans', Arial, sans-serif;
+    background: #161716;
+    color: #fff;
 }
 
 #app {
     height: 100vh;
-    text-align: center;
 }
