@@ -61,7 +61,7 @@ func (p *Proxy) Start() error {
 // Stop stops the proxy.
 func (p *Proxy) Stop() error {
 	if p.server == nil {
-		return fmt.Errorf("proxy not started")
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

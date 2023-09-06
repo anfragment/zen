@@ -26,6 +26,12 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+func (a *App) shutdown(ctx context.Context) {
+	if a.proxy != nil {
+		a.proxy.Stop()
+	}
+}
+
 // StartProxy initializes the associated resources and starts the proxy
 func (a *App) StartProxy() {
 	filter := filter.NewFilter()
@@ -44,6 +50,10 @@ func (a *App) StartProxy() {
 
 // StopProxy stops the proxy
 func (a *App) StopProxy() {
+	if a.proxy == nil {
+		return
+	}
+
 	log.Println("stopping proxy")
 	if err := a.proxy.Stop(); err != nil {
 		log.Fatalf("failed to stop proxy: %v", err)
