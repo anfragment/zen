@@ -6,7 +6,11 @@
 .heading {
     font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 900;
+    font-size: 22;
     border-bottom: 1px dotted #ccc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .footer {

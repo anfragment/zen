@@ -1,4 +1,4 @@
-import { Button } from '@blueprintjs/core';
+import { Button, Icon, IconSize } from '@blueprintjs/core';
 import { useState } from 'react';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
@@ -24,7 +24,13 @@ function App() {
 
   return (
     <div id="App" className="bp5-dark">
-      <h1 className="heading">ZEN</h1>
+      <h1 className="heading">
+        <Icon
+          icon="shield" size={IconSize.LARGE}
+          className="heading__icon"
+        />
+        ZEN
+      </h1>
 
       <Button
         onClick={proxyState.state === 'off' ? start : stop}
