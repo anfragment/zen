@@ -1,9 +1,24 @@
 {
   "filter": {
     "filterLists": [
-      "https://easylist.to/easylist/easylist.txt",
-      "https://easylist.to/easylist/easyprivacy.txt",
-      "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext"
+      { 
+        "url": "https://easylist.to/easylist/easylist.txt",
+        "title": "EasyList",
+        "enabled": true,
+        "type": "ads"
+      },
+      {
+        "url": "https://easylist.to/easylist/easyprivacy.txt",
+        "title": "EasyPrivacy",
+        "enabled": true,
+        "type": "privacy"
+      },
+      {
+        "url": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
+        "title": "Peter Lowe's Ad server list",
+        "enabled": true,
+        "type": "general"
+      }
     ]
   },
   "certmanager": {

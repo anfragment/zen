@@ -1,0 +1,33 @@
+.filter-lists__spinner {
+  margin-top: 8px;
+}
+
+.filter-lists__list {
+  border-bottom: 1px dotted #fff;
+}
+
+.filter-lists__list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.filter-lists__list-switch {
+  margin: 0;
+}
+
+.filter-lists__list-title {
+  margin: 0;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-lists__list-url {
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

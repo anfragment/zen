@@ -19,7 +19,10 @@
         "order": "asc",
         "caseInsensitive": true
       }
-    }]
+    }],
+    "import/prefer-default-export": 0,
+    "@typescript-eslint/no-use-before-define": 0,
+    "max-len": ["error", { "code": 120 }],
   },
   "parserOptions": {
     "project": "./frontend/tsconfig.json"

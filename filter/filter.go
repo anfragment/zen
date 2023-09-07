@@ -35,6 +35,9 @@ func NewFilter() *Filter {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	for _, filterList := range config.Config.Filter.FilterLists {
+		if !filterList.Enabled {
+			continue
+		}
 		go func(filterList string) {
 			defer wg.Done()
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, filterList, nil)
@@ -50,7 +53,7 @@ func NewFilter() *Filter {
 			defer resp.Body.Close()
 			rules, exceptions := filter.AddRules(resp.Body)
 			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, filterList)
-		}(filterList)
+		}(filterList.Url)
 	}
 	wg.Wait()
 

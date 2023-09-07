@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 
+	"github.com/anfragment/zen/config"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -29,6 +30,7 @@ func main() {
 		OnShutdown: app.shutdown,
 		Bind: []interface{}{
 			app,
+			&config.Config,
 		},
 	})
 
