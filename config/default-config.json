@@ -14,8 +14,8 @@
         "type": "privacy"
       },
       {
-        "url": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
-        "title": "Peter Lowe's Ad server list",
+        "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+        "title": "StevenBlack",
         "enabled": true,
         "type": "general"
       }
