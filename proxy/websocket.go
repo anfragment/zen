@@ -32,9 +32,9 @@ func (p *Proxy) proxyWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	targetTLSReader := bufio.NewReader(targetConn)
+	targetReader := bufio.NewReader(targetConn)
 
-	resp, err := http.ReadResponse(targetTLSReader, r)
+	resp, err := http.ReadResponse(targetReader, r)
 	if err != nil {
 		log.Printf("reading response from target(%s): %v", r.Host, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)

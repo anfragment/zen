@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/anfragment/zen/certmanager"
@@ -18,19 +19,22 @@ import (
 )
 
 type Proxy struct {
-	host        string
-	port        int
-	filter      *filter.Filter
-	certmanager *certmanager.CertManager
-	server      *http.Server
+	host           string
+	port           int
+	filter         *filter.Filter
+	certmanager    *certmanager.CertManager
+	server         *http.Server
+	ignoredHosts   map[string]struct{}
+	ignoredHostsMu sync.RWMutex
 }
 
 func NewProxy(host string, port int, filter *filter.Filter, certmanager *certmanager.CertManager) *Proxy {
 	return &Proxy{
-		host:        host,
-		port:        port,
-		filter:      filter,
-		certmanager: certmanager,
+		host:         host,
+		port:         port,
+		filter:       filter,
+		certmanager:  certmanager,
+		ignoredHosts: map[string]struct{}{},
 	}
 }
 
@@ -107,6 +111,7 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 
 	removeConnectionHeaders(r.Header)
 	removeHopHeaders(r.Header)
+
 	if res := p.filterRequest(r); res != nil {
 		res.Write(w)
 		return
@@ -148,12 +153,24 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 	}
 	defer clientConn.Close()
 
+	removeHopHeaders(r.Header)
+	removeConnectionHeaders(r.Header)
+
+	if res := p.filterRequest(r); res != nil {
+		res.Write(clientConn)
+		return
+	}
+
 	host, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		log.Printf("splitting host and port(%s): %v", r.Host, err)
 		return
 	}
-	if net.ParseIP(host) != nil || r.Header.Get("Upgrade") == "websocket" {
+
+	p.ignoredHostsMu.RLock()
+	_, ignoreHost := p.ignoredHosts[host]
+	p.ignoredHostsMu.RUnlock()
+	if ignoreHost || net.ParseIP(host) != nil {
 		// TODO: implement upstream certificate sniffing
 		// https://docs.mitmproxy.org/stable/concepts-howmitmproxyworks/#complication-1-whats-the-remote-hostname
 		p.tunnel(clientConn, r)
@@ -177,11 +194,19 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 	tlsConn := tls.Server(clientConn, tlsConfig)
 	defer tlsConn.Close()
+	connReader := bufio.NewReader(tlsConn)
 
 	for {
-		req, err := http.ReadRequest(bufio.NewReader(tlsConn))
+		req, err := http.ReadRequest(connReader)
 		if err != nil {
 			if err != io.EOF {
+				if strings.Contains(err.Error(), "tls: ") {
+					log.Printf("adding %s to ignored hosts", host)
+					p.ignoredHostsMu.Lock()
+					p.ignoredHosts[host] = struct{}{}
+					p.ignoredHostsMu.Unlock()
+				}
+
 				log.Printf("reading request(%s): %v", r.Host, err)
 			}
 			break
@@ -196,14 +221,21 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 		resp, err := http.DefaultTransport.RoundTrip(req)
 		if err != nil {
+			if strings.Contains(err.Error(), "tls: ") {
+				log.Printf("adding %s to ignored hosts", host)
+				p.ignoredHostsMu.Lock()
+				p.ignoredHosts[host] = struct{}{}
+				p.ignoredHostsMu.Unlock()
+			}
 			log.Printf("roundtrip(%s): %v", r.Host, err)
+			// TODO: send a more meaningful response with a body explaining the error
 			tlsConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
 			break
 		}
-		defer resp.Body.Close()
 
 		if err := resp.Write(tlsConn); err != nil {
 			log.Printf("writing response(%s): %v", r.Host, err)
+			resp.Body.Close()
 			break
 		}
 
@@ -212,8 +244,11 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 			resp.ProtoAtLeast(1, 1) &&
 			!resp.Uncompressed &&
 			(len(resp.TransferEncoding) == 0 || resp.TransferEncoding[0] != "chunked") {
+			resp.Body.Close()
 			break
 		}
+
+		resp.Body.Close()
 	}
 }
 
@@ -247,6 +282,7 @@ func (p *Proxy) tunnel(w net.Conn, r *http.Request) {
 
 	if _, err := w.Write([]byte("HTTP/1.1 200 OK\r\n\r\n")); err != nil {
 		log.Printf("writing 200 OK to client(%s): %v", r.Host, err)
+		return
 	}
 
 	doneC := make(chan struct{}, 2)
