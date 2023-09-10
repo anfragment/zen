@@ -8,6 +8,10 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
+var exclusionListURLs = []string{
+	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
+}
+
 var (
 	wininet                          = windows.NewLazySystemDLL("wininet.dll")
 	internetSetOption                = wininet.NewProc("InternetSetOptionW")

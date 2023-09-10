@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+var exclusionListURLs = []string{
+	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
+	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/apple.txt",
+}
+
 var interfaceName string
 
 // setSystemProxy sets the system proxy to the proxy address

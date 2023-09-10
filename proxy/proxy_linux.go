@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+var exclusionListURLs = []string{
+	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
+}
+
 func (p *Proxy) setSystemProxy() error {
 	if binaryExists("gsettings") {
 		commands := [][]string{

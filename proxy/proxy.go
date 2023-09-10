@@ -24,18 +24,50 @@ type Proxy struct {
 	filter         *filter.Filter
 	certmanager    *certmanager.CertManager
 	server         *http.Server
-	ignoredHosts   map[string]struct{}
+	ignoredHosts   []string
 	ignoredHostsMu sync.RWMutex
 }
 
 func NewProxy(host string, port int, filter *filter.Filter, certmanager *certmanager.CertManager) *Proxy {
-	return &Proxy{
+	p := Proxy{
 		host:         host,
 		port:         port,
 		filter:       filter,
 		certmanager:  certmanager,
-		ignoredHosts: map[string]struct{}{},
+		ignoredHosts: []string{},
 	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(exclusionListURLs))
+	for _, url := range exclusionListURLs {
+		go func(url string) {
+			defer wg.Done()
+			resp, err := http.Get(url)
+			if err != nil {
+				log.Printf("failed to get exclusion list: %v", err)
+				return
+			}
+			defer resp.Body.Close()
+
+			scanner := bufio.NewScanner(resp.Body)
+			for scanner.Scan() {
+				host := strings.TrimSpace(scanner.Text())
+				if len(host) == 0 || strings.HasPrefix(host, "#") {
+					continue
+				}
+
+				p.ignoredHostsMu.Lock()
+				p.ignoredHosts = append(p.ignoredHosts, host)
+				p.ignoredHostsMu.Unlock()
+			}
+			if err := scanner.Err(); err != nil {
+				log.Printf("error scanning exclusion list: %v", err)
+			}
+		}(url)
+	}
+	wg.Wait()
+
+	return &p
 }
 
 // Start starts the proxy on the given address.
@@ -167,10 +199,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.ignoredHostsMu.RLock()
-	_, ignoreHost := p.ignoredHosts[host]
-	p.ignoredHostsMu.RUnlock()
-	if ignoreHost || net.ParseIP(host) != nil {
+	if !p.shouldMITM(host) || net.ParseIP(host) != nil {
 		// TODO: implement upstream certificate sniffing
 		// https://docs.mitmproxy.org/stable/concepts-howmitmproxyworks/#complication-1-whats-the-remote-hostname
 		p.tunnel(clientConn, r)
@@ -203,7 +232,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 				if strings.Contains(err.Error(), "tls: ") {
 					log.Printf("adding %s to ignored hosts", host)
 					p.ignoredHostsMu.Lock()
-					p.ignoredHosts[host] = struct{}{}
+					p.ignoredHosts = append(p.ignoredHosts, host)
 					p.ignoredHostsMu.Unlock()
 				}
 
@@ -224,9 +253,10 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(err.Error(), "tls: ") {
 				log.Printf("adding %s to ignored hosts", host)
 				p.ignoredHostsMu.Lock()
-				p.ignoredHosts[host] = struct{}{}
+				p.ignoredHosts = append(p.ignoredHosts, host)
 				p.ignoredHostsMu.Unlock()
 			}
+
 			log.Printf("roundtrip(%s): %v", r.Host, err)
 			// TODO: send a more meaningful response with a body explaining the error
 			tlsConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
@@ -250,6 +280,20 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 		resp.Body.Close()
 	}
+}
+
+// shouldMITM returns true if the host should be MITM'd.
+func (p *Proxy) shouldMITM(host string) bool {
+	p.ignoredHostsMu.RLock()
+	defer p.ignoredHostsMu.RUnlock()
+
+	for _, ignoredHost := range p.ignoredHosts {
+		if strings.HasSuffix(host, ignoredHost) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // filterRequest returns a response if the request should be blocked according
