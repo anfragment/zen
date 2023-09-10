@@ -1,0 +1,13 @@
+# This file contains MacOS-specific hosts that the proxy has trouble MITM-int.
+# The proxy will not attempt to MITM hosts in this file.
+# If you find a host that doesn't work, add it here and submit a pull request.
+
+# https://support.apple.com/en-gb/HT210060
+apple.com
+icloud.com
+mzstatic.com
+cdn-apple.com
+networking.apple
+apple-cloudkit.com
+icloud.com.cn
+apzones.com
