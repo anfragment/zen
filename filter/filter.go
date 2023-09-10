@@ -31,13 +31,13 @@ func NewFilter() *Filter {
 		exceptionRuleTree: ruletree.NewRuleTree(),
 	}
 	var wg sync.WaitGroup
-	wg.Add(len(config.Config.Filter.FilterLists))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	for _, filterList := range config.Config.Filter.FilterLists {
 		if !filterList.Enabled {
 			continue
 		}
+		wg.Add(1)
 		go func(filterList string) {
 			defer wg.Done()
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, filterList, nil)
