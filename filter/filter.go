@@ -89,7 +89,7 @@ func (m *Filter) AddRules(reader io.Reader) (ruleCount, exceptionCount int) {
 		}
 	}
 
-	return
+	return ruleCount, exceptionCount
 }
 
 func (m *Filter) HandleRequest(req *http.Request) rule.RequestAction {

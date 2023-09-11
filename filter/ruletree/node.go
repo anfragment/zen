@@ -12,12 +12,11 @@ import (
 type nodeKind int8
 
 const (
-	nodeKindExactMatch   nodeKind = iota
-	nodeKindAddressRoot           // |
-	nodeKindHostnameRoot          // hosts.txt
-	nodeKindDomain                // ||
-	nodeKindWildcard              // *
-	nodeKindSeparator             // ^
+	nodeKindExactMatch  nodeKind = iota
+	nodeKindAddressRoot          // |
+	nodeKindDomain               // ||
+	nodeKindWildcard             // *
+	nodeKindSeparator            // ^
 )
 
 // nodeKey identifies a node in the trie.

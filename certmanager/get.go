@@ -79,12 +79,17 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 	cm.certCache[host] = cert
 	cm.certCacheMu.Unlock()
 
+	cm.ScheduleCacheCleanup(host, expiry)
+
+	return &cert, nil
+}
+
+// ScheduleCacheCleanup clears the cache for the given host.
+func (cm *CertManager) ScheduleCacheCleanup(host string, expiry time.Time) {
 	go func() {
 		time.Sleep(time.Until(expiry) - time.Second) // give it a second in case of a lock contention
 		cm.certCacheMu.Lock()
 		delete(cm.certCache, host)
 		cm.certCacheMu.Unlock()
 	}()
-
-	return &cert, nil
 }

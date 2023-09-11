@@ -11,11 +11,12 @@ import (
 )
 
 // RuleTree is a trie-based filter that is capable of parsing
-// Adblock-style and hosts rules and matching URLs against thert.
+// Adblock-style and hosts rules and matching URLs against them.
 //
 // The filter is safe for concurrent use.
 type RuleTree struct {
-	root node
+	root  node
+	hosts map[string]struct{}
 }
 
 var (
@@ -31,7 +32,8 @@ var (
 
 func NewRuleTree() RuleTree {
 	return RuleTree{
-		root: node{},
+		root:  node{},
+		hosts: map[string]struct{}{},
 	}
 }
 
@@ -40,9 +42,6 @@ func (rt *RuleTree) AddRule(r string) error {
 		return nil
 	}
 
-	var tokens []string
-	var modifiersStr string
-	var rootKeyKind nodeKind
 	if reHosts.MatchString(r) {
 		// strip the # and any characters after it
 		if commentIndex := strings.IndexByte(r, '#'); commentIndex != -1 {
@@ -60,9 +59,14 @@ func (rt *RuleTree) AddRule(r string) error {
 			return nil
 		}
 
-		rootKeyKind = nodeKindHostnameRoot
-		tokens = tokenize(host)
-	} else if match := reDomainName.FindStringSubmatch(r); match != nil {
+		rt.hosts[host] = struct{}{}
+		return nil
+	}
+
+	var tokens []string
+	var modifiersStr string
+	var rootKeyKind nodeKind
+	if match := reDomainName.FindStringSubmatch(r); match != nil {
 		rootKeyKind = nodeKindDomain
 		tokens = tokenize(match[1])
 		modifiersStr = match[2]
@@ -106,6 +110,10 @@ func (rt *RuleTree) AddRule(r string) error {
 
 func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
 	host := req.URL.Hostname()
+	if _, ok := rt.hosts[host]; ok {
+		return rule.ActionBlock
+	}
+
 	urlWithoutPort := url.URL{
 		Scheme:   req.URL.Scheme,
 		Host:     host,
@@ -135,29 +143,6 @@ func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
 		return action
 	}
 	tokens = tokens[1:]
-
-	var hostnameFilter func(*node, []string) rule.RequestAction
-	hostnameFilter = func(rootNode *node, tokens []string) rule.RequestAction {
-		if action := rootNode.TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
-			return len(t) == 0 || t[0] != "."
-		}); action != rule.ActionAllow {
-			return action
-		}
-		if len(tokens) > 2 && tokens[1] == "." {
-			// try to match the next domain segment
-			tokens = tokens[2:]
-			return hostnameFilter(rootNode, tokens)
-		}
-		return rule.ActionAllow
-	}
-
-	// hostname root
-	hostnameRootNode := rt.root.FindChild(nodeKey{kind: nodeKindHostnameRoot})
-	if hostnameRootNode != nil {
-		if action := hostnameFilter(hostnameRootNode, tokens); action != rule.ActionAllow {
-			return action
-		}
-	}
 
 	// domain segments
 	for len(tokens) > 0 {
