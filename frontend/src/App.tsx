@@ -1,7 +1,7 @@
 import {
-  Button, ButtonGroup, Icon, IconSize,
+  Button, ButtonGroup, Icon, IconSize, FocusStyleManager,
 } from '@blueprintjs/core';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
 
@@ -10,6 +10,10 @@ import { FilterLists } from './FilterLists';
 import './App.css';
 
 function App() {
+  useEffect(() => {
+    FocusStyleManager.onlyShowFocusOnTabs();
+  }, []);
+
   const [proxyState, setProxyState] = useState<{ state: 'on' | 'off'; loading: boolean; }>({
     state: 'off',
     loading: false,

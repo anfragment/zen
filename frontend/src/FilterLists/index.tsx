@@ -25,7 +25,7 @@ export function FilterLists() {
     const filterLists = await GetFilterLists();
     setState({ ...state, filterLists, loading: false });
   };
-  
+
   useEffect(() => {
     (async () => {
       await fetchLists();
@@ -50,7 +50,11 @@ export function FilterLists() {
       {state.loading && <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />}
 
       {state.filterLists.filter((filterList) => filterList.type === tab).map((filterList) => (
-        <ListItem key={filterList.url} filterList={filterList} onToggle={fetchLists} />
+        <ListItem
+          key={filterList.url}
+          filterList={filterList}
+          onToggle={fetchLists}
+        />
       ))}
     </>
   );
