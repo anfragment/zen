@@ -5,8 +5,9 @@ import { useState } from 'react';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
 
-import './App.css';
 import { FilterLists } from './FilterLists';
+
+import './App.css';
 
 function App() {
   const [proxyState, setProxyState] = useState<{ state: 'on' | 'off'; loading: boolean; }>({
