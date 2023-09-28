@@ -17,7 +17,7 @@
   margin: 0;
 }
 
-.filter-lists__list-title {
+.filter-lists__list-name {
   margin: 0;
   -webkit-line-clamp: 1;
   overflow: hidden;

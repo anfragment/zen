@@ -13,7 +13,7 @@ const APP_NAME = "zen"
 var Config config
 
 type filterList struct {
-	Title   string `json:"title"`
+	Name    string `json:"name"`
 	Type    string `json:"type"`
 	Url     string `json:"url"`
 	Enabled bool   `json:"enabled"`

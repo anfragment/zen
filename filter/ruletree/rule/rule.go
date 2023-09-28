@@ -2,15 +2,16 @@ package rule
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
 
 // Rule represents modifiers of a rule.
 type Rule struct {
-	// rule is the original rule string.
-	rule string
+	// string representation
+	RawRule string
+	// FilterName is the name of the filter that the rule belongs to.
+	FilterName *string
 	// generic is true if the rule is a generic rule.
 	generic   bool
 	modifiers []modifier
@@ -21,9 +22,8 @@ type modifier interface {
 	ShouldMatch(req *http.Request) bool
 }
 
-func (rm *Rule) Parse(rule string, modifiers string) error {
-	rm.rule = rule
-	if modifiers == "" {
+func (rm *Rule) ParseModifiers(modifiers string) error {
+	if len(modifiers) == 0 {
 		rm.generic = true
 		return nil
 	}
@@ -78,19 +78,29 @@ func (rm *Rule) Parse(rule string, modifiers string) error {
 	return nil
 }
 
-type RequestAction int8
+type RequestAction struct {
+	Type       RequestActionType
+	RawRule    string
+	FilterName string
+}
+
+type RequestActionType int8
 
 const (
-	ActionAllow RequestAction = iota
+	ActionAllow RequestActionType = iota
 	ActionBlock
 )
 
 func (rm *Rule) HandleRequest(req *http.Request) RequestAction {
 	for _, modifier := range rm.modifiers {
 		if !modifier.ShouldMatch(req) {
-			return ActionAllow
+			return RequestAction{Type: ActionAllow}
 		}
 	}
-	log.Printf("rule %q matched request %q", rm.rule, req.URL.String())
-	return ActionBlock
+
+	action := RequestAction{Type: ActionBlock, RawRule: rm.RawRule}
+	if rm.FilterName != nil {
+		action.FilterName = *rm.FilterName
+	}
+	return action
 }

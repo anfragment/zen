@@ -1,7 +1,7 @@
 export namespace config {
 	
 	export class filterList {
-	    title: string;
+	    name: string;
 	    type: string;
 	    url: string;
 	    enabled: boolean;
@@ -12,7 +12,7 @@ export namespace config {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.title = source["title"];
+	        this.name = source["name"];
 	        this.type = source["type"];
 	        this.url = source["url"];
 	        this.enabled = source["enabled"];

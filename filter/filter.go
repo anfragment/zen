@@ -38,9 +38,9 @@ func NewFilter() *Filter {
 			continue
 		}
 		wg.Add(1)
-		go func(filterList string) {
+		go func(url string, name string) {
 			defer wg.Done()
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, filterList, nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			if err != nil {
 				log.Printf("filter initialization: %v", err)
 				return
@@ -51,9 +51,9 @@ func NewFilter() *Filter {
 				return
 			}
 			defer resp.Body.Close()
-			rules, exceptions := filter.AddRules(resp.Body)
-			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, filterList)
-		}(filterList.Url)
+			rules, exceptions := filter.AddRules(resp.Body, &name)
+			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, url)
+		}(filterList.Url, filterList.Name)
 	}
 	wg.Wait()
 
@@ -62,26 +62,29 @@ func NewFilter() *Filter {
 
 var (
 	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	reIgnoreRule = regexp.MustCompile(`^(?:!|#|\[)|(##|#\?#|#\$#|#@#)`)
+	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)|(##|#\?#|#\$#|#@#)`)
 	reException  = regexp.MustCompile(`^@@`)
 )
 
-func (m *Filter) AddRules(reader io.Reader) (ruleCount, exceptionCount int) {
+// AddRules parses the rules from the given reader and adds them to the filter.
+func (m *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exceptionCount int) {
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
-		rule := strings.TrimSpace(scanner.Text())
-		if rule == "" || reIgnoreRule.MatchString(rule) {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || reIgnoreLine.MatchString(line) {
 			continue
 		}
-		if reException.MatchString(rule) {
-			if err := m.exceptionRuleTree.AddRule(rule[2:]); err != nil {
+
+		if reException.MatchString(line) {
+			if err := m.exceptionRuleTree.AddRule(line[2:], nil); err != nil {
+				// filterName is only needed for logging blocked requests
 				// log.Printf("error adding exception rule %q: %v", rule, err)
 				continue
 			}
 			exceptionCount++
 		} else {
-			if err := m.ruleTree.AddRule(rule); err != nil {
+			if err := m.ruleTree.AddRule(line, filterName); err != nil {
 				// log.Printf("error adding rule %q: %v", rule, err)
 				continue
 			}
@@ -94,8 +97,8 @@ func (m *Filter) AddRules(reader io.Reader) (ruleCount, exceptionCount int) {
 
 func (m *Filter) HandleRequest(req *http.Request) rule.RequestAction {
 	exceptionAction := m.exceptionRuleTree.HandleRequest(req)
-	if exceptionAction == rule.ActionBlock {
-		return rule.ActionAllow
+	if exceptionAction.Type == rule.ActionBlock {
+		return rule.RequestAction{Type: rule.ActionAllow}
 	}
 
 	return m.ruleTree.HandleRequest(req)

@@ -299,7 +299,8 @@ func (p *Proxy) shouldMITM(host string) bool {
 // filterRequest returns a response if the request should be blocked according
 // to the filter.
 func (p *Proxy) filterRequest(r *http.Request) *http.Response {
-	if p.filter.HandleRequest(r) == rule.ActionBlock {
+	if action := p.filter.HandleRequest(r); action.Type == rule.ActionBlock {
+		log.Printf("%s: %s", action.FilterName, action.RawRule)
 		return &http.Response{
 			StatusCode: http.StatusForbidden,
 			Status:     http.StatusText(http.StatusForbidden),

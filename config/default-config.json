@@ -3,19 +3,19 @@
     "filterLists": [
       { 
         "url": "https://easylist.to/easylist/easylist.txt",
-        "title": "EasyList",
+        "name": "EasyList",
         "enabled": true,
         "type": "ads"
       },
       {
         "url": "https://easylist.to/easylist/easyprivacy.txt",
-        "title": "EasyPrivacy",
+        "name": "EasyPrivacy",
         "enabled": true,
         "type": "privacy"
       },
       {
         "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-        "title": "StevenBlack",
+        "name": "StevenBlack",
         "enabled": true,
         "type": "general"
       }

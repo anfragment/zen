@@ -65,7 +65,7 @@ function ListItem({ filterList, onToggle }: { filterList: config.filterList, onT
   return (
     <div className="filter-lists__list">
       <div className="filter-lists__list-header">
-        <h3 className="filter-lists__list-title">{filterList.title}</h3>
+        <h3 className="filter-lists__list-name">{filterList.name}</h3>
         <Switch
           checked={filterList.enabled}
           disabled={loading}

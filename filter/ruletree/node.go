@@ -102,7 +102,7 @@ func (n *node) Match(tokens []string) (*node, []string) {
 
 func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) rule.RequestAction {
 	if n == nil {
-		return rule.ActionAllow
+		return rule.RequestAction{Type: rule.ActionAllow}
 	}
 	if shouldUseNode == nil {
 		shouldUseNode = func(n *node, tokens []string) bool {
@@ -118,7 +118,7 @@ func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUs
 		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && len(separator.rules) > 0 && shouldUseNode(separator, tokens) {
 			return separator.HandleRequest(req)
 		}
-		return rule.ActionAllow
+		return rule.RequestAction{Type: rule.ActionAllow}
 	}
 	if reSeparator.MatchString(tokens[0]) {
 		if match, remainingTokens := n.FindChild(nodeKey{kind: nodeKindSeparator}).Match(tokens[1:]); match != nil && len(match.rules) > 0 && shouldUseNode(match, remainingTokens) {
@@ -137,9 +137,9 @@ func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUs
 func (n *node) HandleRequest(req *http.Request) rule.RequestAction {
 	for _, r := range n.rules {
 		action := r.HandleRequest(req)
-		if action != rule.ActionAllow {
+		if action.Type != rule.ActionAllow {
 			return action
 		}
 	}
-	return rule.ActionAllow
+	return rule.RequestAction{Type: rule.ActionAllow}
 }
