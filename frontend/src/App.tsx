@@ -1,5 +1,5 @@
 import {
-  Button, ButtonGroup, Icon, IconSize, FocusStyleManager,
+  Button, ButtonGroup, Icon, IconSize, FocusStyleManager, NonIdealState,
 } from '@blueprintjs/core';
 import { useState, useEffect } from 'react';
 
@@ -8,6 +8,7 @@ import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
 import { FilterLists } from './FilterLists';
 
 import './App.css';
+import { RequestLog } from './RequestLog';
 
 function App() {
   useEffect(() => {
@@ -40,13 +41,12 @@ function App() {
           />
           ZEN
         </h1>
-
-        <div className="heading__status--active">
-          <Icon icon="dot" />
-          Active
-        </div>
       </div>
-      <ButtonGroup fill minimal>
+      <ButtonGroup
+        fill
+        minimal
+        className="tabs"
+      >
         <Button
           icon="circle" active={activeTab === 'home'}
           onClick={() => setActiveTab('home')}
@@ -67,19 +67,26 @@ function App() {
         </Button>
       </ButtonGroup>
 
-      {activeTab === 'home' && (
-        <>
-          home
-        </>
-      )}
-      {activeTab === 'filterLists' && (
-        <FilterLists />
-      )}
-      {activeTab === 'settings' && (
-        <>
-          settings
-        </>
-      )}
+      <div className="content">
+        <div style={{ display: activeTab === 'home' ? 'block' : 'none' }}>
+          {proxyState.state === 'off' ? (
+            <NonIdealState
+              icon="lightning"
+              title="Activate the proxy to see blocked requests"
+              description="The proxy is not active. Click the button below to activate it."
+              className="request-log__non-ideal-state"
+            />
+          ) : <RequestLog />}
+        </div>
+        {activeTab === 'filterLists' && (
+          <FilterLists />
+        )}
+        {activeTab === 'settings' && (
+          <>
+            settings
+          </>
+        )}
+      </div>
 
       <Button
         onClick={proxyState.state === 'off' ? start : stop}

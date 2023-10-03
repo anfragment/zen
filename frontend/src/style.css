@@ -2,8 +2,10 @@
 @import "@blueprintjs/core/lib/css/blueprint.css";
 @import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
-body {
-    margin: 0 12px;
+body, html {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
     font-family: Inter, Roboto, 'Helvetica Neue', 'Arial Nova', 'Nimbus Sans', Arial, sans-serif;
     background: rgb(47, 52, 60);
     color: #fff;

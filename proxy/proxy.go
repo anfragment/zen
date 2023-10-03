@@ -16,6 +16,7 @@ import (
 	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/filter"
 	"github.com/anfragment/zen/filter/ruletree/rule"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Proxy struct {
@@ -26,15 +27,17 @@ type Proxy struct {
 	server         *http.Server
 	ignoredHosts   []string
 	ignoredHostsMu sync.RWMutex
+	ctx            context.Context
 }
 
-func NewProxy(host string, port int, filter *filter.Filter, certmanager *certmanager.CertManager) *Proxy {
+func NewProxy(host string, port int, filter *filter.Filter, certmanager *certmanager.CertManager, ctx context.Context) *Proxy {
 	p := Proxy{
 		host:         host,
 		port:         port,
 		filter:       filter,
 		certmanager:  certmanager,
 		ignoredHosts: []string{},
+		ctx:          ctx,
 	}
 
 	var wg sync.WaitGroup
@@ -300,7 +303,7 @@ func (p *Proxy) shouldMITM(host string) bool {
 // to the filter.
 func (p *Proxy) filterRequest(r *http.Request) *http.Response {
 	if action := p.filter.HandleRequest(r); action.Type == rule.ActionBlock {
-		log.Printf("%s: %s", action.FilterName, action.RawRule)
+		runtime.EventsEmit(p.ctx, "proxy:filter", r.Method, r.URL.String(), r.Header.Get("Referer"), action.FilterName, action.RawRule)
 		return &http.Response{
 			StatusCode: http.StatusForbidden,
 			Status:     http.StatusText(http.StatusForbidden),

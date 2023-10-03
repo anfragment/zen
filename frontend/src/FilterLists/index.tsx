@@ -40,7 +40,6 @@ export function FilterLists() {
         id="FilterLists"
         onChange={(id) => setTab(id as FilterListType)}
         selectedTabId={tab}
-        fill
       >
         <Tab id="general" title="General" />
         <Tab id="ads" title="Ads" />

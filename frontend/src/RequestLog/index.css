@@ -1,0 +1,12 @@
+.request-log__card {
+  display: flex;
+  justify-content: space-between;
+}
+
+.request-log__non-ideal-state {
+  margin-top: 20px;
+}
+
+.request-log__card__details__value {
+  line-break: normal;
+}
