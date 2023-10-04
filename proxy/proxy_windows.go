@@ -30,7 +30,7 @@ func (p *Proxy) setSystemProxy() error {
 		return err
 	}
 
-	if err := k.SetStringValue("ProxyServer", fmt.Sprintf("%s:%d", p.host, p.port)); err != nil {
+	if err := k.SetStringValue("ProxyServer", fmt.Sprintf("%s:%d", "127.0.0.1", p.port)); err != nil {
 		if err := k.SetDWordValue("ProxyEnable", 0); err != nil {
 			log.Printf("failed to disable proxy during error handling: %v", err)
 		}
