@@ -33,17 +33,19 @@ export function RequestLog() {
     }, ...prevLogs].slice(0, 200));
   }), []);
 
-  if (logs.length === 0) {
-    return null;
-  }
-
   return (
     <div className="request-log">
-      <CardList compact>
-        {logs.map((log) => (
-          <RequestLogCard log={log} key={log.id} />
-        ))}
-      </CardList>
+      {logs.length === 0 ? (
+        <p className="request-log__empty">
+          Start browsing to see blocked requests.
+        </p>
+      ) : (
+        <CardList compact>
+          {logs.map((log) => (
+            <RequestLogCard log={log} key={log.id} />
+          ))}
+        </CardList>
+      )}
     </div>
   );
 }
@@ -51,7 +53,7 @@ export function RequestLog() {
 function RequestLogCard({ log }: { log: Log }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const { hostname } = new URL(log.url, 'http://foo');
+  const { hostname } = new URL(log.url, 'http://foo'); // setting base url helps with //hostname:port urls
 
   return (
     <>

@@ -3,10 +3,11 @@
   justify-content: space-between;
 }
 
-.request-log__non-ideal-state {
-  margin-top: 20px;
+.request-log__empty {
+  margin-top: .5rem;
+  font-weight: bold;
 }
 
 .request-log__card__details__value {
-  line-break: normal;
+  line-break: anywhere;
 }
