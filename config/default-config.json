@@ -23,5 +23,8 @@
   },
   "certmanager": {
     "caInstalled": false
+  },
+  "proxy": {
+    "port": 0
   }
 }

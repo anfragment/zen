@@ -1,0 +1,18 @@
+.settings-manager {
+  margin-top: 4px;
+}
+
+.settings-manager__section-header {
+  background-color: #fbb360;
+  border-radius: 2px 2px 0 0;
+  font-weight: bold;
+}
+
+.settings-manager__section {
+  border: 1px solid #fbb360;
+  border-radius: 4px;
+}
+
+.settings-manager__section-body {
+  padding: 10px 10px 0 10px;
+}

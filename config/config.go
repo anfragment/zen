@@ -26,6 +26,9 @@ type config struct {
 	Certmanager struct {
 		CAInstalled bool `json:"caInstalled"`
 	} `json:"certmanager"`
+	Proxy struct {
+		Port int `json:"port"`
+	} `json:"proxy"`
 	ConfigDir string `json:"-"`
 	DataDir   string `json:"-"`
 }
@@ -77,6 +80,19 @@ func (c *config) ToggleFilterList(url string, enabled bool) {
 			break
 		}
 	}
+	c.Save()
+}
+
+// GetPort returns the port the proxy is set to listen on.
+// Used on the frontend in the settings manager.
+func (c *config) GetPort() int {
+	return c.Proxy.Port
+}
+
+// SetPort sets the port the proxy is set to listen on.
+// Used on the frontend in the settings manager.
+func (c *config) SetPort(port int) {
+	c.Proxy.Port = port
 	c.Save()
 }
 

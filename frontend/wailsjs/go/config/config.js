@@ -10,12 +10,20 @@ export function GetFilterLists() {
   return window['go']['config']['config']['GetFilterLists']();
 }
 
+export function GetPort() {
+  return window['go']['config']['config']['GetPort']();
+}
+
 export function RemoveFilterList(arg1) {
   return window['go']['config']['config']['RemoveFilterList'](arg1);
 }
 
 export function Save() {
   return window['go']['config']['config']['Save']();
+}
+
+export function SetPort(arg1) {
+  return window['go']['config']['config']['SetPort'](arg1);
 }
 
 export function ToggleFilterList(arg1, arg2) {

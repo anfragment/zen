@@ -5,10 +5,10 @@ import { useState, useEffect } from 'react';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
 
-import { FilterLists } from './FilterLists';
-
 import './App.css';
+import { FilterLists } from './FilterLists';
 import { RequestLog } from './RequestLog';
+import { SettingsManager } from './SettingsManager';
 
 function App() {
   useEffect(() => {
@@ -82,9 +82,7 @@ function App() {
           <FilterLists />
         )}
         {activeTab === 'settings' && (
-          <>
-            settings
-          </>
+          <SettingsManager />
         )}
       </div>
 

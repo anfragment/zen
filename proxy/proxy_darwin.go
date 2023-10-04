@@ -22,12 +22,12 @@ func (p *Proxy) setSystemProxy() error {
 	}
 
 	interfaceName = strings.TrimSpace(string(out))
-	cmd = exec.Command("networksetup", "-setwebproxy", interfaceName, p.host, fmt.Sprint(p.port))
+	cmd = exec.Command("networksetup", "-setwebproxy", interfaceName, "127.0.0.1", fmt.Sprint(p.port))
 	if out, err = cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("set web proxy: %v\n%s", err, out)
 	}
 
-	cmd = exec.Command("networksetup", "-setsecurewebproxy", interfaceName, p.host, fmt.Sprint(p.port))
+	cmd = exec.Command("networksetup", "-setsecurewebproxy", interfaceName, "127.0.0.1", fmt.Sprint(p.port))
 	if out, err = cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("set secure web proxy: %v\n%s", err, out)
 	}

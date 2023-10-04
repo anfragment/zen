@@ -14,13 +14,13 @@ import (
 	"time"
 
 	"github.com/anfragment/zen/certmanager"
+	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter"
 	"github.com/anfragment/zen/filter/ruletree/rule"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Proxy struct {
-	host           string
 	port           int
 	filter         *filter.Filter
 	certmanager    *certmanager.CertManager
@@ -30,14 +30,13 @@ type Proxy struct {
 	ctx            context.Context
 }
 
-func NewProxy(host string, port int, filter *filter.Filter, certmanager *certmanager.CertManager, ctx context.Context) *Proxy {
+func NewProxy(filter *filter.Filter, certmanager *certmanager.CertManager, ctx context.Context) *Proxy {
 	p := Proxy{
-		host:         host,
-		port:         port,
 		filter:       filter,
 		certmanager:  certmanager,
 		ignoredHosts: []string{},
 		ctx:          ctx,
+		port:         config.Config.Proxy.Port,
 	}
 
 	var wg sync.WaitGroup
@@ -79,10 +78,14 @@ func (p *Proxy) Start() error {
 		Handler: p,
 	}
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", p.host, p.port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", p.port))
 	if err != nil {
 		return fmt.Errorf("listen: %v", err)
 	}
+	// get the actual port in case we requested port 0
+	port := listener.Addr().(*net.TCPAddr).Port
+	p.port = port
+	log.Printf("proxy listening on port %d", port)
 
 	go func() {
 		if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {

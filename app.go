@@ -41,7 +41,7 @@ func (a *App) StartProxy() {
 		log.Fatalf("failed to initialize certmanager: %v", err)
 	}
 
-	a.proxy = proxy.NewProxy("127.0.0.1", 8080, filter, certmanager, a.ctx)
+	a.proxy = proxy.NewProxy(filter, certmanager, a.ctx)
 	log.Println("starting proxy")
 	if err := a.proxy.Start(); err != nil {
 		log.Fatalf("failed to start proxy: %v", err)
