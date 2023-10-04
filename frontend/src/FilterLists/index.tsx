@@ -44,6 +44,7 @@ export function FilterLists() {
         <Tab id="general" title="General" />
         <Tab id="ads" title="Ads" />
         <Tab id="privacy" title="Privacy" />
+        <Tab id="malware" title="Malware" />
       </Tabs>
 
       {state.loading && <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />}

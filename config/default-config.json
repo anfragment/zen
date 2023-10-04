@@ -2,7 +2,7 @@
   "filter": {
     "filterLists": [
       { 
-        "url": "https://easylist.to/easylist/easylist.txt",
+        "url": "https://easylist-downloads.adblockplus.org/easylist_noelemhide.txt",
         "name": "EasyList",
         "enabled": true,
         "type": "ads"
@@ -14,8 +14,14 @@
         "type": "privacy"
       },
       {
-        "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-        "name": "StevenBlack",
+        "url": "https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-online.txt",
+        "name": "Online Malicious URL Blocklist",
+        "enabled": true,
+        "type": "malware"
+      },
+      {
+        "url": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
+        "name": "Peter Lowe's Ad and tracking server list",
         "enabled": true,
         "type": "general"
       }

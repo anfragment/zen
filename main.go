@@ -17,10 +17,10 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:     "Zen",
-		MaxWidth:  356,
-		MaxHeight: 600,
-		MinWidth:  356,
-		MinHeight: 600,
+		MinWidth:  385,
+		MaxWidth:  385,
+		MinHeight: 650,
+		MaxHeight: 650,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

@@ -64,7 +64,7 @@ function RequestLogCard({ log }: { log: Log }) {
         onClick={() => setIsOpen(!isOpen)}
       >
         <Tag minimal intent="danger">{hostname}</Tag>
-        <div className="bp5-text-muted">{log.createdAt.toLocaleTimeString([], { timeStyle: 'medium' })}</div>
+        <div className="bp5-text-muted">{log.createdAt.toLocaleTimeString([], { timeStyle: 'short' })}</div>
       </Card>
 
       <Collapse isOpen={isOpen}>
