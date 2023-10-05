@@ -30,6 +30,7 @@ func main() {
 			app,
 			&config.Config,
 		},
+		HideWindowOnClose: true,
 	})
 
 	if err != nil {
