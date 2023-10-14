@@ -39,7 +39,11 @@ var (
 )
 
 func (m *contentTypeModifier) ShouldMatch(req *http.Request) bool {
-	contentType, ok := secFetchDestMap[req.Header.Get("Sec-Fetch-Dest")]
+	secFetchDest := req.Header.Get("Sec-Fetch-Dest")
+	if secFetchDest == "" {
+		return false
+	}
+	contentType, ok := secFetchDestMap[secFetchDest]
 	if m.contentType == "other" {
 		if m.invert {
 			return ok

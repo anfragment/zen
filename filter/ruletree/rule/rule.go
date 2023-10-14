@@ -59,18 +59,18 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			switch ruleType {
 			case "document", "xmlhttprequest", "font", "subdocument", "image", "object", "script", "stylesheet", "media", "websocket":
 				ctm := &contentTypeModifier{}
-				if err := ctm.Parse(ruleType); err != nil {
+				if err := ctm.Parse(modifier); err != nil {
 					return err
 				}
 				rm.modifiers = append(rm.modifiers, ctm)
 			case "third-party":
 				tpm := &thirdPartyModifier{}
-				if err := tpm.Parse(ruleType); err != nil {
+				if err := tpm.Parse(modifier); err != nil {
 					return err
 				}
 				rm.modifiers = append(rm.modifiers, tpm)
 			default:
-				return fmt.Errorf("unknown modifier %s", ruleType)
+				return fmt.Errorf("unknown modifier %s", modifier)
 			}
 		}
 	}
