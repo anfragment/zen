@@ -110,24 +110,32 @@ func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUs
 		}
 	}
 	if len(n.rules) > 0 && shouldUseNode(n, tokens) {
-		return n.HandleRequest(req)
+		if action := n.HandleRequest(req); action.Type != rule.ActionAllow {
+			return action
+		}
 	}
 	if len(tokens) == 0 {
 		// end of an address is also accepted as a separator
 		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
 		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && len(separator.rules) > 0 && shouldUseNode(separator, tokens) {
-			return separator.HandleRequest(req)
+			if action := separator.HandleRequest(req); action.Type != rule.ActionAllow {
+				return action
+			}
 		}
-		return rule.RequestAction{Type: rule.ActionAllow}
+		return n.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseAndHandleReq(req, tokens, shouldUseNode)
 	}
 	if reSeparator.MatchString(tokens[0]) {
 		if match, remainingTokens := n.FindChild(nodeKey{kind: nodeKindSeparator}).Match(tokens[1:]); match != nil && len(match.rules) > 0 && shouldUseNode(match, remainingTokens) {
-			return match.HandleRequest(req)
+			if action := match.HandleRequest(req); action.Type != rule.ActionAllow {
+				return action
+			}
 		}
 	}
 	if wildcard := n.FindChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
 		if match, remainingTokens := wildcard.Match(tokens[1:]); match != nil && len(match.rules) > 0 && shouldUseNode(match, remainingTokens) {
-			return match.HandleRequest(req)
+			if action := match.HandleRequest(req); action.Type != rule.ActionAllow {
+				return action
+			}
 		}
 	}
 
