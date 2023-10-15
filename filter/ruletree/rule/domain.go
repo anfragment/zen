@@ -41,6 +41,10 @@ func (m *domainModifier) ShouldMatch(req *http.Request) bool {
 	return false
 }
 
+func (m *domainModifier) RedirectTo(req *http.Request) string {
+	return ""
+}
+
 type domainModifierEntry struct {
 	invert  bool
 	regular string
