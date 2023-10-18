@@ -305,30 +305,12 @@ func (p *Proxy) shouldMITM(host string) bool {
 // filterRequest returns a response if the request should be blocked according
 // to the filter.
 func (p *Proxy) filterRequest(r *http.Request) *http.Response {
-	action := p.filter.HandleRequest(r)
-	switch action.Type {
-	case rule.ActionBlock:
+	if action := p.filter.HandleRequest(r); action.Type == rule.ActionBlock {
 		runtime.EventsEmit(p.ctx, "proxy:filter", r.Method, r.URL.String(), r.Header.Get("Referer"), action.FilterName, action.RawRule)
 		return &http.Response{
 			StatusCode: http.StatusForbidden,
 			Status:     http.StatusText(http.StatusForbidden),
 			Header:     make(http.Header),
-			Proto:      r.Proto,
-			ProtoMajor: r.ProtoMajor,
-			ProtoMinor: r.ProtoMinor,
-			Request:    r,
-		}
-	case rule.ActionRedirect:
-		runtime.EventsEmit(p.ctx, "proxy:redirect", r.Method, r.URL.String(), r.Header.Get("Referer"), action.RedirectTo, action.FilterName, action.RawRule)
-		log.Printf("redirecting %s to %s", r.URL.String(), action.RedirectTo)
-		return &http.Response{
-			// we intentionally send 302 instead of 301 because the latter is cached
-			// which could not be what the user wants
-			StatusCode: http.StatusFound,
-			Status:     http.StatusText(http.StatusFound),
-			Header: http.Header{
-				"Location": []string{action.RedirectTo},
-			},
 			Proto:      r.Proto,
 			ProtoMajor: r.ProtoMajor,
 			ProtoMinor: r.ProtoMinor,

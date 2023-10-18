@@ -36,10 +36,6 @@ func (m *methodModifier) ShouldMatch(req *http.Request) bool {
 	return false
 }
 
-func (m *methodModifier) RedirectTo(req *http.Request) string {
-	return ""
-}
-
 type methodModifierEntry struct {
 	method string
 	invert bool

@@ -55,7 +55,3 @@ func (m *contentTypeModifier) ShouldMatch(req *http.Request) bool {
 	}
 	return contentType == m.contentType
 }
-
-func (m *contentTypeModifier) RedirectTo(req *http.Request) string {
-	return ""
-}

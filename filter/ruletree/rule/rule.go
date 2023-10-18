@@ -20,7 +20,6 @@ type Rule struct {
 type modifier interface {
 	Parse(modifier string) error
 	ShouldMatch(req *http.Request) bool
-	RedirectTo(req *http.Request) string
 }
 
 func (rm *Rule) ParseModifiers(modifiers string) error {
@@ -49,12 +48,6 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 					return err
 				}
 				rm.modifiers = append(rm.modifiers, mm)
-			case "removeparam":
-				rpm := &removeparamModifier{}
-				if err := rpm.Parse(value); err != nil {
-					return err
-				}
-				rm.modifiers = append(rm.modifiers, rpm)
 			default:
 				return fmt.Errorf("unknown modifier %s", rule)
 			}
@@ -89,8 +82,6 @@ type RequestAction struct {
 	Type       RequestActionType
 	RawRule    string
 	FilterName string
-	// RedirectTo is the URL to redirect to if Type == ActionRedirect.
-	RedirectTo string
 }
 
 type RequestActionType int8
@@ -98,24 +89,13 @@ type RequestActionType int8
 const (
 	ActionAllow RequestActionType = iota
 	ActionBlock
-	ActionRedirect
 )
 
 func (rm *Rule) HandleRequest(req *http.Request) RequestAction {
-	var redirectTo string
 	for _, modifier := range rm.modifiers {
 		if !modifier.ShouldMatch(req) {
 			return RequestAction{Type: ActionAllow}
 		}
-		if modifierRedirectTo := modifier.RedirectTo(req); modifierRedirectTo != "" {
-			// TODO: check if multiple modifiers try to redirect
-			// should probably discard such rules
-			redirectTo = modifierRedirectTo
-		}
-	}
-
-	if redirectTo != "" {
-		return RequestAction{Type: ActionRedirect, RedirectTo: redirectTo}
 	}
 
 	action := RequestAction{Type: ActionBlock, RawRule: rm.RawRule}

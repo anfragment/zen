@@ -38,7 +38,3 @@ func (m *thirdPartyModifier) ShouldMatch(req *http.Request) bool {
 	}
 	return false
 }
-
-func (m *thirdPartyModifier) RedirectTo(req *http.Request) string {
-	return ""
-}
