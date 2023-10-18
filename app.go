@@ -34,14 +34,15 @@ func (a *App) shutdown(ctx context.Context) {
 
 // StartProxy initializes the associated resources and starts the proxy
 func (a *App) StartProxy() {
-	filter := filter.NewFilter()
-
-	certmanager, err := certmanager.NewCertManager()
-	if err != nil {
-		log.Fatalf("failed to initialize certmanager: %v", err)
+	if a.proxy == nil {
+		filter := filter.NewFilter()
+		certmanager, err := certmanager.NewCertManager()
+		if err != nil {
+			log.Fatalf("failed to initialize certmanager: %v", err)
+		}
+		a.proxy = proxy.NewProxy(filter, certmanager, a.ctx)
 	}
 
-	a.proxy = proxy.NewProxy(filter, certmanager, a.ctx)
 	log.Println("starting proxy")
 	if err := a.proxy.Start(); err != nil {
 		log.Fatalf("failed to start proxy: %v", err)

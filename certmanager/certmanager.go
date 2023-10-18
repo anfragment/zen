@@ -201,6 +201,14 @@ func (cm *CertManager) newCA() error {
 	return nil
 }
 
+// Clear removes all cached certificates.
+func (cm *CertManager) Clear() {
+	cm.certCacheMu.Lock()
+	defer cm.certCacheMu.Unlock()
+
+	cm.certCache = make(map[string]tls.Certificate)
+}
+
 func certsFolderName() string {
 	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		// following a general convention of using capitalized folder names on Windows and macOS

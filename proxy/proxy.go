@@ -74,6 +74,8 @@ func NewProxy(filter *filter.Filter, certmanager *certmanager.CertManager, ctx c
 
 // Start starts the proxy on the given address.
 func (p *Proxy) Start() error {
+	p.filter.Init()
+
 	p.server = &http.Server{
 		Handler: p,
 	}
@@ -119,6 +121,9 @@ func (p *Proxy) Stop() error {
 	if err := p.unsetSystemProxy(); err != nil {
 		return fmt.Errorf("unset system proxy: %v", err)
 	}
+
+	p.certmanager.Clear()
+	p.filter.Clear()
 
 	return nil
 }

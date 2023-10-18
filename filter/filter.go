@@ -30,6 +30,12 @@ func NewFilter() *Filter {
 		ruleTree:          ruletree.NewRuleTree(),
 		exceptionRuleTree: ruletree.NewRuleTree(),
 	}
+
+	return filter
+}
+
+// Init initializes the filter by downloading and parsing the filter lists.
+func (f *Filter) Init() {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -51,13 +57,17 @@ func NewFilter() *Filter {
 				return
 			}
 			defer resp.Body.Close()
-			rules, exceptions := filter.AddRules(resp.Body, &name)
+			rules, exceptions := f.AddRules(resp.Body, &name)
 			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, url)
 		}(filterList.Url, filterList.Name)
 	}
 	wg.Wait()
+}
 
-	return filter
+// Clear clears all rules from the filter.
+func (f *Filter) Clear() {
+	f.ruleTree = ruletree.NewRuleTree()
+	f.exceptionRuleTree = ruletree.NewRuleTree()
 }
 
 var (
