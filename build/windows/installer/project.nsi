@@ -98,6 +98,9 @@ Section "uninstall"
 
     RMDir /r $INSTDIR
 
+    ReadEnvStr $0 "LOCALAPPDATA"
+    RMDir /r "$0\${INFO_PRODUCTNAME}"
+
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
 
