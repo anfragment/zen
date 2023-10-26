@@ -182,7 +182,8 @@ func (cm *CertManager) newCA() error {
 		return fmt.Errorf("write private key at %s: %v", cm.keyPath, err)
 	}
 	if runtime.GOOS == "windows" {
-		if err := acl.Chmod(cm.keyPath, 0400); err != nil {
+		// 0500 to allow the user to delete the file
+		if err := acl.Chmod(cm.keyPath, 0500); err != nil {
 			return fmt.Errorf("chmod private key at %s: %v", cm.keyPath, err)
 		}
 	}
