@@ -177,13 +177,13 @@ func (cm *CertManager) newCA() error {
 		return fmt.Errorf("marshal private key: %v", err)
 	}
 	err = os.WriteFile(cm.keyPath, pem.EncodeToMemory(
-		&pem.Block{Type: "PRIVATE KEY", Bytes: privDER}), 0400)
+		&pem.Block{Type: "PRIVATE KEY", Bytes: privDER}), 0600)
 	if err != nil {
 		return fmt.Errorf("write private key at %s: %v", cm.keyPath, err)
 	}
 	if runtime.GOOS == "windows" {
 		// 0500 to allow the user to delete the file
-		if err := acl.Chmod(cm.keyPath, 0500); err != nil {
+		if err := acl.Chmod(cm.keyPath, 0600); err != nil {
 			return fmt.Errorf("chmod private key at %s: %v", cm.keyPath, err)
 		}
 	}
