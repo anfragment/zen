@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"runtime"
 
 	"github.com/anfragment/zen/config"
 	"github.com/wailsapp/wails/v2"
@@ -30,7 +31,11 @@ func main() {
 			app,
 			&config.Config,
 		},
-		HideWindowOnClose: true,
+		// As the app doesn't yet have a tray icon, we want to hide it on close.
+		// On Windows, setting this to true will cause the taskbar icon to dissapear,
+		// but the app will still be running in the background with no apparent ways
+		// to get it back. So we only do this on non-Windows platforms.
+		HideWindowOnClose: runtime.GOOS != "windows",
 	})
 
 	if err != nil {
