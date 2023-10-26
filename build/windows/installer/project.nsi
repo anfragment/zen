@@ -98,6 +98,11 @@ Section "uninstall"
 
     RMDir /r $INSTDIR
 
+    ; Change ACLs to give the user an ability to delete the data folder
+    Exec 'icacls "$LOCALAPPDATA\${INFO_PRODUCTNAME}" /grant "%username%:D /T"'
+
+    RMDir /r "$LOCALAPPDATA\${INFO_PRODUCTNAME}"
+
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
 
