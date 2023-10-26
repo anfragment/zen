@@ -98,6 +98,8 @@ Section "uninstall"
 
     RMDir /r $INSTDIR
 
+    ReadEnvStr $LOCALAPPDATA "LOCALAPPDATA"
+
     ; Change ACLs to give the user an ability to delete the data folder
     Exec 'icacls "$LOCALAPPDATA\${INFO_PRODUCTNAME}" /grant "%username%:D /T"'
 
