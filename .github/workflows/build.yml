@@ -36,20 +36,22 @@ jobs:
         run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
       - name: Build App
         if: runner.os != 'Windows'
-        run: wails build -o Zen-${{ runner.os }}-${{ runner.arch }}
+        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }}
       - name: Build App & Installer
         if: runner.os == 'Windows'
-        run: wails build -nsis -o Zen-${{ runner.os }}-${{ runner.arch }}
+        run: wails build -nsis -o Zen-${{ runner.os }}-${{ matrix.arch }}
       - name: Add MacOS permissions
         if: runner.os == 'macOS'
         run: chmod +x build/bin/*/Contents/MacOS/*
+        shell: bash
       - name: Add Linux perms
         if: runner.os == 'Linux'
         run: chmod +x build/bin/*
+        shell: bash
       
       - uses: actions/upload-artifact@v3
         with:
-          name: Zen-${{ matrix.os }}-${{ matrix.arch }}
+          name: Zen-${{ runner.os }}-${{ matrix.arch }}
           path: build/bin/*
       - name: Release
         uses: softprops/action-gh-release@v1
