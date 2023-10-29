@@ -1,0 +1,60 @@
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }}) - ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, ubuntu-latest, windows-latest]
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          check-latest: true
+          go-version: 1.21
+      - run: go version
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: node --version
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      - name: Install Linux Wails deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
+      - name: Build App
+        if: runner.os != 'Windows'
+        run: wails build -o Zen-${{ matrix.os }}-${{ matrix.arch }}
+      - name: Build App & Installer
+        if: runner.os == 'Windows'
+        run: wails build -nsis -o Zen-${{ matrix.os }}-${{ matrix.arch }}
+      - name: Add MacOS permissions
+        if: runner.os == 'macOS'
+        run: chmod +x build/bin/*/Contents/MacOS/*
+      - name: Add Linux perms
+        if: runner.os == 'Linux'
+        run: chmod +x build/bin/*
+      
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Zen-${{ matrix.os }}-${{ matrix.arch }}
+          path: build/bin/*
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: build/bin/*
+          tag_name: ${{ github.ref }}
+          draft: true
