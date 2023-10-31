@@ -8,6 +8,10 @@ on:
       - v*
   pull_request:
 
+permissions:
+  # https://github.com/softprops/action-gh-release/issues/236
+  contents: write
+
 jobs:
   build:
     name: Build (${{ matrix.os }}) - ${{ matrix.arch }}
