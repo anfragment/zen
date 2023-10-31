@@ -31,10 +31,12 @@ func main() {
 			app,
 			&config.Config,
 		},
-		// As the app doesn't yet have a tray icon, we want to hide it on close.
-		// On Windows, setting this to true will cause the taskbar icon to dissapear,
-		// but the app will still be running in the background with no apparent ways
-		// to get it back. So we only do this on non-Windows platforms.
+		/*
+			As the app doesn't yet have a tray icon, the correct behaviour is to hide the window on close.
+			However, on Windows, setting this to true causes the taskbar icon to disappear without any apparent way to restore the window.
+			Therefore, we only set this to true on non-Windows platforms.
+			This is supposed to be a temporary workaround, since Wails 3.0 with tray support is coming soon.
+		*/
 		HideWindowOnClose: runtime.GOOS != "windows",
 	})
 
