@@ -38,9 +38,12 @@ jobs:
       - name: Install Linux Wails deps
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
-      - name: Build App
-        if: runner.os != 'Windows'
-        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform ${{ runner.os }}/${{ matrix.arch }}
+      - name: Build Linux App
+        if: runner.os == 'Linux'
+        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform linux/${{ matrix.arch }}
+      - name: Build MacOS App
+        if: runner.os == 'macOS'
+        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform darwin/${{ matrix.arch }}
       - name: Build App & Installer
         if: runner.os == 'Windows'
         run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform windows/${{ matrix.arch }} -nsis
