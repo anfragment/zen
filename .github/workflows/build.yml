@@ -20,6 +20,9 @@ jobs:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
         arch: [amd64, arm64]
+      fail-fast: false
+    # cross-compilation to arm64 on x86 Linux is broken, so skip it
+    if: matrix.os != 'ubuntu-latest' || matrix.arch != 'arm64'
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go
