@@ -8,8 +8,6 @@ import (
 	"path"
 )
 
-const APP_NAME = "zen"
-
 var Config config
 
 type filterList struct {
