@@ -46,13 +46,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
       - name: Build Linux App
         if: runner.os == 'Linux'
-        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform linux/${{ matrix.arch }}
+        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }}
       - name: Build MacOS App
         if: runner.os == 'macOS'
-        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform darwin/${{ matrix.arch }}
+        run: wails build -platform darwin/${{ matrix.arch }} && mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
       - name: Build App & Installer
         if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform windows/${{ matrix.arch }} -nsis
+        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis
       - name: Add MacOS permissions
         if: runner.os == 'macOS'
         run: chmod +x build/bin/*/Contents/MacOS/*
