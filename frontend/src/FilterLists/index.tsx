@@ -1,16 +1,25 @@
 import {
-  Tab, Tabs, Spinner, SpinnerSize, Switch,
+  Spinner,
+  SpinnerSize,
+  Switch,
+  Button,
+  MenuItem,
 } from '@blueprintjs/core';
+import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
 
-import { GetFilterLists, ToggleFilterList } from '../../wailsjs/go/config/config';
-import { config } from '../../wailsjs/go/models';
+import {
+  GetFilterLists,
+  RemoveFilterList,
+  ToggleFilterList,
+} from '../../wailsjs/go/config/config';
+// eslint-disable-next-line import/order
+import { type config } from '../../wailsjs/go/models';
 
 import './index.css';
 
-// TODO: it would be nice to have a way to share types between the frontend and backend
-// investigate whether this is possible
-type FilterListType = 'general' | 'ads' | 'privacy';
+import { CreateFilterList } from './CreateFilterList';
+import { FilterListType } from './types';
 
 export function FilterLists() {
   const [state, setState] = useState<{
@@ -32,56 +41,125 @@ export function FilterLists() {
     })();
   }, []);
 
-  const [tab, setTab] = useState<FilterListType>('general');
+  const [type, setType] = useState<FilterListType>(FilterListType.GENERAL);
 
   return (
     <>
-      <Tabs
-        id="FilterLists"
-        onChange={(id) => setTab(id as FilterListType)}
-        selectedTabId={tab}
+      <Select
+        items={Object.values(FilterListType)}
+        itemRenderer={(item) => (
+          <MenuItem
+            key={item}
+            text={
+              <>
+                {item[0].toUpperCase() + item.slice(1)}
+                <span className="bp5-text-muted filter-lists__select-count">
+                  (
+                  {
+                    state.filterLists.filter(
+                      (filterList) =>
+                        filterList.type === item && filterList.enabled,
+                    ).length
+                  }
+                  /
+                  {
+                    state.filterLists.filter(
+                      (filterList) => filterList.type === item,
+                    ).length
+                  }
+                  )
+                </span>
+              </>
+            }
+            onClick={() => {
+              setType(item);
+            }}
+            active={item === type}
+          />
+        )}
+        onItemSelect={(item) => {
+          setType(item);
+        }}
+        popoverProps={{ minimal: true, matchTargetWidth: true }}
+        filterable={false}
       >
-        <Tab id="general" title="General" />
-        <Tab id="ads" title="Ads" />
-        <Tab id="privacy" title="Privacy" />
-        <Tab id="malware" title="Malware" />
-      </Tabs>
-
-      {state.loading && <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />}
-
-      {state.filterLists.filter((filterList) => filterList.type === tab).map((filterList) => (
-        <ListItem
-          key={filterList.url}
-          filterList={filterList}
-          onToggle={fetchLists}
+        <Button
+          text={type[0].toUpperCase() + type.slice(1)}
+          rightIcon="caret-down"
         />
-      ))}
+      </Select>
+
+      {state.loading && (
+        <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />
+      )}
+
+      {state.filterLists
+        .filter((filterList) => filterList.type === type)
+        .map((filterList) => (
+          <ListItem
+            key={filterList.url}
+            filterList={filterList}
+            showDelete={type === FilterListType.CUSTOM}
+            onChange={fetchLists}
+          />
+        ))}
+
+      {type === FilterListType.CUSTOM && (
+        <CreateFilterList onAdd={fetchLists} />
+      )}
     </>
   );
 }
 
-function ListItem({ filterList, onToggle }: { filterList: config.filterList, onToggle: () => void }) {
-  const [loading, setLoading] = useState(false);
+function ListItem({
+  filterList,
+  showDelete,
+  onChange,
+}: {
+  filterList: config.filterList;
+  showDelete?: boolean;
+  onChange?: () => void;
+}) {
+  const [switchLoading, setSwitchLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   return (
     <div className="filter-lists__list">
       <div className="filter-lists__list-header">
         <h3 className="filter-lists__list-name">{filterList.name}</h3>
         <Switch
           checked={filterList.enabled}
-          disabled={loading}
+          disabled={switchLoading}
           onChange={async (e) => {
-            setLoading(true);
+            setSwitchLoading(true);
             await ToggleFilterList(filterList.url, e.currentTarget.checked);
-            setLoading(false);
-            onToggle();
+            setSwitchLoading(false);
+            onChange?.();
           }}
           large
           className="filter-lists__list-switch"
         />
       </div>
-      <p className="bp5-text-muted filter-lists__list-url">
+      <div className="bp5-text-muted filter-lists__list-url">
         {filterList.url}
-      </p>
+      </div>
+
+      {showDelete && (
+        <Button
+          icon="trash"
+          intent="danger"
+          small
+          className="filter-lists__list-delete"
+          loading={deleteLoading}
+          onClick={async () => {
+            setDeleteLoading(true);
+            await RemoveFilterList(filterList.url);
+            setDeleteLoading(false);
+            onChange?.();
+          }}
+        >
+          Delete
+        </Button>
+      )}
     </div>
   );
 }

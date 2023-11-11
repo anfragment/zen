@@ -2,16 +2,18 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "plugins": [
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "prettier"
   ],
   "extends": [
     "airbnb",
-    "airbnb-typescript"
+    "airbnb-typescript",
+    "plugin:import/typescript",
+    "plugin:prettier/recommended"
   ],
   "rules": {
     "no-console": 1,
     "react/react-in-jsx-scope": 0,
-    "react/jsx-max-props-per-line": ["error", { "maximum": 2 }],
     "import/order": ["error", {
       "newlines-between": "always",
       "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
@@ -22,7 +24,8 @@
     }],
     "import/prefer-default-export": 0,
     "@typescript-eslint/no-use-before-define": 0,
-    "max-len": ["error", { "code": 120 }]
+    "react/no-unstable-nested-components": 0,
+    "react/require-default-props": 0
   },
   "parserOptions": {
     "project": "./frontend/tsconfig.json"

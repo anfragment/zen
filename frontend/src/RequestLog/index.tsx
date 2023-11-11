@@ -1,6 +1,4 @@
-import {
-  CardList, Card, Tag, Collapse,
-} from '@blueprintjs/core';
+import { CardList, Card, Tag, Collapse } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-packages
@@ -21,17 +19,26 @@ interface Log {
 export function RequestLog() {
   const [logs, setLogs] = useState<Log[]>([]);
 
-  useEffect(() => EventsOn('proxy:filter', (...data) => {
-    setLogs((prevLogs) => [{
-      id: id(),
-      method: data[0],
-      url: data[1],
-      referer: data[2],
-      filterName: data[3],
-      rule: data[4],
-      createdAt: new Date(),
-    }, ...prevLogs].slice(0, 200));
-  }), []);
+  useEffect(
+    () =>
+      EventsOn('proxy:filter', (...data) => {
+        setLogs((prevLogs) =>
+          [
+            {
+              id: id(),
+              method: data[0],
+              url: data[1],
+              referer: data[2],
+              filterName: data[3],
+              rule: data[4],
+              createdAt: new Date(),
+            },
+            ...prevLogs,
+          ].slice(0, 200),
+        );
+      }),
+    [],
+  );
 
   return (
     <div className="request-log">
@@ -63,15 +70,21 @@ function RequestLogCard({ log }: { log: Log }) {
         interactive
         onClick={() => setIsOpen(!isOpen)}
       >
-        <Tag minimal intent="danger">{hostname}</Tag>
-        <div className="bp5-text-muted">{log.createdAt.toLocaleTimeString([], { timeStyle: 'short' })}</div>
+        <Tag minimal intent="danger">
+          {hostname}
+        </Tag>
+        <div className="bp5-text-muted">
+          {log.createdAt.toLocaleTimeString([], { timeStyle: 'short' })}
+        </div>
       </Card>
 
       <Collapse isOpen={isOpen}>
         <Card className="request-log__card__details">
           <p className="request-log__card__details__value">
             <strong>Method: </strong>
-            <Tag minimal intent="primary">{log.method}</Tag>
+            <Tag minimal intent="primary">
+              {log.method}
+            </Tag>
           </p>
           <p className="request-log__card__details__value">
             <strong>URL: </strong>

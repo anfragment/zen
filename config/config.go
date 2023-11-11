@@ -52,8 +52,8 @@ func (c *config) GetFilterLists() []filterList {
 
 // AddFilterList adds a new filter list to the list of enabled filter lists.
 // Used on the frontend to add a new filter list.
-func (c *config) AddFilterList(url string) {
-	c.Filter.FilterLists = append(c.Filter.FilterLists, filterList{Url: url, Enabled: true})
+func (c *config) AddFilterList(list filterList) {
+	c.Filter.FilterLists = append(c.Filter.FilterLists, list)
 	c.Save()
 }
 
