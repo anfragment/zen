@@ -33,30 +33,35 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 // StartProxy initializes the associated resources and starts the proxy
-func (a *App) StartProxy() {
+func (a *App) StartProxy() string {
 	if a.proxy == nil {
 		filter := filter.NewFilter()
 		certmanager, err := certmanager.NewCertManager()
 		if err != nil {
-			log.Fatalf("failed to initialize certmanager: %v", err)
+			log.Printf("failed to initialize certmanager: %v", err)
+			return err.Error()
 		}
 		a.proxy = proxy.NewProxy(filter, certmanager, a.ctx)
 	}
 
 	log.Println("starting proxy")
 	if err := a.proxy.Start(); err != nil {
-		log.Fatalf("failed to start proxy: %v", err)
+		log.Printf("failed to start proxy: %v", err)
+		return err.Error()
 	}
+	return ""
 }
 
 // StopProxy stops the proxy
-func (a *App) StopProxy() {
+func (a *App) StopProxy() string {
 	if a.proxy == nil {
-		return
+		return "proxy not started"
 	}
 
 	log.Println("stopping proxy")
 	if err := a.proxy.Stop(); err != nil {
-		log.Fatalf("failed to stop proxy: %v", err)
+		log.Printf("failed to stop proxy: %v", err)
+		return err.Error()
 	}
+	return ""
 }

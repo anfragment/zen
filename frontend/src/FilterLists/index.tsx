@@ -18,6 +18,8 @@ import { type config } from '../../wailsjs/go/models';
 
 import './index.css';
 
+import { AppToaster } from '../common/toaster';
+
 import { CreateFilterList } from './CreateFilterList';
 import { FilterListType } from './types';
 
@@ -131,7 +133,16 @@ function ListItem({
           disabled={switchLoading}
           onChange={async (e) => {
             setSwitchLoading(true);
-            await ToggleFilterList(filterList.url, e.currentTarget.checked);
+            const err = await ToggleFilterList(
+              filterList.url,
+              e.currentTarget.checked,
+            );
+            if (err) {
+              AppToaster.show({
+                message: `Failed to toggle filter list: ${err}`,
+                intent: 'danger',
+              });
+            }
             setSwitchLoading(false);
             onChange?.();
           }}
@@ -152,7 +163,13 @@ function ListItem({
           loading={deleteLoading}
           onClick={async () => {
             setDeleteLoading(true);
-            await RemoveFilterList(filterList.url);
+            const err = await RemoveFilterList(filterList.url);
+            if (err) {
+              AppToaster.show({
+                message: `Failed to remove filter list: ${err}`,
+                intent: 'danger',
+              });
+            }
             setDeleteLoading(false);
             onChange?.();
           }}

@@ -16,14 +16,17 @@ func (p *Proxy) proxyWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	clientConn, _, err := hj.Hijack()
 	if err != nil {
-		log.Fatalf("hijacking connection(%s): %v", r.Host, err)
+		log.Printf("error hijacking connection(%s): %v", r.Host, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	defer clientConn.Close()
 
 	targetConn, err := net.Dial("tcp", r.Host)
 	if err != nil {
-		log.Fatalf("dialing remote server(%s): %v", r.Host, err)
+		log.Printf("error dialing remote server(%s): %v", r.Host, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
 	}
 
 	if err := r.Write(targetConn); err != nil {

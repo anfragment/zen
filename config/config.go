@@ -3,6 +3,7 @@ package config
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -52,33 +53,45 @@ func (c *config) GetFilterLists() []filterList {
 
 // AddFilterList adds a new filter list to the list of enabled filter lists.
 // Used on the frontend to add a new filter list.
-func (c *config) AddFilterList(list filterList) {
+func (c *config) AddFilterList(list filterList) string {
 	c.Filter.FilterLists = append(c.Filter.FilterLists, list)
-	c.Save()
+	if err := c.Save(); err != nil {
+		fmt.Printf("failed to save config: %v", err)
+		return err.Error()
+	}
+	return ""
 }
 
 // RemoveFilterList removes a filter list from the list of enabled filter lists.
 // Used on the frontend to remove a filter list.
-func (c *config) RemoveFilterList(url string) {
+func (c *config) RemoveFilterList(url string) string {
 	for i, filterList := range c.Filter.FilterLists {
 		if filterList.Url == url {
 			c.Filter.FilterLists = append(c.Filter.FilterLists[:i], c.Filter.FilterLists[i+1:]...)
 			break
 		}
 	}
-	c.Save()
+	if err := c.Save(); err != nil {
+		fmt.Printf("failed to save config: %v", err)
+		return err.Error()
+	}
+	return ""
 }
 
 // ToggleFilterList toggles the enabled state of a filter list.
 // Used on the frontend to toggle the enabled state of a filter list.
-func (c *config) ToggleFilterList(url string, enabled bool) {
+func (c *config) ToggleFilterList(url string, enabled bool) string {
 	for i, filterList := range c.Filter.FilterLists {
 		if filterList.Url == url {
 			c.Filter.FilterLists[i].Enabled = enabled
 			break
 		}
 	}
-	c.Save()
+	if err := c.Save(); err != nil {
+		fmt.Printf("failed to save config: %v", err)
+		return err.Error()
+	}
+	return ""
 }
 
 // GetPort returns the port the proxy is set to listen on.
@@ -89,9 +102,13 @@ func (c *config) GetPort() int {
 
 // SetPort sets the port the proxy is set to listen on.
 // Used on the frontend in the settings manager.
-func (c *config) SetPort(port int) {
+func (c *config) SetPort(port int) string {
 	c.Proxy.Port = port
-	c.Save()
+	if err := c.Save(); err != nil {
+		fmt.Printf("failed to save config: %v", err)
+		return err.Error()
+	}
+	return ""
 }
 
 //go:embed default-config.json

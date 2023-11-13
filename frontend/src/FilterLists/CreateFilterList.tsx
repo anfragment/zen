@@ -2,6 +2,7 @@ import { Button, FormGroup, InputGroup } from '@blueprintjs/core';
 import { useState, useRef } from 'react';
 
 import { AddFilterList } from '../../wailsjs/go/config/config';
+import { AppToaster } from '../common/toaster';
 
 import { FilterListType } from './types';
 
@@ -44,12 +45,18 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
           const name = nameRef.current?.value || url;
 
           setLoading(true);
-          await AddFilterList({
+          const err = await AddFilterList({
             url,
             name,
             type: FilterListType.CUSTOM,
             enabled: true,
           });
+          if (err) {
+            AppToaster.show({
+              message: `Failed to add filter list: ${err}`,
+              intent: 'danger',
+            });
+          }
           setLoading(false);
           urlRef.current!.value = '';
           nameRef.current!.value = '';

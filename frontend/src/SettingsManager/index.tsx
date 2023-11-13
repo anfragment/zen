@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { GetPort, SetPort } from '../../wailsjs/go/config/config';
 
 import './index.css';
+import { AppToaster } from '../common/toaster';
 
 export function SettingsManager() {
   const [state, setState] = useState({
@@ -48,9 +49,15 @@ export function SettingsManager() {
               min={0}
               max={65535}
               value={state.proxy.port}
-              onValueChange={(port) => {
+              onValueChange={async (port) => {
                 setState({ ...state, proxy: { port } });
-                SetPort(port);
+                const err = await SetPort(port);
+                if (err) {
+                  AppToaster.show({
+                    message: `Failed to set port: ${err}`,
+                    intent: 'danger',
+                  });
+                }
               }}
             />
           </FormGroup>

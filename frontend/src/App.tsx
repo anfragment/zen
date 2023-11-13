@@ -5,12 +5,14 @@ import {
   IconSize,
   FocusStyleManager,
   NonIdealState,
+  Alert,
 } from '@blueprintjs/core';
 import { useState, useEffect } from 'react';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
 
 import './App.css';
+import { AppToaster } from './common/toaster';
 import { FilterLists } from './FilterLists';
 import { RequestLog } from './RequestLog';
 import { SettingsManager } from './SettingsManager';
@@ -27,7 +29,15 @@ function App() {
 
   const start = async () => {
     setProxyState('loading');
-    await StartProxy();
+    const err = await StartProxy();
+    if (err) {
+      AppToaster.show({
+        message: `Failed to start proxy: ${err}`,
+        intent: 'danger',
+      });
+      setProxyState('off');
+      return;
+    }
     setProxyState('on');
   };
   const stop = async () => {

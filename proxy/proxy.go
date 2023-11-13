@@ -91,7 +91,7 @@ func (p *Proxy) Start() error {
 
 	go func() {
 		if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("serve: %v", err)
+			log.Printf("serve: %v", err)
 		}
 	}()
 
