@@ -4,13 +4,21 @@
 
 .filter-lists__list {
   border-bottom: 1px dotted #fff;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 .filter-lists__list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 8px 0;
+  margin-bottom: 6px;
+}
+
+.filter-lists__select-count {
+  display: inline-block;
+  margin-left: 5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .filter-lists__list-switch {
@@ -30,4 +38,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.filter-lists__create-filter-list {
+  border-bottom: 1px dotted #fff;
+  padding-top: 10px;
+  padding-bottom: 10px; 
+}
+
+.filter-lists__list-delete {
+  margin-top: 10px;
 }

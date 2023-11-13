@@ -1,6 +1,4 @@
-import {
-  Section, NumericInput, FormGroup, SectionCard, Tag,
-} from '@blueprintjs/core';
+import { NumericInput, FormGroup, Tag } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
 import { GetPort, SetPort } from '../../wailsjs/go/config/config';
