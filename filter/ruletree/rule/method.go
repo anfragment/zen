@@ -37,13 +37,13 @@ func (m *methodModifier) ShouldMatch(req *http.Request) bool {
 }
 
 type methodModifierEntry struct {
-	method string
-	invert bool
+	method   string
+	inverted bool
 }
 
 func (m *methodModifierEntry) Parse(modifier string) error {
 	if modifier[0] == '~' {
-		m.invert = true
+		m.inverted = true
 		modifier = modifier[1:]
 	}
 	m.method = modifier
@@ -52,7 +52,7 @@ func (m *methodModifierEntry) Parse(modifier string) error {
 
 func (m *methodModifierEntry) MatchMethod(method string) bool {
 	if strings.ToLower(method) == m.method {
-		return !m.invert
+		return !m.inverted
 	}
-	return m.invert
+	return m.inverted
 }

@@ -42,15 +42,15 @@ func (m *domainModifier) ShouldMatch(req *http.Request) bool {
 }
 
 type domainModifierEntry struct {
-	invert  bool
-	regular string
-	tld     string
-	regex   *regexp.Regexp
+	inverted bool
+	regular  string
+	tld      string
+	regex    *regexp.Regexp
 }
 
 func (m *domainModifierEntry) Parse(entry string) error {
 	if entry[0] == '~' {
-		m.invert = true
+		m.inverted = true
 		entry = entry[1:]
 	}
 	if entry[0] == '/' && entry[len(entry)-1] == '/' {
@@ -76,7 +76,7 @@ func (m *domainModifierEntry) MatchDomain(domain string) bool {
 	} else if m.regex != nil {
 		matches = m.regex.MatchString(domain)
 	}
-	if m.invert {
+	if m.inverted {
 		return !matches
 	}
 	return matches

@@ -6,12 +6,12 @@ import (
 
 type contentTypeModifier struct {
 	contentType string
-	invert      bool
+	inverted    bool
 }
 
 func (m *contentTypeModifier) Parse(modifier string) error {
 	if modifier[0] == '~' {
-		m.invert = true
+		m.inverted = true
 		modifier = modifier[1:]
 	}
 	m.contentType = modifier
@@ -45,12 +45,12 @@ func (m *contentTypeModifier) ShouldMatch(req *http.Request) bool {
 	}
 	contentType, ok := secFetchDestMap[secFetchDest]
 	if m.contentType == "other" {
-		if m.invert {
+		if m.inverted {
 			return ok
 		}
 		return !ok
 	}
-	if m.invert {
+	if m.inverted {
 		return contentType != m.contentType
 	}
 	return contentType == m.contentType
