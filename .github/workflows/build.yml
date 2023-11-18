@@ -47,20 +47,45 @@ jobs:
       - name: Build Linux App
         if: runner.os == 'Linux'
         run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }}
+
       - name: Build MacOS App
         if: runner.os == 'macOS'
         run: wails build -platform darwin/${{ matrix.arch }} && mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
-      - name: Build App & Installer
+      - name: Codesign MacOS App Bundle
+        if: runner.os == 'macOS'
+        env: 
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        run: |
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain 
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          
+          /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime build/bin/Zen-${{ matrix.arch }}.app -v
+      - name: Notarize MacOS App Bundle
+        if: runner.os == 'macOS'
+        env:
+          PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+        run: |
+          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
+
+          ditto -c -k --keepParent build/bin/Zen-${{ matrix.arch }}.app notarization.zip
+
+          xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
+
+          xcrun stapler staple build/bin/Zen-${{ matrix.arch }}.app
+
+      - name: Build Windows App & Installer
         if: runner.os == 'Windows'
         run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis
-      - name: Add MacOS permissions
-        if: runner.os == 'macOS'
-        run: chmod +x build/bin/*/Contents/MacOS/*
-        shell: bash
-      - name: Add Linux perms
-        if: runner.os == 'Linux'
-        run: chmod +x build/bin/*
-        shell: bash
       
       - uses: actions/upload-artifact@v3
         with:
