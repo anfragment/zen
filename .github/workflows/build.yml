@@ -41,12 +41,32 @@ jobs:
       - run: node --version
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-      - name: Install Linux Wails deps
+
+      - name: Install Linux Wails Dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
-      - name: Build Linux App
+      - name: Build Linux Binary
         if: runner.os == 'Linux'
         run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }}
+      - name: Archive Linux Binary
+        if: runner.os == 'Linux'
+        run: |
+          cp build/bin/Zen-${{ matrix.arch }} Zen
+          tar -czvf Zen_linux_${{ matrix.arch }}.tar.gz Zen
+          rm Zen
+      - name: Upload Linux Binary Artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: Zen_linux_${{ matrix.arch }}
+          path: Zen_linux_${{ matrix.arch }}.tar.gz
+      - name: Release Linux Binary Artifact
+        if: runner.os == 'Linux'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Zen_linux_${{ matrix.arch }}.tar.gz
+          tag_name: ${{ github.ref }}
+          draft: true
 
       - name: Build MacOS App
         if: runner.os == 'macOS'
@@ -82,19 +102,64 @@ jobs:
           xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
 
           xcrun stapler staple build/bin/Zen-${{ matrix.arch }}.app
+      - name: Archive MacOS App Bundle
+        if: runner.os == 'macOS'
+        run: |
+          cp build/bin/Zen-${{ matrix.arch }}.app Zen.app
+          ditto -c -k --keepParent Zen.app Zen_darwin_${{ matrix.arch }}.zip
+          rm Zen.app
+      - name: Upload MacOS Artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: Zen_darwin_${{ matrix.arch }}
+          path: Zen_darwin_${{ matrix.arch }}.zip
+      - name: Release MacOS Artifact
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Zen_darwin_${{ matrix.arch }}.zip
+          tag_name: ${{ github.ref }}
+          draft: true
 
       - name: Build Windows App & Installer
         if: runner.os == 'Windows'
         run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis
-      
-      - uses: actions/upload-artifact@v3
+      - name: Archive Windows Binary
+        if: runner.os == 'Windows'
+        run: |
+          copy build/bin/Zen-${{ matrix.arch }}.exe Zen.exe
+          Compress-Archive -Path Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}.zip
+          Remove-Item Zen.exe
+      - name: Upload Windows Binary Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
         with:
-          name: Zen-${{ runner.os }}-${{ matrix.arch }}
-          path: build/bin/*
-      - name: Release
+          name: Zen_windows_${{ matrix.arch }}
+          path: Zen_windows_${{ matrix.arch }}.zip
+      - name: Release Windows Binary Artifact
+        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
         with:
-          files: build/bin/*
+          files: Zen_windows_${{ matrix.arch }}.zip
+          tag_name: ${{ github.ref }}
+          draft: true
+      - name: Archive Windows Installer
+        if: runner.os == 'Windows'
+        run: |
+          copy build/bin/Zen-${{ matrix.arch }}-installer.exe Zen-installer.exe
+          Compress-Archive -Path Zen-installer.exe -DestinationPath Zen_windows_${{ matrix.arch }}-installer.zip
+          Remove-Item Zen-installer.exe
+      - name: Upload Windows Installer Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: Zen_windows_${{ matrix.arch }}-installer
+          path: Zen_windows_${{ matrix.arch }}-installer.zip
+      - name: Release Windows Installer Artifact
+        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Zen_windows_${{ matrix.arch }}-installer.zip
           tag_name: ${{ github.ref }}
           draft: true
