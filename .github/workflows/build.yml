@@ -105,7 +105,7 @@ jobs:
       - name: Archive MacOS App Bundle
         if: runner.os == 'macOS'
         run: |
-          cp build/bin/Zen-${{ matrix.arch }}.app Zen.app
+          cp -a build/bin/Zen-${{ matrix.arch }}.app Zen.app
           ditto -c -k --keepParent Zen.app Zen_darwin_${{ matrix.arch }}.zip
           rm Zen.app
       - name: Upload MacOS Artifact
