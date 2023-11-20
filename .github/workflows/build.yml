@@ -107,7 +107,7 @@ jobs:
         run: |
           cp -a build/bin/Zen-${{ matrix.arch }}.app Zen.app
           ditto -c -k --keepParent Zen.app Zen_darwin_${{ matrix.arch }}.zip
-          rm Zen.app
+          rm -rf Zen.app
       - name: Upload MacOS Artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v3
