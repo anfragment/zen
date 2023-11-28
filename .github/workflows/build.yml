@@ -107,7 +107,7 @@ jobs:
           xcrun stapler staple build/bin/Zen-${{ matrix.arch }}.app
       - name: Build MacOS Installer
         if: runner.os == 'macOS'
-        run: create-dmg build/bin/Zen-${{ matrix.arch }}.app --dmg-title=Zen-${{ matrix.arch }}
+        run: create-dmg build/bin/Zen-${{ matrix.arch }}.app && mv "Zen 1.0.0.dmg" Zen-${{ matrix.arch }}.dmg
       - name: Codesign MacOS Installer
         if: runner.os == 'macOS'
         env: 
