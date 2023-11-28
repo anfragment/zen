@@ -41,35 +41,173 @@ jobs:
       - run: node --version
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-      - name: Install Linux Wails deps
+
+      - name: Install Linux Wails Dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
-      - name: Build Linux App
+      - name: Build Linux Binary
         if: runner.os == 'Linux'
-        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform linux/${{ matrix.arch }}
+        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }}
+      - name: Archive Linux Binary
+        if: runner.os == 'Linux'
+        run: |
+          cp build/bin/Zen-${{ matrix.arch }} Zen
+          tar -czvf Zen_linux_${{ matrix.arch }}.tar.gz Zen
+          rm Zen
+      - name: Upload Linux Binary Artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: Zen_linux_${{ matrix.arch }}
+          path: Zen_linux_${{ matrix.arch }}.tar.gz
+      - name: Release Linux Binary Artifact
+        if: runner.os == 'Linux'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Zen_linux_${{ matrix.arch }}.tar.gz
+          tag_name: ${{ github.ref }}
+          draft: true
+
+      - name: Install create-dmg
+        if: runner.os == 'macOS'
+        run: pip3 install setuptools && npm install -g create-dmg
       - name: Build MacOS App
         if: runner.os == 'macOS'
-        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform darwin/${{ matrix.arch }}
-      - name: Build App & Installer
-        if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ runner.os }}-${{ matrix.arch }} -platform windows/${{ matrix.arch }} -nsis
-      - name: Add MacOS permissions
+        run: wails build -platform darwin/${{ matrix.arch }} && mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
+      - name: Codesign MacOS App Bundle
         if: runner.os == 'macOS'
-        run: chmod +x build/bin/*/Contents/MacOS/*
-        shell: bash
-      - name: Add Linux perms
-        if: runner.os == 'Linux'
-        run: chmod +x build/bin/*
-        shell: bash
-      
-      - uses: actions/upload-artifact@v3
+        env: 
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        run: |
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" app.keychain 
+          security default-keychain -s app.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" app.keychain
+          security import certificate.p12 -k app.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" app.keychain
+          
+          /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime build/bin/Zen-${{ matrix.arch }}.app -v
+      - name: Notarize MacOS App Bundle
+        if: runner.os == 'macOS'
+        env:
+          PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+        run: |
+          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
+
+          ditto -c -k --keepParent build/bin/Zen-${{ matrix.arch }}.app notarization.zip
+
+          xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
+
+          xcrun stapler staple build/bin/Zen-${{ matrix.arch }}.app
+      - name: Build MacOS Installer
+        if: runner.os == 'macOS'
+        run: |
+          cp -a build/bin/Zen-${{ matrix.arch }}.app Zen.app
+          create-dmg Zen.app
+          mv "Zen 1.0.0.dmg" Zen-${{ matrix.arch }}.dmg
+          rm -rf Zen.app
+      - name: Codesign MacOS Installer
+        if: runner.os == 'macOS'
+        env: 
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        run: |
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
+          security default-keychain -s installer.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
+          security import certificate.p12 -k installer.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
+          
+          /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime Zen-${{ matrix.arch }}.dmg -v
+      - name: Notarize MacOS Installer
+        if: runner.os == 'macOS'
+        env:
+          PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+        run: |
+          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
+
+          ditto -c -k --keepParent Zen-${{ matrix.arch }}.dmg notarization.zip
+
+          xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
+
+          xcrun stapler staple Zen-${{ matrix.arch }}.dmg
+      - name: Upload MacOS installer artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
         with:
-          name: Zen-${{ runner.os }}-${{ matrix.arch }}
-          path: build/bin/*
-      - name: Release
+          name: Zen_macos_${{ matrix.arch }}-installer
+          path: Zen-${{ matrix.arch }}.dmg
+      - name: Release MacOS Installer
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
         with:
-          files: build/bin/*
+          files: Zen-${{ matrix.arch }}.dmg
+          tag_name: ${{ github.ref }}
+          draft: true
+      - name: Archive MacOS App Bundle
+        if: runner.os == 'macOS'
+        run: |
+          cp -a build/bin/Zen-${{ matrix.arch }}.app Zen.app
+          ditto -c -k --keepParent Zen.app Zen_darwin_${{ matrix.arch }}.zip
+          rm -rf Zen.app
+      - name: Upload Archived MacOS App Bundle Artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: Zen_darwin_${{ matrix.arch }}
+          path: Zen_darwin_${{ matrix.arch }}.zip
+      - name: Release Archived MacOS App Bundle
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Zen_darwin_${{ matrix.arch }}.zip
+          tag_name: ${{ github.ref }}
+          draft: true
+
+      - name: Build Windows App & Installer
+        if: runner.os == 'Windows'
+        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis
+      - name: Archive Windows Binary
+        if: runner.os == 'Windows'
+        run: |
+          copy build/bin/Zen-${{ matrix.arch }}.exe Zen.exe
+          Compress-Archive -Path Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}.zip
+          Remove-Item Zen.exe
+      - name: Upload Archived Windows Binary Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: Zen_windows_${{ matrix.arch }}
+          path: Zen_windows_${{ matrix.arch }}.zip
+      - name: Release Archived Windows Binary
+        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Zen_windows_${{ matrix.arch }}.zip
+          tag_name: ${{ github.ref }}
+          draft: true
+      - name: Upload Windows Installer Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: Zen_windows_${{ matrix.arch }}-installer
+          path: build/bin/Zen-${{ matrix.arch }}-installer.exe
+      - name: Release Windows Installer
+        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/bin/Zen-${{ matrix.arch }}-installer.exe
           tag_name: ${{ github.ref }}
           draft: true
