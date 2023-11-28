@@ -84,11 +84,11 @@ jobs:
         run: |
           echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
 
-          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain 
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
-          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" app.keychain 
+          security default-keychain -s app.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" app.keychain
+          security import certificate.p12 -k app.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" app.keychain
           
           /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime build/bin/Zen-${{ matrix.arch }}.app -v
       - name: Notarize MacOS App Bundle
@@ -118,10 +118,11 @@ jobs:
         run: |
           echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
 
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
-          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
+          security default-keychain -s installer.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
+          security import certificate.p12 -k installer.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
           
           /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime Zen-${{ matrix.arch }}.dmg -v
       - name: Notarize MacOS Installer
