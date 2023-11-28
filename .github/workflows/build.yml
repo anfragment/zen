@@ -68,6 +68,9 @@ jobs:
           tag_name: ${{ github.ref }}
           draft: true
 
+      - name: Install create-dmg
+        if: runner.os == 'macOS'
+        run: npm install -g create-dmg
       - name: Build MacOS App
         if: runner.os == 'macOS'
         run: wails build -platform darwin/${{ matrix.arch }} && mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
@@ -102,6 +105,53 @@ jobs:
           xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
 
           xcrun stapler staple build/bin/Zen-${{ matrix.arch }}.app
+      - name: Build MacOS Installer
+        if: runner.os == 'macOS'
+        run: create-dmg build/bin/Zen-${{ matrix.arch }}.app --dmg-title=Zen-${{ matrix.arch }}
+      - name: Codesign MacOS Installer
+        if: runner.os == 'macOS'
+        env: 
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        run: |
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain 
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          
+          /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime Zen-${{ matrix.arch }}.dmg -v
+      - name: Notarize MacOS Installer
+        if: runner.os == 'macOS'
+        env:
+          PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+        run: |
+          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
+
+          ditto -c -k --keepParent Zen-${{ matrix.arch }}.dmg notarization.zip
+
+          xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
+
+          xcrun stapler staple Zen-${{ matrix.arch }}.dmg
+      - name: Upload MacOS installer artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: Zen_macos_${{ matrix.arch }}-installer
+          path: Zen-${{ matrix.arch }}.dmg
+      - name: Release MacOS Installer
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Zen-${{ matrix.arch }}.dmg
+          tag_name: ${{ github.ref }}
+          draft: true
       - name: Archive MacOS App Bundle
         if: runner.os == 'macOS'
         run: |
