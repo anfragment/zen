@@ -154,6 +154,6 @@ jobs:
         if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
-          file: build/bin/Zen-${{ matrix.arch }}-installer.exe
+          files: build/bin/Zen-${{ matrix.arch }}-installer.exe
           tag_name: ${{ github.ref }}
           draft: true
