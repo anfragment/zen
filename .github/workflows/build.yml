@@ -70,7 +70,7 @@ jobs:
 
       - name: Install create-dmg
         if: runner.os == 'macOS'
-        run: npm install -g create-dmg
+        run: pip3 install setuptools && npm install -g create-dmg
       - name: Build MacOS App
         if: runner.os == 'macOS'
         run: wails build -platform darwin/${{ matrix.arch }} && mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
