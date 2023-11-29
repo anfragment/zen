@@ -69,6 +69,8 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 					return err
 				}
 				rm.modifiers = append(rm.modifiers, tpm)
+			case "all":
+				rm.generic = true
 			default:
 				return fmt.Errorf("unknown modifier %s", modifier)
 			}
