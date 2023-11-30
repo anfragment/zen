@@ -9,9 +9,10 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// Version is the current Version of the binary. Set at compile time using ldflags (see .github/workflows/build.yml)
+// Version is the current version of the binary. Set at compile time using ldflags (see .github/workflows/build.yml).
 const Version = "development"
 
+// SelfUpdate checks for updates and prompts the user to update if there is one.
 func SelfUpdate(ctx context.Context) {
 	shouldUpdate, release := checkForUpdates()
 	if !shouldUpdate {
