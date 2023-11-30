@@ -107,35 +107,6 @@ var (
 	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9]|[_\-.%]`)
 )
 
-// Match returns the node that matches the given tokens along with the remaining tokens.
-// If no node matches, it returns nil.
-func (n *node) Match(tokens []string) (*node, []string) {
-	if n == nil {
-		return nil, nil
-	}
-	if len(n.rules) > 0 {
-		return n, tokens
-	}
-	if len(tokens) == 0 {
-		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && len(separator.rules) > 0 {
-			return separator, tokens
-		}
-		return nil, nil
-	}
-	if reSeparator.MatchString(tokens[0]) {
-		if match, _ := n.FindChild(nodeKey{kind: nodeKindSeparator}).Match(tokens[1:]); match != nil {
-			return match, tokens
-		}
-	}
-	if wildcard := n.FindChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
-		if match, _ := wildcard.Match(tokens[1:]); match != nil {
-			return match, tokens
-		}
-	}
-
-	return n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).Match(tokens[1:])
-}
-
 // TraverseAndHandleReq traverses the trie and returns the action to take for the given request.
 func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) rule.RequestAction {
 	if n == nil {
@@ -146,34 +117,27 @@ func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUs
 			return true
 		}
 	}
-	if len(n.rules) > 0 && shouldUseNode(n, tokens) {
+	if shouldUseNode(n, tokens) {
+		// check the node itself
 		if action := n.HandleRequest(req); action.Type != rule.ActionAllow {
 			return action
 		}
 	}
 	if len(tokens) == 0 {
-		// end of an address is also accepted as a separator
+		// end of an address is a valid separator
 		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
-		if separator := n.FindChild(nodeKey{kind: nodeKindSeparator}); separator != nil && len(separator.rules) > 0 && shouldUseNode(separator, tokens) {
-			if action := separator.HandleRequest(req); action.Type != rule.ActionAllow {
-				return action
-			}
+		if action := n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseAndHandleReq(req, tokens, shouldUseNode); action.Type != rule.ActionAllow {
+			return action
 		}
-		return n.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseAndHandleReq(req, tokens, shouldUseNode)
+		return rule.RequestAction{Type: rule.ActionAllow}
 	}
 	if reSeparator.MatchString(tokens[0]) {
-		if match, remainingTokens := n.FindChild(nodeKey{kind: nodeKindSeparator}).Match(tokens[1:]); match != nil && len(match.rules) > 0 && shouldUseNode(match, remainingTokens) {
-			if action := match.HandleRequest(req); action.Type != rule.ActionAllow {
-				return action
-			}
+		if action := n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseAndHandleReq(req, tokens[1:], shouldUseNode); action.Type != rule.ActionAllow {
+			return action
 		}
 	}
-	if wildcard := n.FindChild(nodeKey{kind: nodeKindWildcard}); wildcard != nil {
-		if match, remainingTokens := wildcard.Match(tokens[1:]); match != nil && len(match.rules) > 0 && shouldUseNode(match, remainingTokens) {
-			if action := match.HandleRequest(req); action.Type != rule.ActionAllow {
-				return action
-			}
-		}
+	if action := n.FindChild(nodeKey{kind: nodeKindWildcard}).TraverseAndHandleReq(req, tokens[1:], shouldUseNode); action.Type != rule.ActionAllow {
+		return action
 	}
 
 	return n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).TraverseAndHandleReq(req, tokens[1:], shouldUseNode)
