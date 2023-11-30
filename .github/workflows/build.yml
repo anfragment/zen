@@ -47,7 +47,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
       - name: Build Linux Binary
         if: runner.os == 'Linux'
-        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }}
+        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }} -ldflags "-X config.Version=$(git describe --tags --always)"
       - name: Archive Linux Binary
         if: runner.os == 'Linux'
         run: |
@@ -73,7 +73,9 @@ jobs:
         run: pip3 install setuptools && npm install -g create-dmg
       - name: Build MacOS App
         if: runner.os == 'macOS'
-        run: wails build -platform darwin/${{ matrix.arch }} && mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
+        run: |
+          wails build -platform darwin/${{ matrix.arch }} -ldflags "-X config.Version=$(git describe --tags --always)"
+          mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
       - name: Codesign MacOS App Bundle
         if: runner.os == 'macOS'
         env: 
@@ -178,7 +180,7 @@ jobs:
 
       - name: Build Windows App & Installer
         if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis
+        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X config.Version=$(git describe --tags --always)"
       - name: Archive Windows Binary
         if: runner.os == 'Windows'
         run: |

@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/anfragment/zen/certmanager"
+	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter"
 	"github.com/anfragment/zen/proxy"
 )
@@ -30,6 +31,10 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.proxy != nil {
 		a.proxy.Stop()
 	}
+}
+
+func (a *App) domReady(ctx context.Context) {
+	config.SelfUpdate(ctx)
 }
 
 // StartProxy initializes the associated resources and starts the proxy
