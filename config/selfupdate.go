@@ -69,7 +69,7 @@ func checkForUpdates() (bool, *selfupdate.Release) {
 		return false, nil
 	}
 
-	v := semver.MustParse(Version)
+	v, _ := semver.ParseTolerant(Version) // ParseTolerant allows for the non-standard "v" prefix
 	if !found || latest.Version.LTE(v) {
 		return false, nil
 	}
