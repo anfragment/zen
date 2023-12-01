@@ -43,9 +43,7 @@ export function RequestLog() {
   return (
     <div className="request-log">
       {logs.length === 0 ? (
-        <p className="request-log__empty">
-          Start browsing to see blocked requests.
-        </p>
+        <p className="request-log__empty">Start browsing to see blocked requests.</p>
       ) : (
         <CardList compact>
           {logs.map((log) => (
@@ -64,18 +62,11 @@ function RequestLogCard({ log }: { log: Log }) {
 
   return (
     <>
-      <Card
-        key={log.id}
-        className="request-log__card"
-        interactive
-        onClick={() => setIsOpen(!isOpen)}
-      >
+      <Card key={log.id} className="request-log__card" interactive onClick={() => setIsOpen(!isOpen)}>
         <Tag minimal intent="danger">
           {hostname}
         </Tag>
-        <div className="bp5-text-muted">
-          {log.createdAt.toLocaleTimeString([], { timeStyle: 'short' })}
-        </div>
+        <div className="bp5-text-muted">{log.createdAt.toLocaleTimeString([], { timeStyle: 'short' })}</div>
       </Card>
 
       <Collapse isOpen={isOpen}>

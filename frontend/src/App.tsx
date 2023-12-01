@@ -1,12 +1,4 @@
-import {
-  Button,
-  ButtonGroup,
-  Icon,
-  IconSize,
-  FocusStyleManager,
-  NonIdealState,
-  Alert,
-} from '@blueprintjs/core';
+import { Button, ButtonGroup, Icon, IconSize, FocusStyleManager, NonIdealState, Alert } from '@blueprintjs/core';
 import { useState, useEffect } from 'react';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
@@ -23,9 +15,7 @@ function App() {
   }, []);
 
   const [proxyState, setProxyState] = useState<'on' | 'off' | 'loading'>('off');
-  const [activeTab, setActiveTab] = useState<
-    'home' | 'filterLists' | 'settings'
-  >('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'filterLists' | 'settings'>('home');
 
   const start = async () => {
     setProxyState('loading');
@@ -55,25 +45,13 @@ function App() {
         </h1>
       </div>
       <ButtonGroup fill minimal className="tabs">
-        <Button
-          icon="circle"
-          active={activeTab === 'home'}
-          onClick={() => setActiveTab('home')}
-        >
+        <Button icon="circle" active={activeTab === 'home'} onClick={() => setActiveTab('home')}>
           Home
         </Button>
-        <Button
-          icon="filter"
-          active={activeTab === 'filterLists'}
-          onClick={() => setActiveTab('filterLists')}
-        >
+        <Button icon="filter" active={activeTab === 'filterLists'} onClick={() => setActiveTab('filterLists')}>
           Filter lists
         </Button>
-        <Button
-          icon="settings"
-          active={activeTab === 'settings'}
-          onClick={() => setActiveTab('settings')}
-        >
+        <Button icon="settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
           Settings
         </Button>
       </ButtonGroup>

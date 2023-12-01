@@ -2,7 +2,6 @@ import { NumericInput, FormGroup, Tag } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
 import { GetPort, SetPort } from '../../wailsjs/go/config/config';
-
 import './index.css';
 import { AppToaster } from '../common/toaster';
 
@@ -28,12 +27,7 @@ export function SettingsManager() {
   return (
     <div className="settings-manager">
       <div className="settings-manager__section">
-        <Tag
-          large
-          intent="warning"
-          fill
-          className="settings-manager__section-header"
-        >
+        <Tag large intent="warning" fill className="settings-manager__section-header">
           Advanced
         </Tag>
 
@@ -41,8 +35,10 @@ export function SettingsManager() {
           <FormGroup
             label="Port"
             labelFor="port"
-            helperText={`The port the proxy server will listen on (0 for random).
-            Be careful when using a port below 1024 as it may require elevated privileges.`}
+            helperText={`
+              The port the proxy server will listen on (0 for random).
+              Be careful when using a port below 1024 as it may require elevated privileges.
+            `}
           >
             <NumericInput
               id="port"

@@ -1,18 +1,8 @@
-import {
-  Spinner,
-  SpinnerSize,
-  Switch,
-  Button,
-  MenuItem,
-} from '@blueprintjs/core';
+import { Spinner, SpinnerSize, Switch, Button, MenuItem } from '@blueprintjs/core';
 import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
 
-import {
-  GetFilterLists,
-  RemoveFilterList,
-  ToggleFilterList,
-} from '../../wailsjs/go/config/config';
+import { GetFilterLists, RemoveFilterList, ToggleFilterList } from '../../wailsjs/go/config/config';
 // eslint-disable-next-line import/order
 import { type config } from '../../wailsjs/go/models';
 
@@ -56,20 +46,8 @@ export function FilterLists() {
               <>
                 {item[0].toUpperCase() + item.slice(1)}
                 <span className="bp5-text-muted filter-lists__select-count">
-                  (
-                  {
-                    state.filterLists.filter(
-                      (filterList) =>
-                        filterList.type === item && filterList.enabled,
-                    ).length
-                  }
-                  /
-                  {
-                    state.filterLists.filter(
-                      (filterList) => filterList.type === item,
-                    ).length
-                  }
-                  )
+                  ({state.filterLists.filter((filterList) => filterList.type === item && filterList.enabled).length}/
+                  {state.filterLists.filter((filterList) => filterList.type === item).length})
                 </span>
               </>
             }
@@ -85,15 +63,10 @@ export function FilterLists() {
         popoverProps={{ minimal: true, matchTargetWidth: true }}
         filterable={false}
       >
-        <Button
-          text={type[0].toUpperCase() + type.slice(1)}
-          rightIcon="caret-down"
-        />
+        <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />
       </Select>
 
-      {state.loading && (
-        <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />
-      )}
+      {state.loading && <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />}
 
       {state.filterLists
         .filter((filterList) => filterList.type === type)
@@ -106,9 +79,7 @@ export function FilterLists() {
           />
         ))}
 
-      {type === FilterListType.CUSTOM && (
-        <CreateFilterList onAdd={fetchLists} />
-      )}
+      {type === FilterListType.CUSTOM && <CreateFilterList onAdd={fetchLists} />}
     </>
   );
 }
@@ -133,10 +104,7 @@ function ListItem({
           disabled={switchLoading}
           onChange={async (e) => {
             setSwitchLoading(true);
-            const err = await ToggleFilterList(
-              filterList.url,
-              e.currentTarget.checked,
-            );
+            const err = await ToggleFilterList(filterList.url, e.currentTarget.checked);
             if (err) {
               AppToaster.show({
                 message: `Failed to toggle filter list: ${err}`,
@@ -150,9 +118,7 @@ function ListItem({
           className="filter-lists__list-switch"
         />
       </div>
-      <div className="bp5-text-muted filter-lists__list-url">
-        {filterList.url}
-      </div>
+      <div className="bp5-text-muted filter-lists__list-url">{filterList.url}</div>
 
       {showDelete && (
         <Button

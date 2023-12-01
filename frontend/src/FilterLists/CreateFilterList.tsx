@@ -14,22 +14,11 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="filter-lists__create-filter-list">
       <FormGroup label="URL" labelFor="url" labelInfo="(required)">
-        <InputGroup
-          id="url"
-          placeholder="https://example.com/filter-list.txt"
-          required
-          type="url"
-          inputRef={urlRef}
-        />
+        <InputGroup id="url" placeholder="https://example.com/filter-list.txt" required type="url" inputRef={urlRef} />
       </FormGroup>
 
       <FormGroup label="Name" labelFor="name" labelInfo="(optional)">
-        <InputGroup
-          id="name"
-          placeholder="Example filter list"
-          type="text"
-          inputRef={nameRef}
-        />
+        <InputGroup id="name" placeholder="Example filter list" type="text" inputRef={nameRef} />
       </FormGroup>
 
       <Button
