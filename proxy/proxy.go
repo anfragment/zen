@@ -1,3 +1,16 @@
+/*
+ * This file contains some code originally licensed under the GPL-3.0 license.
+ * Original Author: Andrey Meshkov <am@adguard.com>
+ * Original Source: https://github.com/AdguardTeam/gomitmproxy
+ *
+ * Modifications made by: Ansar Smagulov <me@anfragment.net>
+ *
+ * This modified code is licensed under the GPL-3.0 license. The full text of the GPL-3.0 license
+ * is included in the COPYING file in the root of this project.
+ *
+ * Note: This project as a whole is licensed under the MIT License, but this particular file,
+ * due to its use of GPL-3.0 licensed code, is an exception and remains licensed under the GPL-3.0.
+ */
 package proxy
 
 import (
