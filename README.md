@@ -54,7 +54,7 @@ Support for installation via package managers is coming soon.
         Request history shows all requests blocked by Zen. Each request can be inspected to see which filter and rule blocked it.
       </td>
       <td>
-        Zen comes with many pre-installed filters. You can also add your own by providing a URL to a host file or EasyList-style filter.
+        Zen comes with many pre-installed filters. You can also add your own by providing a URL to a hosts file or an EasyList-style filter.
       </td>
     </tr>
     <tr>
