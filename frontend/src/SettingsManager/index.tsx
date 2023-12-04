@@ -1,8 +1,10 @@
-import { NumericInput, FormGroup, Tag } from '@blueprintjs/core';
+import { NumericInput, FormGroup, Tag, Button } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
-import { GetPort, SetPort } from '../../wailsjs/go/config/config';
 import './index.css';
+
+import { GetPort, SetPort, GetVersion } from '../../wailsjs/go/config/config';
+import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { AppToaster } from '../common/toaster';
 
 export function SettingsManager() {
@@ -10,23 +12,20 @@ export function SettingsManager() {
     proxy: {
       port: 0,
     },
-    loading: true,
+    version: '',
   });
-
-  const fetchPort = async () => {
-    const port = await GetPort();
-    setState({ ...state, proxy: { port }, loading: false });
-  };
 
   useEffect(() => {
     (async () => {
-      await fetchPort();
+      const port = await GetPort();
+      const version = await GetVersion();
+      setState({ ...state, proxy: { port }, version });
     })();
   }, []);
 
   return (
     <div className="settings-manager">
-      <div className="settings-manager__section">
+      <div className="settings-manager__section--advanced">
         <Tag large intent="warning" fill className="settings-manager__section-header">
           Advanced
         </Tag>
@@ -58,6 +57,24 @@ export function SettingsManager() {
             />
           </FormGroup>
         </div>
+      </div>
+
+      <div className="settings-manager__about bp5-text-muted">
+        <div>
+          <strong>Zen</strong>
+        </div>
+        <div>Your Comprehensive Ad-Blocker and Privacy Guard</div>
+        <div>Version: {state.version}</div>
+        <div>© 2023 Ansar Smagulov</div>
+        <Button
+          minimal
+          small
+          icon="git-branch"
+          className="settings-manager__about-github-button"
+          onClick={() => BrowserOpenURL('https://github.com/anfragment/zen')}
+        >
+          GitHub
+        </Button>
       </div>
     </div>
   );

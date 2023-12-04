@@ -14,6 +14,10 @@ import (
 // Version is the current version of the binary. Set at compile time using ldflags (see .github/workflows/build.yml).
 const Version = "development"
 
+func (c *config) GetVersion() string {
+	return Version
+}
+
 // SelfUpdate checks for updates and prompts the user to update if there is one.
 func SelfUpdate(ctx context.Context) {
 	shouldUpdate, release := checkForUpdates()

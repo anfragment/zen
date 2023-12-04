@@ -8,6 +8,8 @@ export function GetFilterLists():Promise<Array<config.filterList>>;
 
 export function GetPort():Promise<number>;
 
+export function GetVersion():Promise<string>;
+
 export function RemoveFilterList(arg1:string):Promise<string>;
 
 export function Save():Promise<void>;

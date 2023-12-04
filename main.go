@@ -2,12 +2,14 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"runtime"
 
 	"github.com/anfragment/zen/config"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed all:frontend/dist
@@ -31,6 +33,12 @@ func main() {
 		Bind: []interface{}{
 			app,
 			&config.Config,
+		},
+		Mac: &mac.Options{
+			About: &mac.AboutInfo{
+				Title:   "Zen",
+				Message: fmt.Sprintf("Your Comprehensive Ad-Blocker and Privacy Guard\nVersion: %s\n© 2023 Ansar Smagulov", config.Version),
+			},
 		},
 		/*
 			As the app doesn't yet have a tray icon, the correct behaviour is to hide the window on close.

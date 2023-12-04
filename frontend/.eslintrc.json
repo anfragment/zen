@@ -24,8 +24,10 @@
     }],
     "import/prefer-default-export": 0,
     "@typescript-eslint/no-use-before-define": 0,
+    "@typescript-eslint/no-shadow": 0,
     "react/no-unstable-nested-components": 0,
-    "react/require-default-props": 0
+    "react/require-default-props": 0,
+    "import/no-relative-packages": 0
   },
   "parserOptions": {
     "project": "./frontend/tsconfig.json"

@@ -14,6 +14,10 @@ export function GetPort() {
   return window['go']['config']['config']['GetPort']();
 }
 
+export function GetVersion() {
+  return window['go']['config']['config']['GetVersion']();
+}
+
 export function RemoveFilterList(arg1) {
   return window['go']['config']['config']['RemoveFilterList'](arg1);
 }
