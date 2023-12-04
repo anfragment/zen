@@ -27,6 +27,7 @@ func main() {
 		},
 		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
+		OnDomReady: app.domReady,
 		Bind: []interface{}{
 			app,
 			&config.Config,
