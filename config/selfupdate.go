@@ -12,7 +12,7 @@ import (
 )
 
 // Version is the current version of the binary. Set at compile time using ldflags (see .github/workflows/build.yml).
-const Version = "development"
+var Version = "development"
 
 func (c *config) GetVersion() string {
 	return Version
