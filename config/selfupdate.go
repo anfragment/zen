@@ -3,6 +3,8 @@ package config
 import (
 	"context"
 	"log"
+	"os"
+	"os/exec"
 
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
@@ -35,7 +37,7 @@ func SelfUpdate(ctx context.Context) {
 		return
 	}
 
-	v := semver.MustParse(Version)
+	v, _ := semver.ParseTolerant(Version)
 	_, err = selfupdate.UpdateSelf(v, "anfragment/zen")
 	if err != nil {
 		log.Printf("error occurred while updating binary: %v", err)
@@ -54,7 +56,12 @@ func SelfUpdate(ctx context.Context) {
 		log.Printf("error occurred while showing restart dialog: %v", err)
 	}
 	if action == "Yes" {
-		runtime.WindowReloadApp(ctx)
+		cmd := exec.Command(os.Args[0], os.Args[1:]...)
+		if err := cmd.Start(); err != nil {
+			log.Printf("error occurred while restarting: %v", err)
+			return
+		}
+		runtime.Quit(ctx)
 	}
 }
 
