@@ -180,7 +180,7 @@ jobs:
 
       - name: Build Windows App & Installer
         if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/config.Version=$(git describe --tags --abbrev=0)"
+        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/config.Version=$(git describe --tags --abbrev=0)'"
       - name: Archive Windows Binary
         if: runner.os == 'Windows'
         run: |
