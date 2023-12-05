@@ -6,8 +6,14 @@ import './index.css';
 import { GetPort, SetPort, GetVersion } from '../../wailsjs/go/config/config';
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { AppToaster } from '../common/toaster';
+import { ProxyState } from '../types';
 
-export function SettingsManager() {
+import { UninstallCADialog } from './UninstallCADialog';
+
+export interface SettingsManagerProps {
+  proxyState: ProxyState;
+}
+export function SettingsManager({ proxyState }: SettingsManagerProps) {
   const [state, setState] = useState({
     proxy: {
       port: 0,
@@ -56,6 +62,8 @@ export function SettingsManager() {
               }}
             />
           </FormGroup>
+
+          <UninstallCADialog proxyState={proxyState} />
         </div>
       </div>
 

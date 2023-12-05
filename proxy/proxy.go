@@ -135,7 +135,7 @@ func (p *Proxy) Stop() error {
 		return fmt.Errorf("unset system proxy: %v", err)
 	}
 
-	p.certmanager.Clear()
+	p.certmanager.ClearCache()
 	p.filter.Clear()
 
 	return nil

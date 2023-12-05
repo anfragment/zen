@@ -37,29 +37,60 @@ import (
 	"os/exec"
 )
 
-func (cm *CertManager) install() error {
-	var systemTrustCommand []string
-	var systemTrustPath string
+var (
+	systemTrustFilename string
+	systemTrustCommand  []string
+)
+
+func init() {
 	if pathExists("/etc/pki/ca-trust/source/anchors/") {
-		systemTrustPath = "/etc/pki/ca-trust/source/anchors/%s.pem"
+		systemTrustFilename = "/etc/pki/ca-trust/source/anchors/%s.pem"
 		systemTrustCommand = []string{"update-ca-trust", "extract"}
 	} else if pathExists("/usr/local/share/ca-certificates/") {
-		systemTrustPath = "/usr/local/share/ca-certificates/%s.crt"
+		systemTrustFilename = "/usr/local/share/ca-certificates/%s.crt"
 		systemTrustCommand = []string{"update-ca-certificates"}
 	} else if pathExists("/etc/ca-certificates/trust-source/anchors/") {
-		systemTrustPath = "/etc/ca-certificates/trust-source/anchors/%s.crt"
+		systemTrustFilename = "/etc/ca-certificates/trust-source/anchors/%s.crt"
 		systemTrustCommand = []string{"trust", "extract-compat"}
 	} else if pathExists("/usr/share/pki/trust/anchors") {
-		systemTrustPath = "/usr/share/pki/trust/anchors/%s.pem"
+		systemTrustFilename = "/usr/share/pki/trust/anchors/%s.pem"
 		systemTrustCommand = []string{"update-ca-certificates"}
 	}
+}
 
-	filename := fmt.Sprintf(systemTrustPath, "zen-rootCA")
+// installCA installs the root CA into the system trust store.
+func (cm *CertManager) installCA() error {
+	if systemTrustFilename == "" {
+		return fmt.Errorf("installing to the system store is not yet supported on this Linux")
+	}
+
+	filename := fmt.Sprintf(systemTrustFilename, "zen-rootCA")
 	cmd := exec.Command("pkexec", "tee", filename)
 	cmd.Stdin = bytes.NewReader(cm.certData)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("write cert to %s: %v\n%s", filename, err, out)
+	}
+
+	cmd = exec.Command("pkexec", systemTrustCommand...)
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("system trust command: %v\n%s", err, out)
+	}
+
+	return nil
+}
+
+func (cm *CertManager) uninstallCA() error {
+	if systemTrustFilename == "" {
+		return nil
+	}
+
+	filename := fmt.Sprintf(systemTrustFilename, "zen-rootCA")
+	cmd := exec.Command("pkexec", "rm", "-f", filename)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("remove cert from %s: %v\n%s", filename, err, out)
 	}
 
 	cmd = exec.Command("pkexec", systemTrustCommand...)

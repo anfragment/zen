@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Icon, IconSize, FocusStyleManager, NonIdealState, Alert } from '@blueprintjs/core';
+import { Button, ButtonGroup, Icon, IconSize, FocusStyleManager, NonIdealState } from '@blueprintjs/core';
 import { useState, useEffect } from 'react';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
@@ -8,13 +8,14 @@ import { AppToaster } from './common/toaster';
 import { FilterLists } from './FilterLists';
 import { RequestLog } from './RequestLog';
 import { SettingsManager } from './SettingsManager';
+import { ProxyState } from './types';
 
 function App() {
   useEffect(() => {
     FocusStyleManager.onlyShowFocusOnTabs();
   }, []);
 
-  const [proxyState, setProxyState] = useState<'on' | 'off' | 'loading'>('off');
+  const [proxyState, setProxyState] = useState<ProxyState>('off');
   const [activeTab, setActiveTab] = useState<'home' | 'filterLists' | 'settings'>('home');
 
   const start = async () => {
@@ -37,7 +38,7 @@ function App() {
   };
 
   return (
-    <div id="App" className="bp5-dark">
+    <div id="App">
       <div className="heading">
         <h1 className="heading__logo">
           <Icon icon="shield" size={IconSize.LARGE} />
@@ -70,7 +71,7 @@ function App() {
           )}
         </div>
         {activeTab === 'filterLists' && <FilterLists />}
-        {activeTab === 'settings' && <SettingsManager />}
+        {activeTab === 'settings' && <SettingsManager proxyState={proxyState} />}
       </div>
 
       <Button

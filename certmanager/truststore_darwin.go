@@ -34,9 +34,12 @@ import (
 	"bytes"
 	"encoding/asn1"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"path"
 
+	"github.com/anfragment/zen/config"
 	"github.com/getlantern/elevate"
 	"howett.net/plist"
 )
@@ -69,7 +72,8 @@ var trustSettingsData = []byte(`
 </array>
 `)
 
-func (cm *CertManager) install() error {
+// installCA installs the root CA certificate into the system trust store.
+func (cm *CertManager) installCA() error {
 	cmd := elevate.WithPrompt("Authorize Zen to install the root CA certificate").Command(
 		"security", "add-trusted-cert", "-d", "-k", "/Library/Keychains/System.keychain", cm.certPath)
 	out, err := cmd.CombinedOutput()
@@ -133,6 +137,25 @@ func (cm *CertManager) install() error {
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("trust-settings-import: %v\n%s", err, out)
+	}
+
+	return nil
+}
+
+// uninstallCA removes the root CA certificate from the system trust store.
+func (cm *CertManager) uninstallCA() error {
+	cmd := elevate.WithPrompt("Authorize Zen to remove the root CA certificate").Command(
+		"security", "delete-certificate", "-c", cm.cert.Subject.CommonName, "-t")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("failed to delete root CA certificate: %v\n%s", err, out)
+		return fmt.Errorf("delete root CA certificate: %v\n%s", err, out)
+	}
+
+	folderName := path.Join(config.Config.DataDir, certsFolderName())
+	if err := os.RemoveAll(folderName); err != nil {
+		log.Printf("failed to remove certs folder: %v", err)
+		return fmt.Errorf("remove certs folder: %v", err)
 	}
 
 	return nil

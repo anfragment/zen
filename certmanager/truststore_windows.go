@@ -34,6 +34,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log"
 	"math/big"
 	"syscall"
 	"unsafe"
@@ -49,7 +50,8 @@ var (
 	procCertOpenSystemStoreW             = modcrypt32.NewProc("CertOpenSystemStoreW")
 )
 
-func (cm *CertManager) install() error {
+// installCA installs the root CA into the system trust store.
+func (cm *CertManager) installCA() error {
 	var cert []byte
 	if certBlock, _ := pem.Decode(cm.certData); certBlock == nil || certBlock.Type != "CERTIFICATE" {
 		return fmt.Errorf("invalid certificate: type mismatch")
@@ -64,6 +66,23 @@ func (cm *CertManager) install() error {
 	err = store.addCert(cert)
 	if err != nil {
 		return fmt.Errorf("add cert to root store: %v", err)
+	}
+	return nil
+}
+
+func (cm *CertManager) uninstallCA() error {
+	store, err := openWindowsRootStore()
+	if err != nil {
+		return fmt.Errorf("open root store: %v", err)
+	}
+	defer store.close()
+	deletedAny, err := store.deleteCertsWithSerial(cm.cert.SerialNumber)
+	if err == nil && !deletedAny {
+		// this is a non-critical error, so just log it
+		log.Printf("No certs with serial %v found in root store", cm.cert.SerialNumber)
+	}
+	if err != nil {
+		return fmt.Errorf("delete certs with serial %v: %v", cm.cert.SerialNumber, err)
 	}
 	return nil
 }
