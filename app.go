@@ -39,16 +39,17 @@ func (a *App) domReady(ctx context.Context) {
 
 // StartProxy initializes the associated resources and starts the proxy
 func (a *App) StartProxy() string {
+	certmanager := certmanager.GetCertManager()
+
 	if a.proxy == nil {
 		filter := filter.NewFilter()
-		certmanager, err := certmanager.NewCertManager()
-		if err != nil {
-			log.Printf("failed to initialize certmanager: %v", err)
-			return err.Error()
-		}
 		a.proxy = proxy.NewProxy(filter, certmanager, a.ctx)
 	}
 
+	if err := certmanager.Init(); err != nil {
+		log.Printf("failed to initialize certmanager: %v", err)
+		return err.Error()
+	}
 	log.Println("starting proxy")
 	if err := a.proxy.Start(); err != nil {
 		log.Printf("failed to start proxy: %v", err)
