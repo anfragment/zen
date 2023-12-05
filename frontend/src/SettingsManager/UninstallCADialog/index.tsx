@@ -40,7 +40,7 @@ export function UninstallCADialog({ proxyState }: UninstallCADialogProps) {
           <p>
             This can be useful if:
             <ul>
-              <li>You want to uninstall Zen completely</li>
+              <li>You want to uninstall Zen completely.</li>
               <li>
                 You suspect that your CA installation is malfunctioning. This issue may manifest as a browser error when
                 visiting HTTPS websites, or as other applications being unable to connect to the internet.
