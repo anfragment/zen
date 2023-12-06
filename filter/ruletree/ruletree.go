@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/anfragment/zen/filter/ruletree/rule"
 )
@@ -18,7 +19,8 @@ type RuleTree struct {
 	// root is the root node of the trie that stores the rules.
 	root node
 	// hosts maps hostnames to filter names.
-	hosts map[string]*string
+	hosts   map[string]*string
+	hostsMu sync.RWMutex
 }
 
 var (
@@ -61,7 +63,10 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 			return nil
 		}
 
+		rt.hostsMu.Lock()
 		rt.hosts[host] = filterName
+		rt.hostsMu.Unlock()
+
 		return nil
 	}
 
@@ -115,11 +120,14 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 
 func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
 	host := req.URL.Hostname()
+	rt.hostsMu.RLock()
 	if filterName, ok := rt.hosts[host]; ok {
+		rt.hostsMu.RUnlock()
 		// 0.0.0.0 may not be the actual IP address defined in the hosts file,
 		// but storing the actual one feels wasteful.
 		return rule.RequestAction{Type: rule.ActionBlock, RawRule: fmt.Sprintf("0.0.0.0 %s", host), FilterName: *filterName}
 	}
+	rt.hostsMu.RUnlock()
 
 	urlWithoutPort := url.URL{
 		Scheme:   req.URL.Scheme,
