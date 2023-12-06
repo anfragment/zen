@@ -29,11 +29,9 @@ func (p *Proxy) setSystemProxy() error {
 		}
 		return nil
 	}
-	// Proxy configuration on non-GNOME systems is finicky
-	// and I don't have the expertise to figure it out.
-	// TODO: add support for other environments
+	// TODO: add support for other desktop environments
 
-	return fmt.Errorf("system proxy configuration is currently only supported on gnome")
+	return fmt.Errorf("system proxy configuration is currently only supported on GNOME")
 }
 
 func (p *Proxy) unsetSystemProxy() error {
