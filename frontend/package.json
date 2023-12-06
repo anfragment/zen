@@ -14,7 +14,8 @@
     "@blueprintjs/select": "^5.0.17",
     "is-emoji-supported": "^0.0.5",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "use-debounce": "^10.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.17",

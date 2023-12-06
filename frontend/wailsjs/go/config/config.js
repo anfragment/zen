@@ -6,6 +6,10 @@ export function AddFilterList(arg1) {
   return window['go']['config']['config']['AddFilterList'](arg1);
 }
 
+export function GetCAInstalled() {
+  return window['go']['config']['config']['GetCAInstalled']();
+}
+
 export function GetFilterLists() {
   return window['go']['config']['config']['GetFilterLists']();
 }
@@ -18,6 +22,22 @@ export function GetVersion() {
   return window['go']['config']['config']['GetVersion']();
 }
 
+export function Lock() {
+  return window['go']['config']['config']['Lock']();
+}
+
+export function RLock() {
+  return window['go']['config']['config']['RLock']();
+}
+
+export function RLocker() {
+  return window['go']['config']['config']['RLocker']();
+}
+
+export function RUnlock() {
+  return window['go']['config']['config']['RUnlock']();
+}
+
 export function RemoveFilterList(arg1) {
   return window['go']['config']['config']['RemoveFilterList'](arg1);
 }
@@ -26,10 +46,26 @@ export function Save() {
   return window['go']['config']['config']['Save']();
 }
 
+export function SetCAInstalled(arg1) {
+  return window['go']['config']['config']['SetCAInstalled'](arg1);
+}
+
 export function SetPort(arg1) {
   return window['go']['config']['config']['SetPort'](arg1);
 }
 
 export function ToggleFilterList(arg1, arg2) {
   return window['go']['config']['config']['ToggleFilterList'](arg1, arg2);
+}
+
+export function TryLock() {
+  return window['go']['config']['config']['TryLock']();
+}
+
+export function TryRLock() {
+  return window['go']['config']['config']['TryRLock']();
+}
+
+export function Unlock() {
+  return window['go']['config']['config']['Unlock']();
 }

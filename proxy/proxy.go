@@ -36,20 +36,17 @@ import (
 type Proxy struct {
 	port           int
 	filter         *filter.Filter
-	certmanager    *certmanager.CertManager
 	server         *http.Server
 	ignoredHosts   []string
 	ignoredHostsMu sync.RWMutex
 	ctx            context.Context
 }
 
-func NewProxy(filter *filter.Filter, certmanager *certmanager.CertManager, ctx context.Context) *Proxy {
+func NewProxy(ctx context.Context) *Proxy {
 	p := Proxy{
-		filter:       filter,
-		certmanager:  certmanager,
+		filter:       filter.NewFilter(),
 		ignoredHosts: []string{},
 		ctx:          ctx,
-		port:         config.Config.Proxy.Port,
 	}
 
 	var wg sync.WaitGroup
@@ -88,19 +85,20 @@ func NewProxy(filter *filter.Filter, certmanager *certmanager.CertManager, ctx c
 // Start starts the proxy on the given address.
 func (p *Proxy) Start() error {
 	p.filter.Init()
+	if err := certmanager.GetCertManager().Init(); err != nil {
+		log.Println("failed to initialize certmanager: %v", err)
+		return fmt.Errorf("initialize certmanager: %v", err)
+	}
 
 	p.server = &http.Server{
 		Handler: p,
 	}
-
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", p.port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", config.Config.GetPort()))
 	if err != nil {
 		return fmt.Errorf("listen: %v", err)
 	}
-	// get the actual port in case we requested port 0
-	port := listener.Addr().(*net.TCPAddr).Port
-	p.port = port
-	log.Printf("proxy listening on port %d", port)
+	p.port = listener.Addr().(*net.TCPAddr).Port
+	log.Printf("proxy listening on port %d", p.port)
 
 	go func() {
 		if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
@@ -135,7 +133,7 @@ func (p *Proxy) Stop() error {
 		return fmt.Errorf("unset system proxy: %v", err)
 	}
 
-	p.certmanager.ClearCache()
+	certmanager.GetCertManager().ClearCache()
 	p.filter.Clear()
 
 	return nil
@@ -230,7 +228,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tlsCert, err := p.certmanager.GetCertificate(host)
+	tlsCert, err := certmanager.GetCertManager().GetCertificate(host)
 	if err != nil {
 		log.Printf("getting certificate(%s): %v", r.Host, err)
 		return

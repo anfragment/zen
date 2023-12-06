@@ -39,7 +39,7 @@ func (f *Filter) Init() {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	for _, filterList := range config.Config.Filter.FilterLists {
+	for _, filterList := range config.Config.GetFilterLists() {
 		if !filterList.Enabled {
 			continue
 		}
