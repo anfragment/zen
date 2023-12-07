@@ -4,9 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
-	"github.com/anfragment/zen/filter"
 	"github.com/anfragment/zen/proxy"
 )
 
@@ -39,17 +37,8 @@ func (a *App) domReady(ctx context.Context) {
 
 // StartProxy initializes the associated resources and starts the proxy
 func (a *App) StartProxy() string {
-	certmanager := certmanager.GetCertManager()
+	a.proxy = proxy.NewProxy(a.ctx)
 
-	if a.proxy == nil {
-		filter := filter.NewFilter()
-		a.proxy = proxy.NewProxy(filter, certmanager, a.ctx)
-	}
-
-	if err := certmanager.Init(); err != nil {
-		log.Printf("failed to initialize certmanager: %v", err)
-		return err.Error()
-	}
 	log.Println("starting proxy")
 	if err := a.proxy.Start(); err != nil {
 		log.Printf("failed to start proxy: %v", err)
@@ -69,5 +58,6 @@ func (a *App) StopProxy() string {
 		log.Printf("failed to stop proxy: %v", err)
 		return err.Error()
 	}
+	a.proxy = nil
 	return ""
 }

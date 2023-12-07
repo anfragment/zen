@@ -104,12 +104,13 @@ func (cm *CertManager) Init() (err error) {
 		cm.keyPath = path.Join(folderName, keyName)
 		cm.certCache = make(map[string]tls.Certificate)
 
-		if config.Config.Certmanager.CAInstalled {
+		if config.Config.GetCAInstalled() {
 			if err = cm.loadCA(); err != nil {
 				err = fmt.Errorf("CA load: %v", err)
 			}
 			return
 		}
+
 		if err = os.Remove(cm.certPath); err != nil && !os.IsNotExist(err) {
 			err = fmt.Errorf("remove existing CA cert: %v", err)
 			return
@@ -134,8 +135,7 @@ func (cm *CertManager) Init() (err error) {
 			err = fmt.Errorf("install CA: %v", err)
 			return
 		}
-		config.Config.Certmanager.CAInstalled = true
-		config.Config.Save()
+		config.Config.SetCAInstalled(true)
 	})
 
 	return cm.initErr
@@ -276,7 +276,7 @@ func (cm *CertManager) ClearCache() {
 //
 // @frontend
 func (cm *CertManager) UninstallCA() string {
-	if !config.Config.Certmanager.CAInstalled {
+	if !config.Config.GetCAInstalled() {
 		return "CA is not installed"
 	}
 	if err := cm.Init(); err != nil {
@@ -289,8 +289,7 @@ func (cm *CertManager) UninstallCA() string {
 		return err.Error()
 	}
 
-	config.Config.Certmanager.CAInstalled = false
-	config.Config.Save()
+	config.Config.SetCAInstalled(false)
 
 	cm.certData = nil
 	cm.keyData = nil
