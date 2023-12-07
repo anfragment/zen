@@ -42,13 +42,7 @@ func main() {
 				Message: fmt.Sprintf("Your Comprehensive Ad-Blocker and Privacy Guard\nVersion: %s\n© 2023 Ansar Smagulov", config.Version),
 			},
 		},
-		/*
-			As the app doesn't yet have a tray icon, the correct behaviour is to hide the window on close.
-			However, on Windows, setting this to true causes the taskbar icon to disappear without any apparent way to restore the window.
-			Therefore, we only set this to true on non-Windows platforms.
-			This is supposed to be a temporary workaround, since Wails 3.0 with tray support is coming soon.
-		*/
-		HideWindowOnClose: runtime.GOOS != "windows",
+		HideWindowOnClose: runtime.GOOS == "darwin", // only macOS keeps closed windows in taskbar
 	})
 
 	if err != nil {
