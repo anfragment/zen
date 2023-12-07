@@ -66,5 +66,9 @@ Zen currently only works on GNOME-based desktop environments. If you want to hel
   </tbody>
 </table>
 
+## Running & Building
+
+Zen is based on [Wails](https://wails.io), a framework for building desktop applications using Go and web technologies. Follow the [installation instructions](https://wails.io/docs/gettingstarted/installation) to install it on your system. Use `wails build` to build Zen, and `wails dev` to run it in development mode.
+
 ## License
 This project is licensed under the [MIT License](https://github.com/anfragment/zen/blob/master/LICENSE). Some code and assets included with Zen are licensed under different terms. For more information, see the [COPYING](https://github.com/anfragment/zen/blob/master/COPYING.md) file.
