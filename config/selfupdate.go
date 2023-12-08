@@ -14,6 +14,10 @@ import (
 // Version is the current version of the binary. Set at compile time using ldflags (see .github/workflows/build.yml).
 var Version = "development"
 
+// noSelfUpdate is set to "true" for builds distributed to package managers to prevent auto-updating.
+// Set at compile time using ldflags (see .github/workflows/build.yml).
+var noSelfUpdate = "false"
+
 func (c *config) GetVersion() string {
 	return Version
 }
@@ -70,7 +74,9 @@ func SelfUpdate(ctx context.Context) {
 }
 
 func checkForUpdates() (bool, *selfupdate.Release) {
-	if Version == "development" {
+	log.Println("checking for updates")
+	if noSelfUpdate == "true" || Version == "development" {
+		log.Println("self-update disabled")
 		return false, nil
 	}
 
@@ -82,6 +88,7 @@ func checkForUpdates() (bool, *selfupdate.Release) {
 
 	v, _ := semver.ParseTolerant(Version) // ParseTolerant allows for the non-standard "v" prefix
 	if !found || latest.Version.LTE(v) {
+		log.Println("current version is up-to-date")
 		return false, nil
 	}
 
