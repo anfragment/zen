@@ -24,12 +24,12 @@ func (p *Proxy) setSystemProxy() error {
 	interfaceName = strings.TrimSpace(string(out))
 	cmd = exec.Command("networksetup", "-setwebproxy", interfaceName, "127.0.0.1", fmt.Sprint(p.port))
 	if out, err = cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("set web proxy: %v\n%s", err, out)
+		return fmt.Errorf("set web proxy (interface: %s, port: %d): %v\n%s", interfaceName, p.port, err, out)
 	}
 
 	cmd = exec.Command("networksetup", "-setsecurewebproxy", interfaceName, "127.0.0.1", fmt.Sprint(p.port))
 	if out, err = cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("set secure web proxy: %v\n%s", err, out)
+		return fmt.Errorf("set secure web proxy (interface: %s, port: %d): %v\n%s", interfaceName, p.port, err, out)
 	}
 
 	return nil
@@ -42,12 +42,12 @@ func (p *Proxy) unsetSystemProxy() error {
 
 	cmd := exec.Command("networksetup", "-setwebproxystate", interfaceName, "off")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("unset web proxy: %v\n%s", err, out)
+		return fmt.Errorf("unset web proxy (interface: %s): %v\n%s", interfaceName, err, out)
 	}
 
 	cmd = exec.Command("networksetup", "-setsecurewebproxystate", interfaceName, "off")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("unset secure web proxy: %v\n%s", err, out)
+		return fmt.Errorf("unset secure web proxy (interface: %s): %v\n%s", interfaceName, err, out)
 	}
 
 	return nil

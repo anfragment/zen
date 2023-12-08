@@ -49,6 +49,42 @@ func NewProxy(ctx context.Context) *Proxy {
 		ctx:          ctx,
 	}
 
+	return &p
+}
+
+// Start starts the proxy on the given address.
+func (p *Proxy) Start() error {
+	p.filter.Init()
+	if err := certmanager.GetCertManager().Init(); err != nil {
+		log.Println("failed to initialize certmanager: %v", err)
+		return fmt.Errorf("initialize certmanager: %v", err)
+	}
+	p.initExclusionList()
+
+	p.server = &http.Server{
+		Handler: p,
+	}
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", config.Config.GetPort()))
+	if err != nil {
+		return fmt.Errorf("listen: %v", err)
+	}
+	p.port = listener.Addr().(*net.TCPAddr).Port
+	log.Printf("proxy listening on port %d", p.port)
+
+	go func() {
+		if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			log.Printf("serve: %v", err)
+		}
+	}()
+
+	if err := p.setSystemProxy(); err != nil {
+		return fmt.Errorf("set system proxy: %v", err)
+	}
+
+	return nil
+}
+
+func (p *Proxy) initExclusionList() {
 	var wg sync.WaitGroup
 	wg.Add(len(exclusionListURLs))
 	for _, url := range exclusionListURLs {
@@ -78,43 +114,11 @@ func NewProxy(ctx context.Context) *Proxy {
 		}(url)
 	}
 	wg.Wait()
-
-	return &p
-}
-
-// Start starts the proxy on the given address.
-func (p *Proxy) Start() error {
-	p.filter.Init()
-	if err := certmanager.GetCertManager().Init(); err != nil {
-		log.Println("failed to initialize certmanager: %v", err)
-		return fmt.Errorf("initialize certmanager: %v", err)
-	}
-
-	p.server = &http.Server{
-		Handler: p,
-	}
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", config.Config.GetPort()))
-	if err != nil {
-		return fmt.Errorf("listen: %v", err)
-	}
-	p.port = listener.Addr().(*net.TCPAddr).Port
-	log.Printf("proxy listening on port %d", p.port)
-
-	go func() {
-		if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			log.Printf("serve: %v", err)
-		}
-	}()
-
-	if err := p.setSystemProxy(); err != nil {
-		return fmt.Errorf("set system proxy: %v", err)
-	}
-
-	return nil
 }
 
 // Stop stops the proxy.
-func (p *Proxy) Stop() error {
+// If clearCaches is true, the certificate cache will be cleared.
+func (p *Proxy) Stop(clearCaches bool) error {
 	if p.server == nil {
 		return nil
 	}
@@ -133,8 +137,10 @@ func (p *Proxy) Stop() error {
 		return fmt.Errorf("unset system proxy: %v", err)
 	}
 
-	certmanager.GetCertManager().ClearCache()
-	p.filter.Clear()
+	if clearCaches {
+		certmanager.GetCertManager().ClearCache()
+		p.filter = nil
+	}
 
 	return nil
 }

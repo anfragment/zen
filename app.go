@@ -27,7 +27,9 @@ func (a *App) startup(ctx context.Context) {
 
 func (a *App) shutdown(ctx context.Context) {
 	if a.proxy != nil {
-		a.proxy.Stop()
+		if err := a.proxy.Stop(false); err != nil {
+			log.Printf("failed to stop proxy: %v", err)
+		}
 	}
 }
 
@@ -44,6 +46,7 @@ func (a *App) StartProxy() string {
 		log.Printf("failed to start proxy: %v", err)
 		return err.Error()
 	}
+
 	return ""
 }
 
@@ -54,10 +57,11 @@ func (a *App) StopProxy() string {
 	}
 
 	log.Println("stopping proxy")
-	if err := a.proxy.Stop(); err != nil {
+	if err := a.proxy.Stop(true); err != nil {
 		log.Printf("failed to stop proxy: %v", err)
 		return err.Error()
 	}
 	a.proxy = nil
+
 	return ""
 }
