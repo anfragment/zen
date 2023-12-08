@@ -64,12 +64,6 @@ func (f *Filter) Init() {
 	wg.Wait()
 }
 
-// Clear clears all rules from the filter.
-func (f *Filter) Clear() {
-	f.ruleTree = ruletree.NewRuleTree()
-	f.exceptionRuleTree = ruletree.NewRuleTree()
-}
-
 var (
 	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
 	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)|(##|#\?#|#\$#|#@#)`)
