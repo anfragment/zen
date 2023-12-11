@@ -53,7 +53,6 @@ body:
       label: Additional Context
       description: Any additional information that might be relevant to the issue.
       placeholder: |
-        Are you using any other tunnels, proxies or VPNs? Are you using any
-        antivirus software? Which apps or websites seem to be affected?
+        Are you using any other tunnels, proxies or VPNs? Are you using any antivirus software? Which apps or websites seem to be affected?
     validations:
       required: false
