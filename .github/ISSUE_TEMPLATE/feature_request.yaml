@@ -1,0 +1,11 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Zen
+labels: [enhancement]
+body:
+  - type: textarea
+    id: description
+    description: |
+      Describe the feature you would like to see in Zen.
+      Attach screenshots or videos if it helps explain the feature.
+    validations:
+      required: true
