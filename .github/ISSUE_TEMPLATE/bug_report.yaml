@@ -14,8 +14,7 @@ body:
       description: |
         Describe the bug you are experiencing in as much detail as possible.
         Attach screenshots or videos if it helps explain the issue.
-        In case you are proficient with using the command line, please
-        include the logs that Zen prints out ([read how to locate the binaries on our wiki](https://github.com/anfragment/zen/wiki/How-to-find-Zen's-binaries)).
+        In case you are proficient with using the command line, please include the logs that Zen prints out ([read how to locate the binaries on our wiki](https://github.com/anfragment/zen/wiki/How-to-find-Zen's-binaries)).
     validations:
       required: true
   - type: input
