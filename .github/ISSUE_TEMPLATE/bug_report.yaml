@@ -16,8 +16,8 @@ body:
         Attach screenshots or videos if it helps explain the issue.
         In case you are proficient with using the command line, please
         include the logs that Zen prints out ([read how to locate the binaries on our wiki](https://github.com/anfragment/zen/wiki/How-to-find-Zen's-binaries)).
-      validations:
-        required: true
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
@@ -25,8 +25,8 @@ body:
       description: |
         What version of Zen are you using? It can be found on the bottom of the "Settings" page.
       placeholder: v0.0.0
-      validations:
-        required: true
+    validations:
+      required: true
   - type: input
     id: os-kind
     attributes:
@@ -34,8 +34,8 @@ body:
       description: |
         What operating system are you using? If you are using Linux, please include the distribution.
       placeholder: Windows 10
-      validations:
-        required: true
+    validations:
+      required: true
   - type: textarea
     id: steps
     attributes:
@@ -46,8 +46,8 @@ body:
         1. Open the app
         2. Click on the "Start" button
         3 ...
-      validations:
-        required: false
+    validations:
+      required: false
   - type: textarea
     id: additional-context
     attributes:
@@ -56,5 +56,5 @@ body:
       placeholder: |
         Are you using any other tunnels, proxies or VPNs? Are you using any
         antivirus software? Which apps or websites seem to be affected?
-      validations:
-        required: false
+    validations:
+      required: false
