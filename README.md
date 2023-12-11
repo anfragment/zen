@@ -17,7 +17,7 @@ Edward Snowden, Permanent Record
 ![GitHub release](https://img.shields.io/github/v/release/anfragment/zen)
 ![GitHub download counter](https://img.shields.io/github/downloads/anfragment/zen/total)
 
-Zen is an open-source system-wide ad-blocker and privacy guard for Windows, MacOS, and Linux. It works by setting up a proxy that intercepts HTTP requests from all applications, and blocks those serving ads, tracking scripts that monitor your behavior, malware, and other unwanted content. By operating at the system level, Zen can protect against threats that browser extensions cannot, such as trackers embedded in desktop applications and operating system components. Zen comes with many pre-installed filters, but also allows you to easily add hosts files and EasyList-style filters, enabling you to tailor your protection to your specific needs.
+Zen is an open-source system-wide ad-blocker and privacy guard for Windows, macOS, and Linux. It works by setting up a proxy that intercepts HTTP requests from all applications, and blocks those serving ads, tracking scripts that monitor your behavior, malware, and other unwanted content. By operating at the system level, Zen can protect against threats that browser extensions cannot, such as trackers embedded in desktop applications and operating system components. Zen comes with many pre-installed filters, but also allows you to easily add hosts files and EasyList-style filters, enabling you to tailor your protection to your specific needs.
 
 ## Downloads
 
@@ -29,7 +29,7 @@ During the first run, Zen will prompt you to install a root certificate. This is
 
 Unsure which version to download? Click on 'Start' and type 'View processor info'. The 'System type' field under 'Device specifications' will tell you which one you need.
 
-### MacOS
+### macOS
 - x64 (Intel): [💾 Installer](https://github.com/anfragment/zen/releases/latest/download/Zen-amd64.dmg) | [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_darwin_amd64.zip)
 - ARM64 (Apple Silicon): [💾 Installer](https://github.com/anfragment/zen/releases/latest/download/Zen-arm64.dmg) | [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_darwin_arm64.zip)
 

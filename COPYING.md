@@ -2034,7 +2034,7 @@ Creative Commons may be contacted at creativecommons.org.
 ```
 
 ### elevate
-[Elevate](https://github.com/getlantern/elevate) is used to authorize Zen to install the root certificate on MacOS. It is licensed under the [Apache License 2.0](https://github.com/getlantern/elevate/blob/main/LICENSE).
+[Elevate](https://github.com/getlantern/elevate) is used to authorize Zen to install the root certificate on macOS. It is licensed under the [Apache License 2.0](https://github.com/getlantern/elevate/blob/main/LICENSE).
 
 ```
                               Apache License
@@ -2256,7 +2256,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ```
 
 ### go-plist
-[Go-plist](https://github.com/DHowett/go-plist) is used to parse the plist files on MacOS. It is licensed under the [BSD 2-Clause license](https://github.com/DHowett/go-plist/blob/main/LICENSE).
+[Go-plist](https://github.com/DHowett/go-plist) is used to parse the plist files on macOS. It is licensed under the [BSD 2-Clause license](https://github.com/DHowett/go-plist/blob/main/LICENSE).
 
 ```
 Copyright (c) 2013, Dustin L. Howett. All rights reserved.

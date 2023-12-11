@@ -99,12 +99,12 @@ jobs:
       - name: Install create-dmg
         if: runner.os == 'macOS'
         run: pip3 install setuptools && npm install -g create-dmg
-      - name: Build MacOS App
+      - name: Build macOS App
         if: runner.os == 'macOS'
         run: |
           wails build -platform darwin/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/config.Version=$(git describe --tags --abbrev=0)'"
           mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
-      - name: Codesign MacOS App Bundle
+      - name: Codesign macOS App Bundle
         if: runner.os == 'macOS'
         env: 
           MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
@@ -121,7 +121,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" app.keychain
           
           /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime build/bin/Zen-${{ matrix.arch }}.app -v
-      - name: Notarize MacOS App Bundle
+      - name: Notarize macOS App Bundle
         if: runner.os == 'macOS'
         env:
           PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
@@ -135,14 +135,14 @@ jobs:
           xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
 
           xcrun stapler staple build/bin/Zen-${{ matrix.arch }}.app
-      - name: Build MacOS Installer
+      - name: Build macOS Installer
         if: runner.os == 'macOS'
         run: |
           cp -a build/bin/Zen-${{ matrix.arch }}.app Zen.app
           create-dmg Zen.app
           mv "Zen 1.0.0.dmg" Zen-${{ matrix.arch }}.dmg
           rm -rf Zen.app
-      - name: Codesign MacOS Installer
+      - name: Codesign macOS Installer
         if: runner.os == 'macOS'
         env: 
           MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
@@ -159,7 +159,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
           
           /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime Zen-${{ matrix.arch }}.dmg -v
-      - name: Notarize MacOS Installer
+      - name: Notarize macOS Installer
         if: runner.os == 'macOS'
         env:
           PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
@@ -173,32 +173,32 @@ jobs:
           xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
 
           xcrun stapler staple Zen-${{ matrix.arch }}.dmg
-      - name: Upload MacOS installer artifact
+      - name: Upload macOS installer artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v3
         with:
           name: Zen_macos_${{ matrix.arch }}-installer
           path: Zen-${{ matrix.arch }}.dmg
-      - name: Release MacOS Installer
+      - name: Release macOS Installer
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
           files: Zen-${{ matrix.arch }}.dmg
           tag_name: ${{ github.ref }}
           draft: true
-      - name: Archive MacOS App Bundle
+      - name: Archive macOS App Bundle
         if: runner.os == 'macOS'
         run: |
           cp -a build/bin/Zen-${{ matrix.arch }}.app Zen.app
           ditto -c -k --keepParent Zen.app Zen_darwin_${{ matrix.arch }}.zip
           rm -rf Zen.app
-      - name: Upload Archived MacOS App Bundle Artifact
+      - name: Upload Archived macOS App Bundle Artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v3
         with:
           name: Zen_darwin_${{ matrix.arch }}
           path: Zen_darwin_${{ matrix.arch }}.zip
-      - name: Release Archived MacOS App Bundle
+      - name: Release Archived macOS App Bundle
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
