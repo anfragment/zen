@@ -155,7 +155,13 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // proxyHTTP proxies the HTTP request to the remote server.
 func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Upgrade") == "websocket" {
+	if res := p.filterRequest(r); res != nil {
+		res.Write(w)
+		return
+	}
+
+	if isWS(r) {
+		// should we remove hop-by-hop headers here?
 		p.proxyWebsocket(w, r)
 		return
 	}
@@ -171,11 +177,6 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 
 	removeConnectionHeaders(r.Header)
 	removeHopHeaders(r.Header)
-
-	if res := p.filterRequest(r); res != nil {
-		res.Write(w)
-		return
-	}
 
 	resp, err := client.Do(r)
 	if err != nil {
@@ -268,8 +269,15 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		}
-		req.URL.Scheme = "https"
+
 		req.URL.Host = r.Host
+
+		if isWS(req) {
+			p.proxyWebsocketTLS(w, req, tlsConfig, tlsConn)
+			break
+		}
+
+		req.URL.Scheme = "https"
 
 		if res := p.filterRequest(req); res != nil {
 			res.Write(tlsConn)
@@ -286,7 +294,6 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 			}
 
 			log.Printf("roundtrip(%s): %v", r.Host, err)
-			// TODO: send a more meaningful response with a body explaining the error
 			tlsConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
 			break
 		}
@@ -358,9 +365,13 @@ func (p *Proxy) tunnel(w net.Conn, r *http.Request) {
 		return
 	}
 
+	linkBidirectionalTunnel(w, remoteConn)
+}
+
+func linkBidirectionalTunnel(src, dst io.ReadWriter) {
 	doneC := make(chan struct{}, 2)
-	go tunnelConn(remoteConn, w, doneC)
-	go tunnelConn(w, remoteConn, doneC)
+	go tunnelConn(src, dst, doneC)
+	go tunnelConn(dst, src, doneC)
 	<-doneC
 	<-doneC
 }

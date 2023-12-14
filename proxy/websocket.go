@@ -1,71 +1,98 @@
-/*
- * This file contains some code originally licensed under the GPL-3.0 license.
- * Original Author: Andrey Meshkov <am@adguard.com>
- * Original Source: https://github.com/AdguardTeam/gomitmproxy
- *
- * Modifications made by: Ansar Smagulov <me@anfragment.net>
- *
- * This modified code is licensed under the GPL-3.0 license. The full text of the GPL-3.0 license
- * is included in the COPYING file in the root of this project.
- *
- * Note: This project as a whole is licensed under the MIT License, but this particular file,
- * due to its use of GPL-3.0 licensed code, is an exception and remains licensed under the GPL-3.0.
- */
 package proxy
 
 import (
 	"bufio"
+	"crypto/tls"
+	"io"
 	"log"
 	"net"
 	"net/http"
+	"strings"
 )
 
-// proxyWebsocket proxies websocket connections over HTTP.
-func (p *Proxy) proxyWebsocket(w http.ResponseWriter, r *http.Request) {
+func (p *Proxy) proxyWebsocketTLS(w http.ResponseWriter, req *http.Request, tlsConfig *tls.Config, clientConn *tls.Conn) {
+	targetConn, err := tls.Dial("tcp", req.URL.Host, tlsConfig)
+	if err != nil {
+		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
+		log.Printf("dialing websocket backend(%s): %v", req.URL.Host, err)
+		return
+	}
+	defer targetConn.Close()
+
+	if err := websocketHandshake(req, targetConn, clientConn); err != nil {
+		return
+	}
+
+	linkBidirectionalTunnel(targetConn, clientConn)
+}
+
+func (p *Proxy) proxyWebsocket(w http.ResponseWriter, req *http.Request) {
+	targetConn, err := net.Dial("tcp", req.URL.Host)
+	if err != nil {
+		w.WriteHeader(http.StatusBadGateway)
+		log.Printf("dialing websocket backend(%s): %v", req.URL.Host, err)
+		return
+	}
+	defer targetConn.Close()
+
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Fatal("http server does not support hijacking")
 	}
-
 	clientConn, _, err := hj.Hijack()
 	if err != nil {
-		log.Printf("error hijacking connection(%s): %v", r.Host, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("hijacking websocket client(%s): %v", req.URL.Host, err)
 		return
 	}
-	defer clientConn.Close()
 
-	targetConn, err := net.Dial("tcp", r.Host)
+	if err := websocketHandshake(req, targetConn, clientConn); err != nil {
+		return
+	}
+
+	linkBidirectionalTunnel(targetConn, clientConn)
+}
+
+func websocketHandshake(req *http.Request, targetConn io.ReadWriter, clientConn io.ReadWriter) error {
+	err := req.Write(targetConn)
 	if err != nil {
-		log.Printf("error dialing remote server(%s): %v", r.Host, err)
-		http.Error(w, err.Error(), http.StatusBadGateway)
-		return
-	}
-
-	if err := r.Write(targetConn); err != nil {
-		log.Printf("writing request to target(%s): %v", r.Host, err)
-		http.Error(w, err.Error(), http.StatusBadGateway)
-		return
+		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
+		log.Printf("writing websocket request to backend(%s): %v", req.URL.Host, err)
+		return err
 	}
 
 	targetReader := bufio.NewReader(targetConn)
 
-	resp, err := http.ReadResponse(targetReader, r)
+	resp, err := http.ReadResponse(targetReader, req)
 	if err != nil {
-		log.Printf("reading response from target(%s): %v", r.Host, err)
-		http.Error(w, err.Error(), http.StatusBadGateway)
-		return
+		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
+		log.Printf("reading websocket response from backend(%s): %v", req.URL.Host, err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	err = resp.Write(clientConn)
+	if err != nil {
+		log.Printf("writing websocket response to client(%s): %v", req.URL.Host, err)
+		return err
 	}
 
-	if err := resp.Write(clientConn); err != nil {
-		log.Printf("writing response to client(%s): %v", r.Host, err)
-		http.Error(w, err.Error(), http.StatusBadGateway)
-		return
-	}
+	return nil
+}
 
-	doneC := make(chan struct{}, 2)
-	go tunnelConn(targetConn, clientConn, doneC)
-	go tunnelConn(clientConn, targetConn, doneC)
-	<-doneC
-	<-doneC
+func headerContains(h http.Header, name, value string) bool {
+	for _, v := range h[name] {
+		for _, s := range strings.Split(v, ",") {
+			if strings.EqualFold(strings.TrimSpace(s), value) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isWS(r *http.Request) bool {
+	// RFC 6455, the WebSocket Protocol specification, does not explicitly specify if the Upgrade header
+	// should only contain the value "websocket" or not, so we'll employ some defensive programming here.
+	return headerContains(r.Header, "Connection", "upgrade") &&
+		headerContains(r.Header, "Upgrade", "websocket")
 }
