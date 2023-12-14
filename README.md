@@ -1,13 +1,13 @@
-<p style="text-align: center;">
+<p align="center">
   <picture>
     <img src="https://github.com/anfragment/zen/blob/master/assets/appicon.png?raw=true" alt="Zen's Blue Shield Logo" width="150" />
   </picture>
 </p>
 
-<h3 style="text-align: center;">
+<h3 align="center">
   Zen: Your Comprehensive Ad-Blocker and Privacy Guard
 </h3>
-<blockquote style="text-align: center;">
+<blockquote align="center">
 There is, simply, no way, to ignore privacy. Because a citizenry’s freedoms are interdependent, to surrender your own privacy is really to surrender everyone’s.
 
 Edward Snowden, Permanent Record
@@ -60,8 +60,8 @@ Zen currently only works on GNOME-based desktop environments. If you want to hel
       </td>
     </tr>
     <tr>
-      <td style="text-align: center; vertical-align: top"><img src="https://github.com/anfragment/zen/blob/master/assets/screenshots/main-window.png?raw=true" alt="Zen's main window"/></td>
-      <td style="text-align: center; vertical-align: top"><img src="https://github.com/anfragment/zen/blob/master/assets/screenshots/filter-lists.png?raw=true" alt="Zen's filter list manager"/></td>
+      <td align="center" valign="top"><img src="https://github.com/anfragment/zen/blob/master/assets/screenshots/main-window.png?raw=true" alt="Zen's main window"/></td>
+      <td align="center" valign="top"><img src="https://github.com/anfragment/zen/blob/master/assets/screenshots/filter-lists.png?raw=true" alt="Zen's filter list manager"/></td>
     </tr>
   </tbody>
 </table>
