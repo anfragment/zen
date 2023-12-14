@@ -270,7 +270,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### gomitmproxy
+### goproxy
 Proxy implementation is partially based on [goproxy](https://github.com/elazarl/goproxy), which is licensed under the [BSD-3-Clause license terms](https://github.com/elazarl/goproxy/blob/master/LICENSE).
 
 ```
