@@ -33,7 +33,7 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 		return nil, fmt.Errorf("generate serial number: %v", err)
 	}
 
-	expiresAt := time.Now().Add(certTTL)
+	notAfter := time.Now().Add(certTTL)
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -41,7 +41,7 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 		},
 		DNSNames:  []string{host},
 		NotBefore: time.Now(),
-		NotAfter:  expiresAt,
+		NotAfter:  notAfter,
 
 		KeyUsage:              x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
@@ -71,7 +71,7 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 		return nil, fmt.Errorf("load key pair: %v", err)
 	}
 
-	cm.certCache.Put(host, expiresAt.Add(-5*time.Minute), &cert) // 5 minute buffer in case a TLS handshake takes a while, the system clock is off, etc.
+	cm.certCache.Put(host, notAfter.Add(-5*time.Minute), &cert) // 5 minute buffer in case a TLS handshake takes a while, the system clock is off, etc.
 
 	return &cert, nil
 }
