@@ -35,7 +35,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -56,20 +55,26 @@ import (
 const (
 	caName  = "rootCA.pem"
 	keyName = "rootCA-key.pem"
+	// cacheMaxSize is the maximum number of certificates the cache will store.
+	//
+	// Considering that a single tls.Certificate is about 1.7KB, this means that the cache
+	// can store 5800 certificates in about 10MB of memory.
+	cacheMaxSize = 5800
+	// cacheCleanupInterval is the interval at which the cache is cleaned up.
+	cacheCleanupInterval = 5 * time.Minute
 )
 
 // CertManager manages the root CA certificate and key for the proxy.
 type CertManager struct {
-	certData    []byte
-	keyData     []byte
-	certPath    string
-	cert        *x509.Certificate
-	keyPath     string
-	key         crypto.PrivateKey
-	certCache   map[string]tls.Certificate
-	certCacheMu sync.RWMutex
-	initOnce    *sync.Once
-	initErr     error
+	certData  []byte
+	keyData   []byte
+	certPath  string
+	cert      *x509.Certificate
+	keyPath   string
+	key       crypto.PrivateKey
+	certCache *CertLRUCache
+	initOnce  *sync.Once
+	initErr   error
 }
 
 var (
@@ -102,7 +107,7 @@ func (cm *CertManager) Init() (err error) {
 		folderName := path.Join(config.Config.DataDir, certsFolderName())
 		cm.certPath = path.Join(folderName, caName)
 		cm.keyPath = path.Join(folderName, keyName)
-		cm.certCache = make(map[string]tls.Certificate)
+		cm.certCache = NewCertLRUCache(cacheMaxSize, cacheCleanupInterval)
 
 		if config.Config.GetCAInstalled() {
 			if err = cm.loadCA(); err != nil {
@@ -265,11 +270,8 @@ func (cm *CertManager) newCA() error {
 }
 
 // ClearCache removes all cached certificates.
-func (cm *CertManager) ClearCache() {
-	cm.certCacheMu.Lock()
-	defer cm.certCacheMu.Unlock()
-
-	cm.certCache = make(map[string]tls.Certificate)
+func (cm *CertManager) PurgeCache() {
+	cm.certCache.Purge()
 }
 
 // UninstallCA wraps platform-specific uninstallCA methods.
@@ -300,7 +302,7 @@ func (cm *CertManager) UninstallCA() string {
 	cm.certCache = nil
 	cm.initOnce = &sync.Once{}
 	cm.initErr = nil
-	cm.ClearCache()
+	cm.PurgeCache()
 
 	return ""
 }
