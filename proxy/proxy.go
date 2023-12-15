@@ -118,7 +118,7 @@ func (p *Proxy) initExclusionList() {
 
 // Stop stops the proxy.
 // If clearCaches is true, the certificate cache will be cleared.
-func (p *Proxy) Stop(clearCaches bool) error {
+func (p *Proxy) Stop(purgeCache bool) error {
 	if p.server == nil {
 		return nil
 	}
@@ -137,8 +137,8 @@ func (p *Proxy) Stop(clearCaches bool) error {
 		return fmt.Errorf("unset system proxy: %v", err)
 	}
 
-	if clearCaches {
-		certmanager.GetCertManager().ClearCache()
+	if purgeCache {
+		certmanager.GetCertManager().PurgeCache()
 		p.filter = nil
 	}
 

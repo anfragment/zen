@@ -13,15 +13,13 @@ import (
 	"time"
 )
 
-const certTTL = 2 * time.Minute
+// certTTL is the time-to-live for certificates.
+const certTTL = 24 * time.Hour
 
 // GetCertificate returns a self-signed certificate for the given host.
 func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
-	cm.certCacheMu.RLock()
-	cert, ok := cm.certCache[host]
-	cm.certCacheMu.RUnlock()
-	if ok {
-		return &cert, nil
+	if cert := cm.certCache.Get(host); cert != nil {
+		return cert, nil
 	}
 
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -35,7 +33,7 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 		return nil, fmt.Errorf("generate serial number: %v", err)
 	}
 
-	expiry := time.Now().Add(certTTL)
+	expiresAt := time.Now().Add(certTTL)
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -43,7 +41,7 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 		},
 		DNSNames:  []string{host},
 		NotBefore: time.Now(),
-		NotAfter:  expiry,
+		NotAfter:  expiresAt,
 
 		KeyUsage:              x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
@@ -68,26 +66,12 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 		return nil, fmt.Errorf("encode key to PEM")
 	}
 
-	cert, err = tls.X509KeyPair(pemCert, pemKey)
+	cert, err := tls.X509KeyPair(pemCert, pemKey)
 	if err != nil {
 		return nil, fmt.Errorf("load key pair: %v", err)
 	}
 
-	cm.certCacheMu.Lock()
-	cm.certCache[host] = cert
-	cm.certCacheMu.Unlock()
-
-	cm.ScheduleCacheCleanup(host, expiry)
+	cm.certCache.Put(host, expiresAt.Add(-5*time.Minute), &cert) // 5 minute buffer in case a TLS handshake takes a while, the system clock is off, etc.
 
 	return &cert, nil
-}
-
-// ScheduleCacheCleanup clears the cache for the given host.
-func (cm *CertManager) ScheduleCacheCleanup(host string, expiry time.Time) {
-	go func() {
-		time.Sleep(time.Until(expiry) - time.Second) // give it a second in case of a lock contention
-		cm.certCacheMu.Lock()
-		delete(cm.certCache, host)
-		cm.certCacheMu.Unlock()
-	}()
 }
