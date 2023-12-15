@@ -56,7 +56,7 @@ func NewProxy(ctx context.Context) *Proxy {
 func (p *Proxy) Start() error {
 	p.filter.Init()
 	if err := certmanager.GetCertManager().Init(); err != nil {
-		log.Println("failed to initialize certmanager: %v", err)
+		log.Printf("failed to initialize certmanager: %v", err)
 		return fmt.Errorf("initialize certmanager: %v", err)
 	}
 	p.initExclusionList()
