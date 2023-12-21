@@ -11,23 +11,24 @@ type Rule struct {
 	// string representation
 	RawRule string
 	// FilterName is the name of the filter that the rule belongs to.
-	FilterName *string
-	// generic is true if the rule is a generic rule.
-	generic   bool
-	modifiers []modifier
+	FilterName         *string
+	matchingModifiers  []matchingModifier
+	modifyingModifiers []modifyingModifier
 }
 
-type modifier interface {
+// matchingModifier is a modifier that defines whether a rule matches a request.
+type matchingModifier interface {
 	Parse(modifier string) error
 	ShouldMatch(req *http.Request) bool
 }
 
-func (rm *Rule) ParseModifiers(modifiers string) error {
-	if len(modifiers) == 0 {
-		rm.generic = true
-		return nil
-	}
+// modifyingModifier is a modifier that defines how a rule modifies a request.
+type modifyingModifier interface {
+	Parse(modifier string) error
+	Modify(req *http.Request)
+}
 
+func (rm *Rule) ParseModifiers(modifiers string) error {
 	for _, modifier := range strings.Split(modifiers, ",") {
 		if len(modifier) == 0 {
 			return fmt.Errorf("empty modifier")
@@ -41,13 +42,13 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 				if err := dm.Parse(value); err != nil {
 					return err
 				}
-				rm.modifiers = append(rm.modifiers, dm)
+				rm.matchingModifiers = append(rm.matchingModifiers, dm)
 			case "method":
 				mm := &methodModifier{}
 				if err := mm.Parse(value); err != nil {
 					return err
 				}
-				rm.modifiers = append(rm.modifiers, mm)
+				rm.matchingModifiers = append(rm.matchingModifiers, mm)
 			default:
 				return fmt.Errorf("unknown modifier %s", rule)
 			}
@@ -62,15 +63,15 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 				if err := ctm.Parse(modifier); err != nil {
 					return err
 				}
-				rm.modifiers = append(rm.modifiers, ctm)
+				rm.matchingModifiers = append(rm.matchingModifiers, ctm)
 			case "third-party":
 				tpm := &thirdPartyModifier{}
 				if err := tpm.Parse(modifier); err != nil {
 					return err
 				}
-				rm.modifiers = append(rm.modifiers, tpm)
+				rm.matchingModifiers = append(rm.matchingModifiers, tpm)
 			case "all":
-				rm.generic = true
+				// TODO: this should act as a $popup modifier once it gets implemented
 			default:
 				return fmt.Errorf("unknown modifier %s", modifier)
 			}
@@ -80,29 +81,16 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 	return nil
 }
 
-type RequestAction struct {
-	Type       RequestActionType
-	RawRule    string
-	FilterName string
-}
-
-type RequestActionType int8
-
-const (
-	ActionAllow RequestActionType = iota
-	ActionBlock
-)
-
-func (rm *Rule) HandleRequest(req *http.Request) RequestAction {
-	for _, modifier := range rm.modifiers {
+func (rm *Rule) ShouldMatch(req *http.Request) bool {
+	for _, modifier := range rm.matchingModifiers {
 		if !modifier.ShouldMatch(req) {
-			return RequestAction{Type: ActionAllow}
+			return false
 		}
 	}
 
-	action := RequestAction{Type: ActionBlock, RawRule: rm.RawRule}
-	if rm.FilterName != nil {
-		action.FilterName = *rm.FilterName
-	}
-	return action
+	return true
+}
+
+func (rm *Rule) ShouldBlock(req *http.Request) bool {
+	return len(rm.modifyingModifiers) == 0
 }

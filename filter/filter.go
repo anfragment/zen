@@ -99,11 +99,18 @@ func (m *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 	return ruleCount, exceptionCount
 }
 
-func (m *Filter) HandleRequest(req *http.Request) rule.RequestAction {
-	exceptionAction := m.exceptionRuleTree.HandleRequest(req)
-	if exceptionAction.Type == rule.ActionBlock {
-		return rule.RequestAction{Type: rule.ActionAllow}
+func (m *Filter) HandleRequest(req *http.Request) (block bool, rules []rule.Rule) {
+	if len(m.exceptionRuleTree.FindMatchingRules(req)) > 0 {
+		// TODO: implement precise exception handling
+		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#removeheader-modifier (see "Negating $removeheader")
+		return false, nil
 	}
 
-	return m.ruleTree.HandleRequest(req)
+	rules = m.ruleTree.FindMatchingRules(req)
+	for _, r := range rules {
+		if r.ShouldBlock(req) {
+			return true, []rule.Rule{r}
+		}
+	}
+	return false, rules
 }

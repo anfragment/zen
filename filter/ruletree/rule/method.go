@@ -29,7 +29,7 @@ func (m *methodModifier) Parse(modifier string) error {
 func (m *methodModifier) ShouldMatch(req *http.Request) bool {
 	method := req.Method
 	for _, entry := range m.entries {
-		if entry.MatchMethod(method) {
+		if entry.MatchesMethod(method) {
 			return true
 		}
 	}
@@ -50,7 +50,7 @@ func (m *methodModifierEntry) Parse(modifier string) error {
 	return nil
 }
 
-func (m *methodModifierEntry) MatchMethod(method string) bool {
+func (m *methodModifierEntry) MatchesMethod(method string) bool {
 	if strings.ToLower(method) == m.method {
 		return !m.inverted
 	}

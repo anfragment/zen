@@ -118,14 +118,19 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 	return nil
 }
 
-func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
+func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 	host := req.URL.Hostname()
 	rt.hostsMu.RLock()
 	if filterName, ok := rt.hosts[host]; ok {
 		rt.hostsMu.RUnlock()
-		// 0.0.0.0 may not be the actual IP address defined in the hosts file,
+		// 0.0.0.0 may not be the actual IP defined in the hosts file,
 		// but storing the actual one feels wasteful.
-		return rule.RequestAction{Type: rule.ActionBlock, RawRule: fmt.Sprintf("0.0.0.0 %s", host), FilterName: *filterName}
+		return []rule.Rule{
+			{
+				RawRule:    fmt.Sprintf("0.0.0.0 %s", host),
+				FilterName: filterName,
+			},
+		}
 	}
 	rt.hostsMu.RUnlock()
 
@@ -142,22 +147,16 @@ func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
 	tokens := tokenize(url)
 
 	// address root
-	if action := rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
+	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRules(req, tokens, func(n *node, t []string) bool {
 		// address root rules have to match the entire URL
 		return len(t) == 0
-	}); action.Type != rule.ActionAllow {
-		return action
-	}
+	})...)
 
-	if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-		return action
-	}
+	rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
 	tokens = tokens[1:]
 
 	// protocol separator
-	if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-		return action
-	}
+	rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
 	tokens = tokens[1:]
 
 	// domain segments
@@ -166,24 +165,18 @@ func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
 			break
 		}
 		if tokens[0] != "." {
-			if action := rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-				return action
-			}
+			rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseFindMatchingRules(req, tokens, nil)...)
 		}
-		if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-			return action
-		}
+		rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
 		tokens = tokens[1:]
 	}
 
 	// rest of the URL
-	// TODO: handle query parameters, etc.
+	// TODO: handle query parameters, fragments
 	for len(tokens) > 0 {
-		if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-			return action
-		}
+		rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
 		tokens = tokens[1:]
 	}
 
-	return rule.RequestAction{Type: rule.ActionAllow}
+	return rules
 }

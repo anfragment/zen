@@ -29,7 +29,6 @@ import (
 	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter"
-	"github.com/anfragment/zen/filter/ruletree/rule"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -334,8 +333,8 @@ func (p *Proxy) shouldMITM(host string) bool {
 // filterRequest returns a response if the request should be blocked according
 // to the filter.
 func (p *Proxy) filterRequest(r *http.Request) *http.Response {
-	if action := p.filter.HandleRequest(r); action.Type == rule.ActionBlock {
-		runtime.EventsEmit(p.ctx, "proxy:filter", r.Method, r.URL.String(), r.Header.Get("Referer"), action.FilterName, action.RawRule)
+	if block, rules := p.filter.HandleRequest(r); block {
+		runtime.EventsEmit(p.ctx, "proxy:filter", r.Method, r.URL.String(), r.Header.Get("Referer"), rules[0].FilterName, rules[0].RawRule)
 		return &http.Response{
 			StatusCode: http.StatusForbidden,
 			Status:     http.StatusText(http.StatusForbidden),
