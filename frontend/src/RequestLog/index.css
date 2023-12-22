@@ -1,13 +1,29 @@
 .request-log__card {
   display: flex;
   justify-content: space-between;
+  border-bottom: 1.5px solid #fff !important;
 }
 
 .request-log__empty {
+  line-height: 200px;
+  text-align: center;
   margin-top: .5rem;
   font-weight: bold;
 }
 
 .request-log__card__details__value {
   line-break: anywhere;
+  
+}
+
+.request-log__card__details {
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+}
+
+.listClass {
+  border: 0px solid #fff !important;
+
+  box-sizing: border-box !important;
+  box-shadow: none !important;
 }

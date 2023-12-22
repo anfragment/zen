@@ -39,12 +39,6 @@ function App() {
 
   return (
     <div id="App">
-      <div className="heading">
-        <h1 className="heading__logo">
-          <Icon icon="shield" size={IconSize.LARGE} />
-          ZEN
-        </h1>
-      </div>
       <ButtonGroup fill minimal className="tabs">
         <Button icon="circle" active={activeTab === 'home'} onClick={() => setActiveTab('home')}>
           Home
@@ -61,9 +55,7 @@ function App() {
         <div style={{ display: activeTab === 'home' ? 'block' : 'none' }}>
           {proxyState === 'off' ? (
             <NonIdealState
-              icon="lightning"
               title="Activate the proxy to see blocked requests"
-              description="The proxy is not active. Click the button below to activate it."
               className="request-log__non-ideal-state"
             />
           ) : (

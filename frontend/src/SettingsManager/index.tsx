@@ -28,7 +28,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
   return (
     <div className="settings-manager">
       <div className="settings-manager__section--advanced">
-        <Tag large intent="warning" fill className="settings-manager__section-header">
+        <Tag large intent="danger" fill className="settings-manager__section-header">
           Advanced
         </Tag>
 
@@ -40,15 +40,13 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
       <div className="settings-manager__about bp5-text-muted">
         <div>
-          <strong>Zen</strong>
+          <strong>Zen ({state.version})</strong>
         </div>
-        <div>Your Comprehensive Ad-Blocker and Privacy Guard</div>
-        <div>Version: {state.version}</div>
-        <div>© 2023 Ansar Smagulov</div>
+        <div className="whiteText">Your Comprehensive Ad-Blocker and Privacy Guard</div>
+        <div className="whiteText">© 2023 Ansar Smagulov</div>
         <Button
           minimal
           small
-          icon="git-branch"
           className="settings-manager__about-github-button"
           onClick={() => BrowserOpenURL('https://github.com/anfragment/zen')}
         >

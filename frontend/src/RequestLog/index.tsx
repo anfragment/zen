@@ -41,11 +41,11 @@ export function RequestLog() {
   );
 
   return (
-    <div className="request-log">
+    <div className="listClass">
       {logs.length === 0 ? (
-        <p className="request-log__empty">Start browsing to see blocked requests.</p>
+        <p className="request-log__empty">No blocked requests yet...</p>
       ) : (
-        <CardList compact>
+        <CardList compact className="listClass">
           {logs.map((log) => (
             <RequestLogCard log={log} key={log.id} />
           ))}
@@ -93,7 +93,7 @@ function RequestLogCard({ log }: { log: Log }) {
           </p>
           <p className="request-log__card__details__value">
             <strong>Rule: </strong>
-            {log.rule}
+            {log.rule.replace("||", "")}
           </p>
         </Card>
       </Collapse>

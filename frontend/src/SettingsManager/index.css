@@ -8,7 +8,7 @@
 }
 
 .settings-manager__section--advanced {
-  border: 1px solid #fbb360;
+  border: 2px solid #cb4145;
   border-radius: 4px;
   margin-bottom: 4px;
 }
@@ -25,4 +25,10 @@
 
 .settings-manager__about-github-button {
   font-size: .8rem;
+  text-align: center;
+  margin-top: 16px;
+}
+
+.whiteText {
+  color: #fff;
 }

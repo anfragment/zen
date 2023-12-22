@@ -3,26 +3,22 @@
 }
 
 .filter-lists__list {
-  border-bottom: 1px dotted #fff;
+  border-bottom: 2px solid #fff;
   padding-top: 10px;
   padding-bottom: 10px;
+  margin-top: -10px;
 }
 
 .filter-lists__list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
 }
 
 .filter-lists__select-count {
   display: inline-block;
   margin-left: 5px;
   font-variant-numeric: tabular-nums;
-}
-
-.filter-lists__list-switch {
-  margin: 0;
 }
 
 .filter-lists__list-name {
@@ -41,11 +37,25 @@
 }
 
 .filter-lists__create-filter-list {
-  border-bottom: 1px dotted #fff;
+  border-bottom: 1px solid #fff;
   padding-top: 10px;
-  padding-bottom: 10px; 
+  padding-bottom: 10px;
 }
 
 .filter-lists__list-delete {
   margin-top: 10px;
+}
+
+
+.listClass {
+  padding: 0 0 10px 0;
+}
+
+.filter-lists__list-switch {
+  margin-top: 10px;
+  align-content: center;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  margin-left: 9px;
 }

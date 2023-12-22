@@ -1,4 +1,4 @@
-import { Spinner, SpinnerSize, Switch, Button, MenuItem } from '@blueprintjs/core';
+import { Spinner, SpinnerSize, Switch, Button, MenuItem, Tooltip } from '@blueprintjs/core';
 import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
 
@@ -38,6 +38,7 @@ export function FilterLists() {
   return (
     <>
       <Select
+        className="listClass"
         items={Object.values(FilterListType)}
         itemRenderer={(item) => (
           <MenuItem
@@ -63,7 +64,7 @@ export function FilterLists() {
         popoverProps={{ minimal: true, matchTargetWidth: true }}
         filterable={false}
       >
-        <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />
+        <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" intent="primary" />
       </Select>
 
       {state.loading && <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />}
@@ -118,8 +119,11 @@ function ListItem({
           className="filter-lists__list-switch"
         />
       </div>
-      <div className="bp5-text-muted filter-lists__list-url">{filterList.url}</div>
-
+      <div className="bp5-text-muted filter-lists__list-url">
+        <Tooltip compact content={filterList.url} className='className="bp5-text-muted filter-lists__list-url"'>
+          <div className="bp5-text-muted filter-lists__list-url">{filterList.url}</div>
+        </Tooltip>
+      </div>
       {showDelete && (
         <Button
           icon="trash"
