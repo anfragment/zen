@@ -104,7 +104,7 @@ var (
 	// reSeparator is a regular expression that matches the separator token.
 	// According to https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters:
 	// "Separator character is any character, but a letter, a digit, or one of the following: _ - . %. ... The end of the address is also accepted as separator."
-	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9]|[_\-.%]`)
+	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9_\-\.%]`)
 )
 
 // TraverseFindMatchingRules traverses the trie and returns the rules that match the given request.
@@ -126,7 +126,8 @@ func (n *node) TraverseFindMatchingRules(req *http.Request, tokens []string, sho
 	if len(tokens) == 0 {
 		// end of an address is a valid separator
 		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
-		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).FindMatchingRules(req)...)
+		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRules(req, tokens, shouldUseNode)...)
+		return rules
 	}
 	if reSeparator.MatchString(tokens[0]) {
 		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRules(req, tokens[1:], shouldUseNode)...)

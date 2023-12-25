@@ -29,6 +29,10 @@ type modifyingModifier interface {
 }
 
 func (rm *Rule) ParseModifiers(modifiers string) error {
+	if len(modifiers) == 0 {
+		return nil
+	}
+
 	for _, modifier := range strings.Split(modifiers, ",") {
 		if len(modifier) == 0 {
 			return fmt.Errorf("empty modifier")
