@@ -11,7 +11,13 @@ type methodModifier struct {
 }
 
 func (m *methodModifier) Parse(modifier string) error {
-	entries := strings.Split(modifier, "|")
+	eqIndex := strings.IndexByte(modifier, '=')
+	if eqIndex == -1 {
+		return fmt.Errorf("invalid method modifier")
+	}
+	value := modifier[eqIndex+1:]
+
+	entries := strings.Split(value, "|")
 	m.entries = make([]methodModifierEntry, 0, len(entries))
 	for _, entry := range entries {
 		if entry == "" {

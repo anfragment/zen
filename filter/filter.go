@@ -111,6 +111,9 @@ func (m *Filter) HandleRequest(req *http.Request) (block bool, rules []rule.Rule
 		if r.ShouldBlock(req) {
 			return true, []rule.Rule{r}
 		}
+		if r.Modify(req) {
+			log.Printf("modified request to %s using rule %s", req.URL.String(), r.RawRule)
+		}
 	}
 	return false, rules
 }

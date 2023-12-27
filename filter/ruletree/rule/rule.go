@@ -16,16 +16,21 @@ type Rule struct {
 	modifyingModifiers []modifyingModifier
 }
 
-// matchingModifier is a modifier that defines whether a rule matches a request.
-type matchingModifier interface {
+// modifier is a modifier of a rule.
+type modifier interface {
 	Parse(modifier string) error
+}
+
+// matchingModifier defines whether a rule matches a request.
+type matchingModifier interface {
+	modifier
 	ShouldMatch(req *http.Request) bool
 }
 
-// modifyingModifier is a modifier that defines how a rule modifies a request.
+// modifyingModifier modifies a request.
 type modifyingModifier interface {
-	Parse(modifier string) error
-	Modify(req *http.Request)
+	modifier
+	Modify(req *http.Request) (modified bool)
 }
 
 func (rm *Rule) ParseModifiers(modifiers string) error {
@@ -33,58 +38,48 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		return nil
 	}
 
-	for _, modifier := range strings.Split(modifiers, ",") {
-		if len(modifier) == 0 {
+	for _, m := range strings.Split(modifiers, ",") {
+		if len(m) == 0 {
 			return fmt.Errorf("empty modifier")
 		}
 
-		if eqIndex := strings.IndexByte(modifier, '='); eqIndex != -1 {
-			rule, value := modifier[:eqIndex], modifier[eqIndex+1:]
-			switch rule {
-			case "domain":
-				dm := &domainModifier{}
-				if err := dm.Parse(value); err != nil {
-					return err
-				}
-				rm.matchingModifiers = append(rm.matchingModifiers, dm)
-			case "method":
-				mm := &methodModifier{}
-				if err := mm.Parse(value); err != nil {
-					return err
-				}
-				rm.matchingModifiers = append(rm.matchingModifiers, mm)
-			default:
-				return fmt.Errorf("unknown modifier %s", rule)
-			}
-		} else {
-			ruleType := modifier
-			if ruleType[0] == '~' {
-				ruleType = ruleType[1:]
-			}
-			switch ruleType {
-			case "document", "xmlhttprequest", "font", "subdocument", "image", "object", "script", "stylesheet", "media", "websocket":
-				ctm := &contentTypeModifier{}
-				if err := ctm.Parse(modifier); err != nil {
-					return err
-				}
-				rm.matchingModifiers = append(rm.matchingModifiers, ctm)
-			case "third-party":
-				tpm := &thirdPartyModifier{}
-				if err := tpm.Parse(modifier); err != nil {
-					return err
-				}
-				rm.matchingModifiers = append(rm.matchingModifiers, tpm)
-			case "all":
-				// TODO: this should act as a $popup modifier once it gets implemented
-			default:
-				return fmt.Errorf("unknown modifier %s", modifier)
-			}
+		isKind := func(kind string) bool {
+			return strings.HasPrefix(m, kind)
+		}
+		var modifier modifier
+		switch {
+		case isKind("domain"):
+			modifier = &domainModifier{}
+		case isKind("method"):
+			modifier = &methodModifier{}
+		case isKind("document"), isKind("xmlhttprequest"), isKind("font"), isKind("subdocument"), isKind("image"), isKind("object"), isKind("script"), isKind("stylesheet"), isKind("media"), isKind("websocket"):
+			modifier = &contentTypeModifier{}
+		case isKind("third-party"):
+			modifier = &thirdPartyModifier{}
+		case isKind("removeparam"):
+			modifier = &removeParamModifier{}
+		case isKind("all"):
+			// TODO: should act as "popup" modifier once it gets implemented
+		default:
+			return fmt.Errorf("unknown modifier %s", modifier)
+		}
+
+		if err := modifier.Parse(m); err != nil {
+			return err
+		}
+
+		if matchingModifier, ok := modifier.(matchingModifier); ok {
+			rm.matchingModifiers = append(rm.matchingModifiers, matchingModifier)
+		}
+		if modifyingModifier, ok := modifier.(modifyingModifier); ok {
+			rm.modifyingModifiers = append(rm.modifyingModifiers, modifyingModifier)
 		}
 	}
 
 	return nil
 }
 
+// ShouldMatch returns true if the rule should match the request.
 func (rm *Rule) ShouldMatch(req *http.Request) bool {
 	for _, modifier := range rm.matchingModifiers {
 		if !modifier.ShouldMatch(req) {
@@ -95,6 +90,18 @@ func (rm *Rule) ShouldMatch(req *http.Request) bool {
 	return true
 }
 
+// ShouldBlock returns true if the request should be blocked.
 func (rm *Rule) ShouldBlock(req *http.Request) bool {
 	return len(rm.modifyingModifiers) == 0
+}
+
+// Modify modifies a request. Returns true if the request was modified.
+func (rm *Rule) Modify(req *http.Request) (modified bool) {
+	for _, modifier := range rm.modifyingModifiers {
+		if modifier.Modify(req) {
+			modified = true
+		}
+	}
+
+	return modified
 }
