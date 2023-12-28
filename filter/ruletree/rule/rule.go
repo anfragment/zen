@@ -11,98 +11,99 @@ type Rule struct {
 	// string representation
 	RawRule string
 	// FilterName is the name of the filter that the rule belongs to.
-	FilterName *string
-	// generic is true if the rule is a generic rule.
-	generic   bool
-	modifiers []modifier
+	FilterName         *string
+	matchingModifiers  []matchingModifier
+	modifyingModifiers []modifyingModifier
 }
 
+// modifier is a modifier of a rule.
 type modifier interface {
 	Parse(modifier string) error
+}
+
+// matchingModifier defines whether a rule matches a request.
+type matchingModifier interface {
+	modifier
 	ShouldMatch(req *http.Request) bool
+}
+
+// modifyingModifier modifies a request.
+type modifyingModifier interface {
+	modifier
+	Modify(req *http.Request) (modified bool)
 }
 
 func (rm *Rule) ParseModifiers(modifiers string) error {
 	if len(modifiers) == 0 {
-		rm.generic = true
 		return nil
 	}
 
-	for _, modifier := range strings.Split(modifiers, ",") {
-		if len(modifier) == 0 {
+	for _, m := range strings.Split(modifiers, ",") {
+		if len(m) == 0 {
 			return fmt.Errorf("empty modifier")
 		}
 
-		if eqIndex := strings.IndexByte(modifier, '='); eqIndex != -1 {
-			rule, value := modifier[:eqIndex], modifier[eqIndex+1:]
-			switch rule {
-			case "domain":
-				dm := &domainModifier{}
-				if err := dm.Parse(value); err != nil {
-					return err
-				}
-				rm.modifiers = append(rm.modifiers, dm)
-			case "method":
-				mm := &methodModifier{}
-				if err := mm.Parse(value); err != nil {
-					return err
-				}
-				rm.modifiers = append(rm.modifiers, mm)
-			default:
-				return fmt.Errorf("unknown modifier %s", rule)
-			}
+		isKind := func(kind string) bool {
+			return strings.HasPrefix(m, kind)
+		}
+		var modifier modifier
+		switch {
+		case isKind("domain"):
+			modifier = &domainModifier{}
+		case isKind("method"):
+			modifier = &methodModifier{}
+		case isKind("document"), isKind("xmlhttprequest"), isKind("font"), isKind("subdocument"), isKind("image"), isKind("object"), isKind("script"), isKind("stylesheet"), isKind("media"), isKind("websocket"):
+			modifier = &contentTypeModifier{}
+		case isKind("third-party"):
+			modifier = &thirdPartyModifier{}
+		case isKind("removeparam"):
+			modifier = &removeParamModifier{}
+		case isKind("all"):
+			// TODO: should act as "popup" modifier once it gets implemented
+			continue
+		default:
+			return fmt.Errorf("unknown modifier %s", modifier)
+		}
+
+		if err := modifier.Parse(m); err != nil {
+			return err
+		}
+
+		if matchingModifier, ok := modifier.(matchingModifier); ok {
+			rm.matchingModifiers = append(rm.matchingModifiers, matchingModifier)
+		} else if modifyingModifier, ok := modifier.(modifyingModifier); ok {
+			rm.modifyingModifiers = append(rm.modifyingModifiers, modifyingModifier)
 		} else {
-			ruleType := modifier
-			if ruleType[0] == '~' {
-				ruleType = ruleType[1:]
-			}
-			switch ruleType {
-			case "document", "xmlhttprequest", "font", "subdocument", "image", "object", "script", "stylesheet", "media", "websocket":
-				ctm := &contentTypeModifier{}
-				if err := ctm.Parse(modifier); err != nil {
-					return err
-				}
-				rm.modifiers = append(rm.modifiers, ctm)
-			case "third-party":
-				tpm := &thirdPartyModifier{}
-				if err := tpm.Parse(modifier); err != nil {
-					return err
-				}
-				rm.modifiers = append(rm.modifiers, tpm)
-			case "all":
-				rm.generic = true
-			default:
-				return fmt.Errorf("unknown modifier %s", modifier)
-			}
+			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
 	}
 
 	return nil
 }
 
-type RequestAction struct {
-	Type       RequestActionType
-	RawRule    string
-	FilterName string
-}
-
-type RequestActionType int8
-
-const (
-	ActionAllow RequestActionType = iota
-	ActionBlock
-)
-
-func (rm *Rule) HandleRequest(req *http.Request) RequestAction {
-	for _, modifier := range rm.modifiers {
+// ShouldMatch returns true if the rule should match the request.
+func (rm *Rule) ShouldMatch(req *http.Request) bool {
+	for _, modifier := range rm.matchingModifiers {
 		if !modifier.ShouldMatch(req) {
-			return RequestAction{Type: ActionAllow}
+			return false
 		}
 	}
 
-	action := RequestAction{Type: ActionBlock, RawRule: rm.RawRule}
-	if rm.FilterName != nil {
-		action.FilterName = *rm.FilterName
+	return true
+}
+
+// ShouldBlock returns true if the request should be blocked.
+func (rm *Rule) ShouldBlock(req *http.Request) bool {
+	return len(rm.modifyingModifiers) == 0
+}
+
+// Modify modifies a request. Returns true if the request was modified.
+func (rm *Rule) Modify(req *http.Request) (modified bool) {
+	for _, modifier := range rm.modifyingModifiers {
+		if modifier.Modify(req) {
+			modified = true
+		}
 	}
-	return action
+
+	return modified
 }

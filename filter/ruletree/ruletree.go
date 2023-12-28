@@ -24,14 +24,20 @@ type RuleTree struct {
 }
 
 var (
-	modifiersCG = `(?:\$(.+))?`
-	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	reIgnoreRule   = regexp.MustCompile(`^(?:!|#|\[)|(##|#\?#|#\$#|#@#)`)
+	// matchingPartCG matches the part of a rule that is used to match URLs.
+	// Note: the '$' character is excluded due to its use as the separator between the matching part and modifiers.
+	// This means that rules containing '$' in the matching part will get disregarded, but I can't think of any other
+	// way to reliably distinguish between the matching part and modifiers.
+	matchingPartCG = `([^$]+)`
+	// modifiersCG matches the modifiers part of a rule.
+	modifiersCG    = `(?:\$(.+))`
 	reHosts        = regexp.MustCompile(`^(?:0\.0\.0\.0|127\.0\.0\.1) (.+)`)
 	reHostsIgnore  = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
-	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|(.+?)%s$`, modifiersCG))
-	reExactAddress = regexp.MustCompile(fmt.Sprintf(`^\|(.+?)%s$`, modifiersCG))
-	reGeneric      = regexp.MustCompile(fmt.Sprintf(`^(.+?)%s$`, modifiersCG))
+	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|%s%s?$`, matchingPartCG, modifiersCG))
+	reExactAddress = regexp.MustCompile(fmt.Sprintf(`^\|%s%s?$`, matchingPartCG, modifiersCG))
+	reAddressParts = regexp.MustCompile(fmt.Sprintf(`^%s%s?$`, matchingPartCG, modifiersCG))
+	// reGeneric matches rules without a matching part, e.g. `$removeparam=utm_referrer`.
+	reGeneric = regexp.MustCompile(fmt.Sprintf(`^%s+$`, modifiersCG))
 )
 
 func NewRuleTree() RuleTree {
@@ -42,12 +48,8 @@ func NewRuleTree() RuleTree {
 }
 
 func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
-	if reIgnoreRule.MatchString(rawRule) {
-		return nil
-	}
-
 	if reHosts.MatchString(rawRule) {
-		// strip the # and any characters after it
+		// Strip the # and any characters after it
 		if commentIndex := strings.IndexByte(rawRule, '#'); commentIndex != -1 {
 			rawRule = rawRule[:commentIndex]
 		}
@@ -81,10 +83,14 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 		rootKeyKind = nodeKindAddressRoot
 		tokens = tokenize(match[1])
 		modifiers = match[2]
-	} else if match := reGeneric.FindStringSubmatch(rawRule); match != nil {
+	} else if match := reAddressParts.FindStringSubmatch(rawRule); match != nil {
 		rootKeyKind = nodeKindExactMatch
 		tokens = tokenize(match[1])
 		modifiers = match[2]
+	} else if match := reGeneric.FindStringSubmatch(rawRule); match != nil {
+		rootKeyKind = nodeKindGeneric
+		tokens = []string{}
+		modifiers = match[1]
 	} else {
 		return fmt.Errorf("unknown rule format")
 	}
@@ -118,14 +124,19 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 	return nil
 }
 
-func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
+func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 	host := req.URL.Hostname()
 	rt.hostsMu.RLock()
 	if filterName, ok := rt.hosts[host]; ok {
 		rt.hostsMu.RUnlock()
-		// 0.0.0.0 may not be the actual IP address defined in the hosts file,
+		// 0.0.0.0 may not be the actual IP defined in the hosts file,
 		// but storing the actual one feels wasteful.
-		return rule.RequestAction{Type: rule.ActionBlock, RawRule: fmt.Sprintf("0.0.0.0 %s", host), FilterName: *filterName}
+		return []rule.Rule{
+			{
+				RawRule:    fmt.Sprintf("0.0.0.0 %s", host),
+				FilterName: filterName,
+			},
+		}
 	}
 	rt.hostsMu.RUnlock()
 
@@ -138,26 +149,22 @@ func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
 	}
 
 	url := urlWithoutPort.String()
-	// address root -> hostname root -> domain -> etc.
 	tokens := tokenize(url)
 
+	// generic rules -> address root -> hostname root -> domain -> etc.
+	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindGeneric}).FindMatchingRules(req)...)
+
 	// address root
-	if action := rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseAndHandleReq(req, tokens, func(n *node, t []string) bool {
+	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRules(req, tokens, func(n *node, t []string) bool {
 		// address root rules have to match the entire URL
 		return len(t) == 0
-	}); action.Type != rule.ActionAllow {
-		return action
-	}
+	})...)
 
-	if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-		return action
-	}
+	rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
 	tokens = tokens[1:]
 
 	// protocol separator
-	if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-		return action
-	}
+	rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
 	tokens = tokens[1:]
 
 	// domain segments
@@ -166,24 +173,18 @@ func (rt *RuleTree) HandleRequest(req *http.Request) rule.RequestAction {
 			break
 		}
 		if tokens[0] != "." {
-			if action := rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-				return action
-			}
+			rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseFindMatchingRules(req, tokens, nil)...)
 		}
-		if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-			return action
-		}
+		rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
 		tokens = tokens[1:]
 	}
 
 	// rest of the URL
-	// TODO: handle query parameters, etc.
+	// TODO: handle query parameters, fragments
 	for len(tokens) > 0 {
-		if action := rt.root.TraverseAndHandleReq(req, tokens, nil); action.Type != rule.ActionAllow {
-			return action
-		}
+		rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
 		tokens = tokens[1:]
 	}
 
-	return rule.RequestAction{Type: rule.ActionAllow}
+	return rules
 }

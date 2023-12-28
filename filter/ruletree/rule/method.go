@@ -11,7 +11,13 @@ type methodModifier struct {
 }
 
 func (m *methodModifier) Parse(modifier string) error {
-	entries := strings.Split(modifier, "|")
+	eqIndex := strings.IndexByte(modifier, '=')
+	if eqIndex == -1 {
+		return fmt.Errorf("invalid method modifier")
+	}
+	value := modifier[eqIndex+1:]
+
+	entries := strings.Split(value, "|")
 	m.entries = make([]methodModifierEntry, 0, len(entries))
 	for _, entry := range entries {
 		if entry == "" {
@@ -29,7 +35,7 @@ func (m *methodModifier) Parse(modifier string) error {
 func (m *methodModifier) ShouldMatch(req *http.Request) bool {
 	method := req.Method
 	for _, entry := range m.entries {
-		if entry.MatchMethod(method) {
+		if entry.MatchesMethod(method) {
 			return true
 		}
 	}
@@ -50,7 +56,7 @@ func (m *methodModifierEntry) Parse(modifier string) error {
 	return nil
 }
 
-func (m *methodModifierEntry) MatchMethod(method string) bool {
+func (m *methodModifierEntry) MatchesMethod(method string) bool {
 	if strings.ToLower(method) == m.method {
 		return !m.inverted
 	}

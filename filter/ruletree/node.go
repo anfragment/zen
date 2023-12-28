@@ -17,6 +17,8 @@ const (
 	nodeKindDomain               // ||
 	nodeKindWildcard             // *
 	nodeKindSeparator            // ^
+	// nodeKindGeneric is a kind of node that matches any URL.
+	nodeKindGeneric
 )
 
 // nodeKey uniquely identifies a node within the trie.
@@ -104,52 +106,45 @@ var (
 	// reSeparator is a regular expression that matches the separator token.
 	// According to https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters:
 	// "Separator character is any character, but a letter, a digit, or one of the following: _ - . %. ... The end of the address is also accepted as separator."
-	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9]|[_\-.%]`)
+	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9_\-\.%]`)
 )
 
-// TraverseAndHandleReq traverses the trie and returns the action to take for the given request.
-func (n *node) TraverseAndHandleReq(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) rule.RequestAction {
+// TraverseFindMatchingRules traverses the trie and returns the rules that match the given request.
+func (n *node) TraverseFindMatchingRules(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) (rules []rule.Rule) {
 	if n == nil {
-		return rule.RequestAction{Type: rule.ActionAllow}
+		return rules
 	}
 	if shouldUseNode == nil {
 		shouldUseNode = func(n *node, tokens []string) bool {
 			return true
 		}
 	}
+
 	if shouldUseNode(n, tokens) {
 		// check the node itself
-		if action := n.HandleRequest(req); action.Type != rule.ActionAllow {
-			return action
-		}
+		rules = append(rules, n.FindMatchingRules(req)...)
 	}
+
 	if len(tokens) == 0 {
 		// end of an address is a valid separator
 		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
-		if action := n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseAndHandleReq(req, tokens, shouldUseNode); action.Type != rule.ActionAllow {
-			return action
-		}
-		return rule.RequestAction{Type: rule.ActionAllow}
+		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRules(req, tokens, shouldUseNode)...)
+		return rules
 	}
 	if reSeparator.MatchString(tokens[0]) {
-		if action := n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseAndHandleReq(req, tokens[1:], shouldUseNode); action.Type != rule.ActionAllow {
-			return action
-		}
+		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRules(req, tokens[1:], shouldUseNode)...)
 	}
-	if action := n.FindChild(nodeKey{kind: nodeKindWildcard}).TraverseAndHandleReq(req, tokens[1:], shouldUseNode); action.Type != rule.ActionAllow {
-		return action
-	}
+	rules = append(rules, n.FindChild(nodeKey{kind: nodeKindWildcard}).TraverseFindMatchingRules(req, tokens[1:], shouldUseNode)...)
+	rules = append(rules, n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).TraverseFindMatchingRules(req, tokens[1:], shouldUseNode)...)
 
-	return n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).TraverseAndHandleReq(req, tokens[1:], shouldUseNode)
+	return rules
 }
 
-// HandleRequest returns the action to take for the given request.
-func (n *node) HandleRequest(req *http.Request) rule.RequestAction {
+func (n *node) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 	for _, r := range n.rules {
-		action := r.HandleRequest(req)
-		if action.Type != rule.ActionAllow {
-			return action
+		if r.ShouldMatch(req) {
+			rules = append(rules, r)
 		}
 	}
-	return rule.RequestAction{Type: rule.ActionAllow}
+	return rules
 }

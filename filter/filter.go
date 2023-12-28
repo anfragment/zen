@@ -14,6 +14,7 @@ import (
 	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter/ruletree"
 	"github.com/anfragment/zen/filter/ruletree/rule"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // Filter is trie-based filter for URLs that is capable of parsing
@@ -99,11 +100,77 @@ func (m *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 	return ruleCount, exceptionCount
 }
 
-func (m *Filter) HandleRequest(req *http.Request) rule.RequestAction {
-	exceptionAction := m.exceptionRuleTree.HandleRequest(req)
-	if exceptionAction.Type == rule.ActionBlock {
-		return rule.RequestAction{Type: rule.ActionAllow}
+type filterActionKind string
+
+const (
+	filterActionBlocked    filterActionKind = "blocked"
+	filterActionRedirected filterActionKind = "redirected"
+	filterActionModified   filterActionKind = "modified"
+)
+
+// filterAction is the data structure that is emitted as an event when a request matches filter rules.
+// See its usage at: frontend/src/RequestLog/index.tsx
+type filterAction struct {
+	Kind    filterActionKind `json:"kind"`
+	Method  string           `json:"method"`
+	URL     string           `json:"url"`
+	To      string           `json:"to,omitempty"`
+	Referer string           `json:"referer,omitempty"`
+	Rules   []rule.Rule      `json:"rules"`
+}
+
+// HandleRequest handles the given request by matching it against the filter rules.
+// If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
+func (m *Filter) HandleRequest(ctx context.Context, req *http.Request) *http.Response {
+	if len(m.exceptionRuleTree.FindMatchingRules(req)) > 0 {
+		// TODO: implement precise exception handling
+		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#removeheader-modifier (see "Negating $removeheader")
+		return nil
 	}
 
-	return m.ruleTree.HandleRequest(req)
+	matchingRules := m.ruleTree.FindMatchingRules(req)
+	appliedRules := make([]rule.Rule, 0, len(matchingRules))
+	initialURL := req.URL.String()
+	for _, r := range matchingRules {
+		if r.ShouldBlock(req) {
+			runtime.EventsEmit(ctx, "filter:action", filterAction{
+				Kind:    filterActionBlocked,
+				Method:  req.Method,
+				URL:     req.URL.String(),
+				Referer: req.Header.Get("Referer"),
+				Rules:   []rule.Rule{r},
+			})
+			return m.formBlockResponse(req, r)
+		}
+		if r.Modify(req) {
+			appliedRules = append(appliedRules, r)
+		}
+	}
+
+	finalURL := req.URL.String()
+	if initialURL != finalURL {
+		runtime.EventsEmit(ctx, "filter:action", filterAction{
+			Kind:    filterActionRedirected,
+			Method:  req.Method,
+			URL:     initialURL,
+			To:      finalURL,
+			Referer: req.Header.Get("Referer"),
+			// This is not entirely accurate since not all applied rules necessarily contribute to the redirect.
+			// Tracking the URL in each loop iteration could fix this, but I don't think it's worth the effort.
+			Rules: appliedRules,
+		})
+		return m.formRedirectResponse(req, finalURL)
+	}
+
+	if len(appliedRules) > 0 {
+		runtime.EventsEmit(ctx, "filter:action", filterAction{
+			Kind:    filterActionModified,
+			Method:  req.Method,
+			URL:     initialURL,
+			Referer: req.Header.Get("Referer"),
+			Rules:   appliedRules,
+		})
+	}
+
+	return nil
 }

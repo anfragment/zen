@@ -11,3 +11,7 @@
 .request-log__card__details__value {
   line-break: anywhere;
 }
+
+.request-log__card__details__rules td {
+  line-break: anywhere;
+}
