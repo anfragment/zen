@@ -29,7 +29,6 @@ import (
 	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Proxy struct {
@@ -154,7 +153,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // proxyHTTP proxies the HTTP request to the remote server.
 func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
-	if res := p.filterRequest(r); res != nil {
+	if res := p.filter.HandleRequest(p.ctx, r); res != nil {
 		res.Write(w)
 		return
 	}
@@ -216,7 +215,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 	removeHopHeaders(r.Header)
 	removeConnectionHeaders(r.Header)
 
-	if res := p.filterRequest(r); res != nil {
+	if res := p.filter.HandleRequest(p.ctx, r); res != nil {
 		res.Write(clientConn)
 		return
 	}
@@ -278,7 +277,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 		req.URL.Scheme = "https"
 
-		if res := p.filterRequest(req); res != nil {
+		if res := p.filter.HandleRequest(p.ctx, req); res != nil {
 			res.Write(tlsConn)
 			break
 		}
@@ -328,24 +327,6 @@ func (p *Proxy) shouldMITM(host string) bool {
 	}
 
 	return true
-}
-
-// filterRequest returns a response if the request should be blocked according
-// to the filter.
-func (p *Proxy) filterRequest(r *http.Request) *http.Response {
-	if block, rules := p.filter.HandleRequest(r); block {
-		runtime.EventsEmit(p.ctx, "proxy:filter", r.Method, r.URL.String(), r.Header.Get("Referer"), rules[0].FilterName, rules[0].RawRule)
-		return &http.Response{
-			StatusCode: http.StatusForbidden,
-			Status:     http.StatusText(http.StatusForbidden),
-			Header:     make(http.Header),
-			Proto:      r.Proto,
-			ProtoMajor: r.ProtoMajor,
-			ProtoMinor: r.ProtoMinor,
-			Request:    r,
-		}
-	}
-	return nil
 }
 
 // tunnel tunnels the connection between the client and the remote server

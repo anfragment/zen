@@ -1,4 +1,4 @@
-import { CardList, Card, Tag, Collapse } from '@blueprintjs/core';
+import { CardList, Card, Tag, Collapse, HTMLTable } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-packages
@@ -6,39 +6,45 @@ import { EventsOn } from '../../wailsjs/runtime';
 
 import './index.css';
 
-interface Log {
+type Rule = {
+  FilterName: string;
+  RawRule: string;
+};
+
+type FilterActionKind = 'blocked' | 'redirected' | 'modified';
+
+type FilterAction = {
   id: string;
+  kind: FilterActionKind;
   method: string;
   url: string;
+  to: string;
   referer: string;
-  filterName: string;
-  rule: string;
+  rules: Rule[];
   createdAt: Date;
-}
+};
 
 export function RequestLog() {
-  const [logs, setLogs] = useState<Log[]>([]);
+  const [logs, setLogs] = useState<FilterAction[]>([]);
 
-  useEffect(
-    () =>
-      EventsOn('proxy:filter', (...data) => {
-        setLogs((prevLogs) =>
-          [
-            {
-              id: id(),
-              method: data[0],
-              url: data[1],
-              referer: data[2],
-              filterName: data[3],
-              rule: data[4],
-              createdAt: new Date(),
-            },
-            ...prevLogs,
-          ].slice(0, 200),
-        );
-      }),
-    [],
-  );
+  useEffect(() => {
+    const cancel = EventsOn('filter:action', (action: Omit<FilterAction, 'id' | 'createdAt'>) => {
+      setLogs((logs) =>
+        [
+          {
+            ...action,
+            id: id(),
+            createdAt: new Date(),
+          },
+          ...logs,
+        ].slice(0, 200),
+      );
+    });
+
+    return () => {
+      cancel();
+    };
+  }, []);
 
   return (
     <div className="request-log">
@@ -55,15 +61,15 @@ export function RequestLog() {
   );
 }
 
-function RequestLogCard({ log }: { log: Log }) {
+function RequestLogCard({ log }: { log: FilterAction }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const { hostname } = new URL(log.url, 'http://foo'); // setting base url helps with //hostname:port urls
+  const { hostname } = new URL(log.url, 'http://foo'); // Setting the base url somehow helps with parsing //hostname:port URLs
 
   return (
     <>
       <Card key={log.id} className="request-log__card" interactive onClick={() => setIsOpen(!isOpen)}>
-        <Tag minimal intent="danger">
+        <Tag minimal intent={log.kind === 'blocked' ? 'danger' : 'warning'}>
           {hostname}
         </Tag>
         <div className="bp5-text-muted">{log.createdAt.toLocaleTimeString([], { timeStyle: 'short' })}</div>
@@ -81,20 +87,34 @@ function RequestLogCard({ log }: { log: Log }) {
             <strong>URL: </strong>
             {log.url}
           </p>
+          {log.kind === 'redirected' && (
+            <p className="request-log__card__details__value">
+              <strong>Redirected to: </strong>
+              {log.to}
+            </p>
+          )}
           {log.referer && (
             <p className="request-log__card__details__value">
               <strong>Referer: </strong>
               {log.referer}
             </p>
           )}
-          <p className="request-log__card__details__value">
-            <strong>Filter name: </strong>
-            {log.filterName}
-          </p>
-          <p className="request-log__card__details__value">
-            <strong>Rule: </strong>
-            {log.rule}
-          </p>
+          <HTMLTable bordered compact striped className="request-log__card__details__rules">
+            <thead>
+              <tr>
+                <th>Filter name</th>
+                <th>Rule</th>
+              </tr>
+            </thead>
+            <tbody>
+              {log.rules.map((rule) => (
+                <tr key={rule.RawRule}>
+                  <td>{rule.FilterName}</td>
+                  <td>{rule.RawRule}</td>
+                </tr>
+              ))}
+            </tbody>
+          </HTMLTable>
         </Card>
       </Collapse>
     </>
@@ -102,5 +122,5 @@ function RequestLogCard({ log }: { log: Log }) {
 }
 
 function id(): string {
-  return Math.random().toString(36).substr(2, 9);
+  return Math.random().toString(36).slice(2, 9);
 }

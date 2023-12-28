@@ -71,9 +71,10 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 
 		if matchingModifier, ok := modifier.(matchingModifier); ok {
 			rm.matchingModifiers = append(rm.matchingModifiers, matchingModifier)
-		}
-		if modifyingModifier, ok := modifier.(modifyingModifier); ok {
+		} else if modifyingModifier, ok := modifier.(modifyingModifier); ok {
 			rm.modifyingModifiers = append(rm.modifyingModifiers, modifyingModifier)
+		} else {
+			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
 	}
 

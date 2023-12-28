@@ -70,7 +70,11 @@ func (rm *removeParamModifier) Modify(req *http.Request) (modified bool) {
 		}
 	case removeparamKindRegexp:
 		for _, param := range params {
-			if rm.regexp.MatchString(param) {
+			// The second condition addresses an issue with how some filter lists implement regexp removeparam modifiers.
+			// For example, here's a rule from DandelionSprout's CleanURLs list:
+			// $removeparam=/^utm(_[a-z_]*)?=/
+			// The '=' sign at the end would prevent matching the parameter name. Therefore, we check for it separately.
+			if rm.regexp.MatchString(param) || rm.regexp.MatchString(param+"=") {
 				query.Del(param)
 				modified = true
 			}
