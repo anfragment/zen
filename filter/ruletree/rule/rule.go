@@ -60,6 +60,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			modifier = &removeParamModifier{}
 		case isKind("all"):
 			// TODO: should act as "popup" modifier once it gets implemented
+			continue
 		default:
 			return fmt.Errorf("unknown modifier %s", modifier)
 		}
