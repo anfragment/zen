@@ -24,14 +24,20 @@ type RuleTree struct {
 }
 
 var (
-	modifiersCG = `(?:\$(.+))?`
-	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	reIgnoreRule   = regexp.MustCompile(`^(?:!|#|\[)|(##|#\?#|#\$#|#@#)`)
+	// matchingPartCG matches the part of a rule that is used to match URLs.
+	// Note: the '$' character is excluded due to its use as the separator between the matching part and modifiers.
+	// This means that rules containing '$' in the matching part will get disregarded, but I can't think of any other
+	// way to reliably distinguish between the matching part and modifiers.
+	matchingPartCG = `([^$]+)`
+	// modifiersCG matches the modifiers part of a rule.
+	modifiersCG    = `(?:\$(.+))`
 	reHosts        = regexp.MustCompile(`^(?:0\.0\.0\.0|127\.0\.0\.1) (.+)`)
 	reHostsIgnore  = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
-	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|(.+?)%s$`, modifiersCG))
-	reExactAddress = regexp.MustCompile(fmt.Sprintf(`^\|(.+?)%s$`, modifiersCG))
-	reGeneric      = regexp.MustCompile(fmt.Sprintf(`^(.+?)%s$`, modifiersCG))
+	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|%s%s?$`, matchingPartCG, modifiersCG))
+	reExactAddress = regexp.MustCompile(fmt.Sprintf(`^\|%s%s?$`, matchingPartCG, modifiersCG))
+	reAddressParts = regexp.MustCompile(fmt.Sprintf(`^%s%s?$`, matchingPartCG, modifiersCG))
+	// reGeneric matches rules without a matching part, e.g. `$removeparam=utm_referrer`.
+	reGeneric = regexp.MustCompile(fmt.Sprintf(`^%s+$`, modifiersCG))
 )
 
 func NewRuleTree() RuleTree {
@@ -42,12 +48,8 @@ func NewRuleTree() RuleTree {
 }
 
 func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
-	if reIgnoreRule.MatchString(rawRule) {
-		return nil
-	}
-
 	if reHosts.MatchString(rawRule) {
-		// strip the # and any characters after it
+		// Strip the # and any characters after it
 		if commentIndex := strings.IndexByte(rawRule, '#'); commentIndex != -1 {
 			rawRule = rawRule[:commentIndex]
 		}
@@ -81,10 +83,14 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 		rootKeyKind = nodeKindAddressRoot
 		tokens = tokenize(match[1])
 		modifiers = match[2]
-	} else if match := reGeneric.FindStringSubmatch(rawRule); match != nil {
+	} else if match := reAddressParts.FindStringSubmatch(rawRule); match != nil {
 		rootKeyKind = nodeKindExactMatch
 		tokens = tokenize(match[1])
 		modifiers = match[2]
+	} else if match := reGeneric.FindStringSubmatch(rawRule); match != nil {
+		rootKeyKind = nodeKindGeneric
+		tokens = []string{}
+		modifiers = match[1]
 	} else {
 		return fmt.Errorf("unknown rule format")
 	}
@@ -143,8 +149,10 @@ func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 	}
 
 	url := urlWithoutPort.String()
-	// address root -> hostname root -> domain -> etc.
 	tokens := tokenize(url)
+
+	// generic rules -> address root -> hostname root -> domain -> etc.
+	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindGeneric}).FindMatchingRules(req)...)
 
 	// address root
 	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRules(req, tokens, func(n *node, t []string) bool {

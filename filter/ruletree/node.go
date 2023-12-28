@@ -17,6 +17,8 @@ const (
 	nodeKindDomain               // ||
 	nodeKindWildcard             // *
 	nodeKindSeparator            // ^
+	// nodeKindGeneric is a kind of node that matches any URL.
+	nodeKindGeneric
 )
 
 // nodeKey uniquely identifies a node within the trie.
