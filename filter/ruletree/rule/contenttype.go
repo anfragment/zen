@@ -24,6 +24,7 @@ var (
 	secFetchDestMap = map[string]string{
 		"audio":     "media",
 		"document":  "document",
+		"doc":       "document",
 		"empty":     "xmlhttprequest",
 		"font":      "font",
 		"frame":     "subdocument",
