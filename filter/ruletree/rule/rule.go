@@ -44,6 +44,9 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		}
 
 		isKind := func(kind string) bool {
+			if len(m) > 0 && m[0] == '~' {
+				return strings.HasPrefix(m[1:], kind)
+			}
 			return strings.HasPrefix(m, kind)
 		}
 		var modifier modifier
