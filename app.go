@@ -34,6 +34,7 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 func (a *App) domReady(ctx context.Context) {
+	config.RunMigrations()
 	config.SelfUpdate(ctx)
 }
 
