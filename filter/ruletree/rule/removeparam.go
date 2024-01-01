@@ -22,6 +22,11 @@ type removeParamModifier struct {
 	regexp *regexp.Regexp
 }
 
+var (
+	// regexpRegexp is a regexp that matches a regexp.
+	regexpRegexp = regexp.MustCompile(`^/(.+)/i?$`)
+)
+
 func (rm *removeParamModifier) Parse(modifier string) error {
 	if modifier == "removeparam" {
 		rm.kind = removeparamKindGeneric
@@ -34,10 +39,16 @@ func (rm *removeParamModifier) Parse(modifier string) error {
 	}
 	value := modifier[eqIndex+1:]
 
-	if value[0] == '/' && value[len(value)-1] == '/' {
-		regexp, err := regexp.Compile(value[1 : len(value)-1])
+	if match := regexpRegexp.FindStringSubmatch(value); match != nil {
+		// TODO: use this in other regexp modifiers.
+		regexpBody := match[1]
+		if value[len(value)-1] == 'i' {
+			// Convert JS-style case insensitivity to Go-style.
+			regexpBody = "(?i)" + regexpBody
+		}
+		regexp, err := regexp.Compile(regexpBody)
 		if err != nil {
-			return fmt.Errorf("invalid regexp %w", value)
+			return fmt.Errorf("regexp parsing(%s): %w", regexpBody, err)
 		}
 		rm.kind = removeparamKindRegexp
 		rm.regexp = regexp
