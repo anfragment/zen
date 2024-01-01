@@ -55,7 +55,17 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			modifier = &domainModifier{}
 		case isKind("method"):
 			modifier = &methodModifier{}
-		case isKind("document"), isKind("doc"), isKind("xmlhttprequest"), isKind("font"), isKind("subdocument"), isKind("image"), isKind("object"), isKind("script"), isKind("stylesheet"), isKind("media"), isKind("websocket"):
+		case isKind("document"),
+			isKind("doc"),
+			isKind("xmlhttprequest"),
+			isKind("font"),
+			isKind("subdocument"),
+			isKind("image"),
+			isKind("object"),
+			isKind("script"),
+			isKind("stylesheet"),
+			isKind("media"),
+			isKind("other"):
 			modifier = &contentTypeModifier{}
 		case isKind("third-party"):
 			modifier = &thirdPartyModifier{}
