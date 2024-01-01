@@ -152,7 +152,11 @@ func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 	tokens := tokenize(url)
 
 	// generic rules -> address root -> hostname root -> domain -> etc.
-	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindGeneric}).FindMatchingRules(req)...)
+
+	// generic rules
+	if genericNode := rt.root.FindChild(nodeKey{kind: nodeKindGeneric}); genericNode != nil {
+		rules = append(rules, genericNode.FindMatchingRules(req)...)
+	}
 
 	// address root
 	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRules(req, tokens, func(n *node, t []string) bool {
