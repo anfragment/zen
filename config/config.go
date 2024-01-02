@@ -12,6 +12,9 @@ import (
 // Config is the singleton config instance.
 var Config config
 
+// firstLaunch is true if the application is being run for the first time.
+var firstLaunch bool
+
 type filterList struct {
 	Name    string `json:"name"`
 	Type    string `json:"type"`
@@ -199,6 +202,7 @@ func init() {
 		if err := os.WriteFile(configFile, configData, 0644); err != nil {
 			log.Fatalf("failed to write config file: %v", err)
 		}
+		firstLaunch = true
 	}
 
 	if err := json.Unmarshal(configData, &Config); err != nil {
