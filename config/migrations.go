@@ -9,6 +9,8 @@ import (
 	"github.com/blang/semver"
 )
 
+// migrations is a map of version to migration function.
+// Warning: RunMigration() runs the migrations in arbitrary order.
 var migrations = map[string]func() error{
 	"v0.3.0": func() error {
 		errStr := Config.AddFilterList(filterList{
