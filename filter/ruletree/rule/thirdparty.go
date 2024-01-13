@@ -21,20 +21,19 @@ func (m *thirdPartyModifier) ShouldMatch(req *http.Request) bool {
 	if req.Header.Get("Sec-Fetch-Site") == "cross-site" {
 		return !m.inverted
 	}
-	if referer := req.Header.Get("Referer"); referer != "" {
-		host := req.Host
-		if host == "" {
-			host = req.URL.Hostname()
-		}
-		refererURL, err := req.URL.Parse(referer)
-		if err != nil {
-			return false
-		}
-		refererHost := refererURL.Hostname()
-		if strings.HasSuffix(refererHost, host) {
-			return m.inverted
-		}
-		return !m.inverted
+
+	referer := req.Header.Get("Referer")
+	if referer == "" {
+		return false
 	}
-	return false
+	targetHost := req.Host
+	refererURL, err := req.URL.Parse(referer)
+	if err != nil {
+		return false
+	}
+	refererHost := refererURL.Hostname()
+	if strings.HasSuffix(refererHost, targetHost) {
+		return m.inverted
+	}
+	return !m.inverted
 }
