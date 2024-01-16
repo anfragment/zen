@@ -1,13 +1,15 @@
 package rule
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 )
 
 type methodModifier struct {
-	entries []methodModifierEntry
+	entries  []methodModifierEntry
+	inverted bool
 }
 
 func (m *methodModifier) Parse(modifier string) error {
@@ -17,48 +19,52 @@ func (m *methodModifier) Parse(modifier string) error {
 	}
 	value := modifier[eqIndex+1:]
 
+	m.inverted = strings.HasPrefix(value, "~")
 	entries := strings.Split(value, "|")
-	m.entries = make([]methodModifierEntry, 0, len(entries))
-	for _, entry := range entries {
+	m.entries = make([]methodModifierEntry, len(entries))
+	for i, entry := range entries {
 		if entry == "" {
-			return fmt.Errorf("empty method modifier entry")
+			return errors.New("empty method modifier entry")
 		}
-		mme := methodModifierEntry{}
-		if err := mme.Parse(entry); err != nil {
-			return err
+		inverted := strings.HasPrefix(entry, "~")
+		if inverted != m.inverted {
+			return errors.New("cannot mix inverted and non-inverted method modifiers")
 		}
-		m.entries = append(m.entries, mme)
+		if inverted {
+			entry = entry[1:]
+		}
+
+		m.entries[i] = methodModifierEntry{}
+		m.entries[i].Parse(entry)
 	}
 	return nil
 }
 
 func (m *methodModifier) ShouldMatch(req *http.Request) bool {
-	method := req.Method
+	matches := false
 	for _, entry := range m.entries {
-		if entry.MatchesMethod(method) {
-			return true
+		if entry.MatchesMethod(req.Method) {
+			matches = true
+			break
 		}
 	}
-	return false
+	if m.inverted {
+		return !matches
+	}
+	return matches
 }
 
 type methodModifierEntry struct {
-	method   string
-	inverted bool
+	// method is the method to match. It is expected to be uppercase.
+	method string
 }
 
-func (m *methodModifierEntry) Parse(modifier string) error {
-	if modifier[0] == '~' {
-		m.inverted = true
-		modifier = modifier[1:]
-	}
-	m.method = modifier
-	return nil
+func (m *methodModifierEntry) Parse(modifier string) {
+	m.method = strings.ToUpper(modifier)
 }
 
+// MatchesMethod returns true if the method matches the entry.
+// The method is expected to be uppercase.
 func (m *methodModifierEntry) MatchesMethod(method string) bool {
-	if strings.ToLower(method) == m.method {
-		return !m.inverted
-	}
-	return m.inverted
+	return m.method == method
 }

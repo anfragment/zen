@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,27 +10,34 @@ import (
 )
 
 type domainModifier struct {
-	entries []domainModifierEntry
+	entries  []domainModifierEntry
+	inverted bool
 }
 
 func (m *domainModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
 	if eqIndex == -1 {
-		return fmt.Errorf("invalid domain modifier")
+		return fmt.Errorf("invalid method modifier")
 	}
 	value := modifier[eqIndex+1:]
 
+	m.inverted = strings.HasPrefix(value, "~")
 	entries := strings.Split(value, "|")
-	m.entries = make([]domainModifierEntry, 0, len(entries))
-	for _, entry := range entries {
+	m.entries = make([]domainModifierEntry, len(entries))
+	for i, entry := range entries {
 		if entry == "" {
-			return fmt.Errorf("empty domain modifier entry")
+			return errors.New("empty method modifier entry")
 		}
-		dme := domainModifierEntry{}
-		if err := dme.Parse(entry); err != nil {
-			return err
+		inverted := strings.HasPrefix(entry, "~")
+		if inverted != m.inverted {
+			return errors.New("cannot mix inverted and non-inverted method modifiers")
 		}
-		m.entries = append(m.entries, dme)
+		if inverted {
+			entry = entry[1:]
+		}
+
+		m.entries[i] = domainModifierEntry{}
+		m.entries[i].Parse(entry)
 	}
 	return nil
 }
@@ -46,52 +54,50 @@ func (m *domainModifier) ShouldMatch(req *http.Request) bool {
 		hostname = req.URL.Hostname()
 	}
 
+	matches := false
 	for _, entry := range m.entries {
 		if entry.MatchDomain(hostname) {
-			return true
+			matches = true
+			break
 		}
 	}
-
-	return false
+	if m.inverted {
+		return !matches
+	}
+	return matches
 }
 
 type domainModifierEntry struct {
-	inverted bool
-	regular  string
-	tld      string
-	regex    *regexp.Regexp
+	regular string
+	tld     string
+	regex   *regexp.Regexp
 }
 
 func (m *domainModifierEntry) Parse(entry string) error {
-	if entry[0] == '~' {
-		m.inverted = true
-		entry = entry[1:]
-	}
-	if entry[0] == '/' && entry[len(entry)-1] == '/' {
+	switch {
+	case entry[0] == '/' && entry[len(entry)-1] == '/':
 		regex, err := regexp.Compile(entry[1 : len(entry)-1])
 		if err != nil {
 			return fmt.Errorf("invalid regex %q: %w", entry, err)
 		}
 		m.regex = regex
-	} else if entry[len(entry)-1] == '*' {
+	case entry[len(entry)-1] == '*':
 		m.tld = entry[:len(entry)-1]
-	} else {
+	default:
 		m.regular = entry
 	}
 	return nil
 }
 
 func (m *domainModifierEntry) MatchDomain(domain string) bool {
-	matches := false
-	if m.regular != "" {
-		matches = strings.HasSuffix(domain, m.regular)
-	} else if m.tld != "" {
-		matches = strings.HasPrefix(domain, m.tld)
-	} else if m.regex != nil {
-		matches = m.regex.MatchString(domain)
+	switch {
+	case m.regular != "":
+		return strings.HasSuffix(domain, m.regular)
+	case m.tld != "":
+		return strings.HasPrefix(domain, m.tld)
+	case m.regex != nil:
+		return m.regex.MatchString(domain)
+	default:
+		return false
 	}
-	if m.inverted {
-		return !matches
-	}
-	return matches
 }
