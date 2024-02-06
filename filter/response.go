@@ -6,8 +6,8 @@ import (
 	"github.com/anfragment/zen/filter/ruletree/rule"
 )
 
-// formBlockResponse forms a response for a blocked request.
-func (m *Filter) formBlockResponse(req *http.Request, rule rule.Rule) *http.Response {
+// createBlockResponse creates a response for a blocked request.
+func (f *Filter) createBlockResponse(req *http.Request, rule rule.Rule) *http.Response {
 	return &http.Response{
 		StatusCode: http.StatusForbidden,
 		ProtoMajor: req.ProtoMajor,
@@ -16,8 +16,8 @@ func (m *Filter) formBlockResponse(req *http.Request, rule rule.Rule) *http.Resp
 	}
 }
 
-// formRedirectResponse forms a response for a redirected request.
-func (m *Filter) formRedirectResponse(req *http.Request, to string) *http.Response {
+// createRedirectResponse creates a response for a redirected request.
+func (f *Filter) createRedirectResponse(req *http.Request, to string) *http.Response {
 	return &http.Response{
 		// The use of 307 Temporary Redirect instead of 308 Permanent Redirect is intentional.
 		// 308's can be cached by clients, which might cause issues in cases of erroneous redirects, changing filter rules, etc.

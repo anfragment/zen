@@ -60,7 +60,7 @@ func (f *Filter) Init() {
 			defer resp.Body.Close()
 			rules, exceptions := f.AddRules(resp.Body, &name)
 			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, url)
-		}(filterList.Url, filterList.Name)
+		}(filterList.URL, filterList.Name)
 	}
 	wg.Wait()
 }
@@ -72,7 +72,7 @@ var (
 )
 
 // AddRules parses the rules from the given reader and adds them to the filter.
-func (m *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exceptionCount int) {
+func (f *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exceptionCount int) {
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
@@ -82,14 +82,14 @@ func (m *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 		}
 
 		if reException.MatchString(line) {
-			if err := m.exceptionRuleTree.AddRule(line[2:], nil); err != nil {
+			if err := f.exceptionRuleTree.AddRule(line[2:], nil); err != nil {
 				// filterName is only needed for logging blocked requests
 				// log.Printf("error adding exception rule %q: %v", rule, err)
 				continue
 			}
 			exceptionCount++
 		} else {
-			if err := m.ruleTree.AddRule(line, filterName); err != nil {
+			if err := f.ruleTree.AddRule(line, filterName); err != nil {
 				// log.Printf("error adding rule %q: %v", rule, err)
 				continue
 			}
@@ -121,14 +121,14 @@ type filterAction struct {
 
 // HandleRequest handles the given request by matching it against the filter rules.
 // If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
-func (m *Filter) HandleRequest(ctx context.Context, req *http.Request) *http.Response {
-	if len(m.exceptionRuleTree.FindMatchingRules(req)) > 0 {
+func (f *Filter) HandleRequest(ctx context.Context, req *http.Request) *http.Response {
+	if len(f.exceptionRuleTree.FindMatchingRules(req)) > 0 {
 		// TODO: implement precise exception handling
 		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#removeheader-modifier (see "Negating $removeheader")
 		return nil
 	}
 
-	matchingRules := m.ruleTree.FindMatchingRules(req)
+	matchingRules := f.ruleTree.FindMatchingRules(req)
 	appliedRules := make([]rule.Rule, 0, len(matchingRules))
 	initialURL := req.URL.String()
 	for _, r := range matchingRules {
@@ -140,7 +140,7 @@ func (m *Filter) HandleRequest(ctx context.Context, req *http.Request) *http.Res
 				Referer: req.Header.Get("Referer"),
 				Rules:   []rule.Rule{r},
 			})
-			return m.formBlockResponse(req, r)
+			return f.createBlockResponse(req, r)
 		}
 		if r.Modify(req) {
 			appliedRules = append(appliedRules, r)
@@ -159,7 +159,7 @@ func (m *Filter) HandleRequest(ctx context.Context, req *http.Request) *http.Res
 			// Tracking the URL in each loop iteration could fix this, but I don't think it's worth the effort.
 			Rules: appliedRules,
 		})
-		return m.formRedirectResponse(req, finalURL)
+		return f.createRedirectResponse(req, finalURL)
 	}
 
 	if len(appliedRules) > 0 {

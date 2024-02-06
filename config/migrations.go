@@ -16,7 +16,7 @@ var migrations = map[string]func() error{
 		errStr := Config.AddFilterList(filterList{
 			Name:    "DandelionSprout's URL Shortener",
 			Type:    "privacy",
-			Url:     "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/LegitimateURLShortener.txt",
+			URL:     "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/LegitimateURLShortener.txt",
 			Enabled: true,
 		})
 		if errStr != "" {

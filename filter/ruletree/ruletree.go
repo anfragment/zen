@@ -111,11 +111,12 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 		node = rt.root.findOrAddChild(nodeKey{kind: rootKeyKind})
 	}
 	for _, token := range tokens {
-		if token == "^" {
+		switch token {
+		case "^":
 			node = node.findOrAddChild(nodeKey{kind: nodeKindSeparator})
-		} else if token == "*" {
+		case "*":
 			node = node.findOrAddChild(nodeKey{kind: nodeKindWildcard})
-		} else {
+		default:
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
 	}

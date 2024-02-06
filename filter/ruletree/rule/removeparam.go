@@ -68,7 +68,7 @@ func (rm *removeParamModifier) Parse(modifier string) error {
 
 func (rm *removeParamModifier) Modify(req *http.Request) (modified bool) {
 	query := req.URL.Query()
-	params := make([]string, len(query))
+	params := make([]string, 0, len(query))
 	for param := range query {
 		params = append(params, param)
 	}

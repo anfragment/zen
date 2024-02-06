@@ -60,7 +60,8 @@ func (p *Proxy) Start() error {
 	p.initExclusionList()
 
 	p.server = &http.Server{
-		Handler: p,
+		Handler:           p,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", config.Config.GetPort()))
 	if err != nil {
@@ -246,6 +247,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{*tlsCert},
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	tlsConn := tls.Server(clientConn, tlsConfig)

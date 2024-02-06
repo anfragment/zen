@@ -18,7 +18,7 @@ var firstLaunch bool
 type filterList struct {
 	Name    string `json:"name"`
 	Type    string `json:"type"`
-	Url     string `json:"url"`
+	URL     string `json:"url"`
 	Enabled bool   `json:"enabled"`
 }
 
@@ -91,7 +91,7 @@ func (c *config) RemoveFilterList(url string) string {
 	defer c.Unlock()
 
 	for i, filterList := range c.Filter.FilterLists {
-		if filterList.Url == url {
+		if filterList.URL == url {
 			c.Filter.FilterLists = append(c.Filter.FilterLists[:i], c.Filter.FilterLists[i+1:]...)
 			break
 		}
@@ -111,7 +111,7 @@ func (c *config) ToggleFilterList(url string, enabled bool) string {
 	defer c.Unlock()
 
 	for i, filterList := range c.Filter.FilterLists {
-		if filterList.Url == url {
+		if filterList.URL == url {
 			c.Filter.FilterLists[i].Enabled = enabled
 			break
 		}

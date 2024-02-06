@@ -22,9 +22,20 @@ linters:
     - prealloc
     - predeclared
     - makezero
+    - bidichk
   disable:
     - errcheck
 
 run:
   modules-download-mode: readonly
   timeout: 5m
+
+linters-settings:
+  gosec:
+    config:
+      # Maximum allowed permissions mode for os.OpenFile and os.Chmod
+      # Default: "0600"
+      G302: "0644"
+      # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
+      # Default: "0600" 
+      G306: "0644"

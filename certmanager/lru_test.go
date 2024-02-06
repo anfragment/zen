@@ -59,49 +59,37 @@ func TestMultipleCerts(t *testing.T) {
 func TestExpiration(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCertLRUCache(4000, time.Second)
+	cache := NewCertLRUCache(3000, time.Second)
 
-	checkTTL := func(ttl time.Duration, doneC chan<- struct{}, errC chan<- error) {
-		now := time.Now()
-		certs := make([]*tls.Certificate, 1000)
-		for i := 0; i < len(certs); i++ {
-			certs[i] = &tls.Certificate{}
-			cache.Put(fmt.Sprintf("%d.%d.example.com", i, ttl), now.Add(ttl), certs[i])
-		}
+	ttlValues := []time.Duration{1 * time.Second, 3 * time.Second, 9 * time.Second}
+	for _, ttl := range ttlValues {
+		ttl := ttl
+		t.Run(fmt.Sprintf("TTL=%s", ttl), func(t *testing.T) {
+			t.Parallel()
+			testCheckExpirationForTTL(t, cache, ttl)
+		})
+	}
+}
 
-		<-time.After(ttl / 2)
-		for _, i := range rand.Perm(1000) {
-			if cache.Get(fmt.Sprintf("%d.%d.example.com", i, ttl)) != certs[i] {
-				errC <- fmt.Errorf("Expected the retrieved certificate to be the same as the one put in. Failure at index %d.", i)
-				return
-			}
-		}
-
-		<-time.After((ttl / 2) + time.Second)
-		for _, i := range rand.Perm(1000) {
-			if cache.Get(fmt.Sprintf("%d.%d.example.com", i, ttl)) != nil {
-				errC <- fmt.Errorf("Expected the certificate to expire. Failure at index %d.", i)
-				return
-			}
-		}
-
-		doneC <- struct{}{}
+func testCheckExpirationForTTL(t *testing.T, cache *CertLRUCache, ttl time.Duration) {
+	now := time.Now()
+	certs := make([]*tls.Certificate, 1000)
+	for i := 0; i < len(certs); i++ {
+		certs[i] = &tls.Certificate{}
+		cache.Put(fmt.Sprintf("%d.%d.example.com", i, ttl), now.Add(ttl), certs[i])
 	}
 
-	doneC := make(chan struct{}, 3)
-	errC := make(chan error, 1)
+	<-time.After(ttl / 2)
+	for _, i := range rand.Perm(1000) {
+		if cache.Get(fmt.Sprintf("%d.%d.example.com", i, ttl)) != certs[i] {
+			t.Fatalf("Expected the certificate to be kept. Failure at index %d.", i)
+		}
+	}
 
-	go checkTTL(3*time.Second, doneC, errC)
-	go checkTTL(5*time.Second, doneC, errC)
-	go checkTTL(10*time.Second, doneC, errC)
-
-	for i := 0; i < 3; i++ {
-		select {
-		case <-doneC:
-		case err := <-errC:
-			t.Fatal(err)
-		case <-time.After(15 * time.Second):
-			t.Fatal("Timed out")
+	<-time.After((ttl / 2) + time.Second)
+	for _, i := range rand.Perm(1000) {
+		if cache.Get(fmt.Sprintf("%d.%d.example.com", i, ttl)) != nil {
+			t.Fatalf("Expected the certificate to be expired. Failure at index %d.", i)
 		}
 	}
 }

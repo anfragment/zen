@@ -79,7 +79,7 @@ type CertManager struct {
 
 var (
 	// certManagerInstance is the singleton CertManager instance.
-	certManagerInstance *CertManager = nil
+	certManagerInstance *CertManager
 	// certManagerOnce ensures that the singleton CertManager instance is only created once.
 	certManagerOnce sync.Once
 )
