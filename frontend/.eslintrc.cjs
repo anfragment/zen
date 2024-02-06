@@ -1,17 +1,17 @@
-{
-  "root": true,
-  "parser": "@typescript-eslint/parser",
-  "plugins": [
+module.exports = {
+  root: true,
+  parser: "@typescript-eslint/parser",
+  plugins: [
     "@typescript-eslint",
     "prettier"
   ],
-  "extends": [
+  extends: [
     "airbnb",
     "airbnb-typescript",
     "plugin:import/typescript",
     "plugin:prettier/recommended"
   ],
-  "rules": {
+  rules: {
     "no-console": 1,
     "react/react-in-jsx-scope": 0,
     "import/order": ["error", {
@@ -29,7 +29,13 @@
     "react/require-default-props": 0,
     "import/no-relative-packages": 0
   },
-  "parserOptions": {
-    "project": "./frontend/tsconfig.json"
-  }
-}
+  parserOptions: {
+    project: "./tsconfig.json",
+    tsconfigRootDir: __dirname
+  },
+  ignorePatterns: [
+    "node_modules/",
+    "wailsjs/",
+    "vite.config.ts"
+  ]
+};

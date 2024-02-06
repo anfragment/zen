@@ -1,0 +1,30 @@
+# Refer to golangci-lint's example config file for more options and information:
+# https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
+
+linters:
+  enable:
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - importas
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
+    - typecheck
+    - unconvert
+    - unused
+    - gocritic
+    - stylecheck
+    - unparam
+    - asciicheck
+    - prealloc
+    - predeclared
+    - makezero
+  disable:
+    - errcheck
+
+run:
+  modules-download-mode: readonly
+  timeout: 5m
