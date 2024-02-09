@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/anfragment/zen/app"
 	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
 	"github.com/wailsapp/wails/v2"
@@ -17,7 +18,7 @@ import (
 var assets embed.FS
 
 func main() {
-	app := NewApp()
+	app := app.NewApp()
 
 	err := wails.Run(&options.App{
 		Title:     "Zen",
@@ -28,9 +29,9 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		OnStartup:  app.startup,
-		OnShutdown: app.shutdown,
-		OnDomReady: app.domReady,
+		OnStartup:  app.Startup,
+		OnShutdown: app.Shutdown,
+		OnDomReady: app.DomReady,
 		Bind: []interface{}{
 			app,
 			&config.Config,

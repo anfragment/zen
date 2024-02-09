@@ -11,7 +11,12 @@ type Rule = {
   RawRule: string;
 };
 
-type FilterActionKind = 'blocked' | 'redirected' | 'modified';
+// type FilterActionKind = 'block' | 'redirect' | 'modify';
+enum FilterActionKind {
+  Block = 'block',
+  Redirect = 'redirect',
+  Modify = 'modify',
+}
 
 type FilterAction = {
   id: string;

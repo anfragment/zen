@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -37,25 +38,25 @@ type Proxy struct {
 	server         *http.Server
 	ignoredHosts   []string
 	ignoredHostsMu sync.RWMutex
-	ctx            context.Context
 }
 
-func NewProxy(ctx context.Context) *Proxy {
-	p := Proxy{
-		filter:       filter.NewFilter(),
-		ignoredHosts: []string{},
-		ctx:          ctx,
+func NewProxy(filter *filter.Filter) (*Proxy, error) {
+	if filter == nil {
+		return nil, errors.New("filter is nil")
 	}
 
-	return &p
+	return &Proxy{
+		filter: filter,
+	}, nil
 }
 
 // Start starts the proxy on the given address.
 func (p *Proxy) Start() error {
 	p.filter.Init()
 	if err := certmanager.GetCertManager().Init(); err != nil {
-		log.Printf("failed to initialize certmanager: %v", err)
-		return fmt.Errorf("initialize certmanager: %v", err)
+		err = fmt.Errorf("failed to initialize certmanager: %w", err)
+		log.Println(err)
+		return err
 	}
 	p.initExclusionList()
 
@@ -154,7 +155,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // proxyHTTP proxies the HTTP request to the remote server.
 func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
-	if res := p.filter.HandleRequest(p.ctx, r); res != nil {
+	if res := p.filter.HandleRequest(r); res != nil {
 		res.Write(w)
 		return
 	}
@@ -216,7 +217,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 	removeHopHeaders(r.Header)
 	removeConnectionHeaders(r.Header)
 
-	if res := p.filter.HandleRequest(p.ctx, r); res != nil {
+	if res := p.filter.HandleRequest(r); res != nil {
 		res.Write(clientConn)
 		return
 	}
@@ -279,7 +280,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 		req.URL.Scheme = "https"
 
-		if res := p.filter.HandleRequest(p.ctx, req); res != nil {
+		if res := p.filter.HandleRequest(req); res != nil {
 			res.Write(tlsConn)
 			break
 		}
