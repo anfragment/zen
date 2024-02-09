@@ -13,8 +13,7 @@ import (
 	"time"
 
 	"github.com/anfragment/zen/config"
-	"github.com/anfragment/zen/filter/ruletree"
-	"github.com/anfragment/zen/filter/ruletree/rule"
+	"github.com/anfragment/zen/rule"
 )
 
 // filterEventsEmitter represents an object that can emit filter events.
@@ -24,25 +23,35 @@ type filterEventsEmitter interface {
 	OnFilterModify(method, url, referer string, rules []rule.Rule)
 }
 
-// Filter is trie-based filter for URLs that is capable of parsing
-// Adblock filters and hosts rules and matching URLs against them.
+// ruleMatcher represents an object that can match requests against rules.
+type ruleMatcher interface {
+	AddRule(rule string, filterName *string) error
+	FindMatchingRules(req *http.Request) []rule.Rule
+}
+
+// Filter is a filter for URLs that is capable of Adblock-style filter lists and hosts rules and matching URLs against them.
 //
 // The filter is safe for concurrent use.
 type Filter struct {
-	ruleTree          ruletree.RuleTree
-	exceptionRuleTree ruletree.RuleTree
-	eventsEmitter     filterEventsEmitter
+	ruleMatcher          ruleMatcher
+	exceptionRuleMatcher ruleMatcher
+	eventsEmitter        filterEventsEmitter
 }
 
-func NewFilter(eventsEmitter filterEventsEmitter) (*Filter, error) {
+// NewFilter creates a new filter with the given rule matcher, exception rule matcher and events emitter.
+func NewFilter(ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if eventsEmitter == nil {
 		return nil, errors.New("eventsEmitter is nil")
 	}
+	if ruleMatcher == nil {
+		return nil, errors.New("ruleMatcher is nil")
+	}
+	if exceptionRuleMatcher == nil {
+		return nil, errors.New("exceptionRuleMatcher is nil")
+	}
 
 	return &Filter{
-		ruleTree:          ruletree.NewRuleTree(),
-		exceptionRuleTree: ruletree.NewRuleTree(),
-		eventsEmitter:     eventsEmitter,
+		ruleMatcher, exceptionRuleMatcher, eventsEmitter,
 	}, nil
 }
 
@@ -93,14 +102,13 @@ func (f *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 		}
 
 		if reException.MatchString(line) {
-			if err := f.exceptionRuleTree.AddRule(line[2:], nil); err != nil {
-				// filterName is only needed for logging blocked requests
+			if err := f.exceptionRuleMatcher.AddRule(line[2:], filterName); err != nil {
 				// log.Printf("error adding exception rule %q: %v", rule, err)
 				continue
 			}
 			exceptionCount++
 		} else {
-			if err := f.ruleTree.AddRule(line, filterName); err != nil {
+			if err := f.ruleMatcher.AddRule(line, filterName); err != nil {
 				// log.Printf("error adding rule %q: %v", rule, err)
 				continue
 			}
@@ -114,13 +122,13 @@ func (f *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 // HandleRequest handles the given request by matching it against the filter rules.
 // If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
 func (f *Filter) HandleRequest(req *http.Request) *http.Response {
-	if len(f.exceptionRuleTree.FindMatchingRules(req)) > 0 {
+	if len(f.exceptionRuleMatcher.FindMatchingRules(req)) > 0 {
 		// TODO: implement precise exception handling
 		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#removeheader-modifier (see "Negating $removeheader")
 		return nil
 	}
 
-	matchingRules := f.ruleTree.FindMatchingRules(req)
+	matchingRules := f.ruleMatcher.FindMatchingRules(req)
 	if len(matchingRules) == 0 {
 		return nil
 	}

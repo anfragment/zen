@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/anfragment/zen/filter/ruletree/rule"
+	"github.com/anfragment/zen/rule"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 

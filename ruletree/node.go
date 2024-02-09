@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/anfragment/zen/filter/ruletree/rule"
+	"github.com/anfragment/zen/rule"
 )
 
 // nodeKind defines the type of a node in the trie.

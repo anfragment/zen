@@ -7,6 +7,7 @@ import (
 	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter"
 	"github.com/anfragment/zen/proxy"
+	"github.com/anfragment/zen/ruletree"
 )
 
 // App struct
@@ -25,8 +26,10 @@ func NewApp() *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
-	eventsEmitter := newEventsHandler(a.ctx)
-	filter, err := filter.NewFilter(eventsEmitter)
+	eventsHandler := newEventsHandler(a.ctx)
+	ruleMatcher := ruletree.NewRuleTree()
+	exceptionRuleMatcher := ruletree.NewRuleTree()
+	filter, err := filter.NewFilter(ruleMatcher, exceptionRuleMatcher, eventsHandler)
 	if err != nil {
 		log.Fatalf("failed to create filter: %v", err)
 	}
@@ -38,10 +41,8 @@ func (a *App) Startup(ctx context.Context) {
 }
 
 func (a *App) Shutdown(ctx context.Context) {
-	if a.proxy != nil {
-		if err := a.proxy.Stop(false); err != nil {
-			log.Printf("failed to stop proxy: %v", err)
-		}
+	if err := a.proxy.Stop(false); err != nil {
+		log.Printf("failed to stop proxy: %v", err)
 	}
 }
 

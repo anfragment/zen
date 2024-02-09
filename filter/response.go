@@ -3,7 +3,7 @@ package filter
 import (
 	"net/http"
 
-	"github.com/anfragment/zen/filter/ruletree/rule"
+	"github.com/anfragment/zen/rule"
 )
 
 // createBlockResponse creates a response for a blocked request.
