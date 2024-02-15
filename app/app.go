@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter"
 	"github.com/anfragment/zen/proxy"
@@ -33,8 +34,11 @@ func (a *App) Startup(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("failed to create filter: %v", err)
 	}
-
-	a.proxy, err = proxy.NewProxy(filter)
+	certManager, err := certmanager.NewCertManager()
+	if err != nil {
+		log.Fatalf("failed to create cert manager: %v", err)
+	}
+	a.proxy, err = proxy.NewProxy(filter, certManager)
 	if err != nil {
 		log.Fatalf("failed to create proxy: %v", err)
 	}

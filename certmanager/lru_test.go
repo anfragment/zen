@@ -12,7 +12,7 @@ import (
 func TestPutAndGet(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCertLRUCache(100, time.Hour)
+	cache := newCertLRUCache(100, time.Hour)
 	cert := &tls.Certificate{}
 	cache.Put("example.com", time.Now().Add(24*time.Hour), cert)
 	if cache.Get("example.com") != cert {
@@ -24,7 +24,7 @@ func TestPutAndGet(t *testing.T) {
 func TestPutMultipleTimes(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCertLRUCache(100, time.Hour)
+	cache := newCertLRUCache(100, time.Hour)
 	cert1 := &tls.Certificate{}
 	cert2 := &tls.Certificate{}
 	cache.Put("example.com", time.Now().Add(24*time.Hour), cert1)
@@ -38,7 +38,7 @@ func TestPutMultipleTimes(t *testing.T) {
 func TestMultipleCerts(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCertLRUCache(1000, time.Hour)
+	cache := newCertLRUCache(1000, time.Hour)
 	certs := make([]*tls.Certificate, 1000)
 
 	expiresAt := time.Now().Add(24 * time.Hour)
@@ -59,7 +59,7 @@ func TestMultipleCerts(t *testing.T) {
 func TestExpiration(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCertLRUCache(3000, time.Second)
+	cache := newCertLRUCache(3000, time.Second)
 
 	ttlValues := []time.Duration{1 * time.Second, 3 * time.Second, 9 * time.Second}
 	for _, ttl := range ttlValues {
@@ -71,7 +71,7 @@ func TestExpiration(t *testing.T) {
 	}
 }
 
-func testCheckExpirationForTTL(t *testing.T, cache *CertLRUCache, ttl time.Duration) {
+func testCheckExpirationForTTL(t *testing.T, cache *certLRUCache, ttl time.Duration) {
 	now := time.Now()
 	certs := make([]*tls.Certificate, 1000)
 	for i := 0; i < len(certs); i++ {
@@ -98,7 +98,7 @@ func testCheckExpirationForTTL(t *testing.T, cache *CertLRUCache, ttl time.Durat
 func TestGetExpired(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCertLRUCache(1000, time.Hour)
+	cache := newCertLRUCache(1000, time.Hour)
 	cert := &tls.Certificate{}
 	cache.Put("example.com", time.Now().Add(-time.Hour), cert)
 	if cache.Get("example.com") != nil {
@@ -110,7 +110,7 @@ func TestGetExpired(t *testing.T) {
 func TestLRU(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCertLRUCache(2000, time.Hour)
+	cache := newCertLRUCache(2000, time.Hour)
 
 	certsToBeEvicted := make([]*tls.Certificate, 1000)
 	certsToBeKept := make([]*tls.Certificate, 1000)
@@ -151,7 +151,7 @@ func TestLRU(t *testing.T) {
 func TestPurge(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCertLRUCache(1000, time.Hour)
+	cache := newCertLRUCache(1000, time.Hour)
 
 	cert := &tls.Certificate{}
 	cache.Put("example.com", time.Now().Add(24*time.Hour), cert)

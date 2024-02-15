@@ -1,3 +1,5 @@
+package certmanager
+
 /*
 This file contains code from the mkcert project,
 licensed under the BSD 3-Clause License:
@@ -28,7 +30,6 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package certmanager
 
 import (
 	"crypto"
@@ -45,7 +46,6 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"sync"
 	"time"
 
 	"github.com/anfragment/zen/config"
@@ -72,78 +72,45 @@ type CertManager struct {
 	cert      *x509.Certificate
 	keyPath   string
 	key       crypto.PrivateKey
-	certCache *CertLRUCache
-	initOnce  *sync.Once
-	initErr   error
+	certCache *certLRUCache
 }
 
-var (
-	// certManagerInstance is the singleton CertManager instance.
-	certManagerInstance *CertManager
-	// certManagerOnce ensures that the singleton CertManager instance is only created once.
-	certManagerOnce sync.Once
-)
+func NewCertManager() (*CertManager, error) {
+	cm := &CertManager{}
 
-// GetCertManager returns the singleton CertManager instance.
-func GetCertManager() *CertManager {
-	certManagerOnce.Do(func() {
-		certManagerInstance = &CertManager{
-			initOnce: &sync.Once{},
-		}
-	})
-	return certManagerInstance
-}
+	folderName := path.Join(config.Config.DataDir, certsFolderName())
+	cm.certPath = path.Join(folderName, caName)
+	cm.keyPath = path.Join(folderName, keyName)
+	cm.certCache = newCertLRUCache(cacheMaxSize, cacheCleanupInterval)
 
-// Init initializes the CertManager singleton.
-//
-// This method should be called by any other CertManager methods that get called by the frontend.
-// This ensures that users get a meaningful error message if the certmanager had failed to initialize.
-func (cm *CertManager) Init() (err error) {
-	cm.initOnce.Do(func() {
-		defer func() {
-			cm.initErr = err
-		}()
+	if config.Config.GetCAInstalled() {
+		if err := cm.loadCA(); err != nil {
+			return nil, fmt.Errorf("CA load: %v", err)
+		}
+		return cm, nil
+	}
 
-		folderName := path.Join(config.Config.DataDir, certsFolderName())
-		cm.certPath = path.Join(folderName, caName)
-		cm.keyPath = path.Join(folderName, keyName)
-		cm.certCache = NewCertLRUCache(cacheMaxSize, cacheCleanupInterval)
+	if err := os.Remove(cm.certPath); err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("remove existing CA cert: %v", err)
+	}
+	if err := os.Remove(cm.keyPath); err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("remove existing CA key: %v", err)
+	}
+	if err := os.MkdirAll(folderName, 0755); err != nil {
+		return nil, fmt.Errorf("create certs folder: %v", err)
+	}
+	if err := cm.newCA(); err != nil {
+		return nil, fmt.Errorf("create new CA: %v", err)
+	}
+	if err := cm.loadCA(); err != nil {
+		return nil, fmt.Errorf("CA load: %v", err)
+	}
+	if err := cm.installCA(); err != nil {
+		return nil, fmt.Errorf("install CA: %v", err)
+	}
+	config.Config.SetCAInstalled(true)
 
-		if config.Config.GetCAInstalled() {
-			if err = cm.loadCA(); err != nil {
-				err = fmt.Errorf("CA load: %v", err)
-			}
-			return
-		}
-
-		if err = os.Remove(cm.certPath); err != nil && !os.IsNotExist(err) {
-			err = fmt.Errorf("remove existing CA cert: %v", err)
-			return
-		}
-		if err = os.Remove(cm.keyPath); err != nil && !os.IsNotExist(err) {
-			err = fmt.Errorf("remove existing CA key: %v", err)
-			return
-		}
-		if err = os.MkdirAll(folderName, 0755); err != nil {
-			err = fmt.Errorf("create certs folder: %v", err)
-			return
-		}
-		if err = cm.newCA(); err != nil {
-			err = fmt.Errorf("create new CA: %v", err)
-			return
-		}
-		if err = cm.loadCA(); err != nil {
-			err = fmt.Errorf("CA load: %v", err)
-			return
-		}
-		if err = cm.installCA(); err != nil {
-			err = fmt.Errorf("install CA: %v", err)
-			return
-		}
-		config.Config.SetCAInstalled(true)
-	})
-
-	return cm.initErr
+	return cm, nil
 }
 
 // loadCA loads the existing CA certificate and key into memory.
@@ -275,15 +242,9 @@ func (cm *CertManager) PurgeCache() {
 }
 
 // UninstallCA wraps platform-specific uninstallCA methods.
-//
-// @frontend
 func (cm *CertManager) UninstallCA() string {
 	if !config.Config.GetCAInstalled() {
 		return "CA is not installed"
-	}
-	if err := cm.Init(); err != nil {
-		log.Printf("failed to initialize certmanager: %v", err)
-		return fmt.Sprintf("init: %v", err)
 	}
 
 	if err := cm.uninstallCA(); err != nil {
@@ -300,8 +261,6 @@ func (cm *CertManager) UninstallCA() string {
 	cm.keyPath = ""
 	cm.key = nil
 	cm.certCache = nil
-	cm.initOnce = &sync.Once{}
-	cm.initErr = nil
 	cm.PurgeCache()
 
 	return ""

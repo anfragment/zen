@@ -27,37 +27,41 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter"
 )
 
+// certManager represents an object capable of generating certificates for the proxy.
+type certManager interface {
+	GetCertificate(host string) (*tls.Certificate, error)
+}
+
 type Proxy struct {
 	port           int
 	filter         *filter.Filter
+	certManager    certManager
 	server         *http.Server
 	ignoredHosts   []string
 	ignoredHostsMu sync.RWMutex
 }
 
-func NewProxy(filter *filter.Filter) (*Proxy, error) {
+func NewProxy(filter *filter.Filter, certManager certManager) (*Proxy, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")
 	}
+	if certManager == nil {
+		return nil, errors.New("certManager is nil")
+	}
 
 	return &Proxy{
-		filter: filter,
+		filter:      filter,
+		certManager: certManager,
 	}, nil
 }
 
 // Start starts the proxy on the given address.
 func (p *Proxy) Start() error {
 	p.filter.Init()
-	if err := certmanager.GetCertManager().Init(); err != nil {
-		err = fmt.Errorf("failed to initialize certmanager: %w", err)
-		log.Println(err)
-		return err
-	}
 	p.initExclusionList()
 
 	p.server = &http.Server{
@@ -138,7 +142,6 @@ func (p *Proxy) Stop(purgeCache bool) error {
 	}
 
 	if purgeCache {
-		certmanager.GetCertManager().PurgeCache()
 		p.filter = nil
 	}
 
@@ -235,7 +238,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tlsCert, err := certmanager.GetCertManager().GetCertificate(host)
+	tlsCert, err := p.certManager.GetCertificate(host)
 	if err != nil {
 		log.Printf("getting certificate(%s): %v", r.Host, err)
 		return

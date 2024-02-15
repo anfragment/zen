@@ -6,7 +6,6 @@ import (
 	"runtime"
 
 	"github.com/anfragment/zen/app"
-	"github.com/anfragment/zen/certmanager"
 	"github.com/anfragment/zen/config"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -35,7 +34,6 @@ func main() {
 		Bind: []interface{}{
 			app,
 			&config.Config,
-			certmanager.GetCertManager(),
 		},
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
