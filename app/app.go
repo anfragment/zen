@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log"
+	"sync"
 
 	"github.com/anfragment/zen/certgen"
 	"github.com/anfragment/zen/certstore"
@@ -14,8 +15,11 @@ import (
 
 // App struct
 type App struct {
-	ctx       context.Context
-	proxy     *proxy.Proxy
+	ctx           context.Context
+	eventsHandler *eventsHandler
+	proxy         *proxy.Proxy
+	// proxyMu ensures that proxy is only started or stopped once at a time.
+	proxyMu   sync.Mutex
 	certStore *certstore.DiskCertStore
 }
 
@@ -28,32 +32,18 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
-
-	eventsHandler := newEventsHandler(a.ctx)
-	ruleMatcher := ruletree.NewRuleTree()
-	exceptionRuleMatcher := ruletree.NewRuleTree()
-
-	filter, err := filter.NewFilter(ruleMatcher, exceptionRuleMatcher, eventsHandler)
-	if err != nil {
-		log.Fatalf("failed to create filter: %v", err)
-	}
-
+	a.eventsHandler = newEventsHandler(a.ctx)
 	a.certStore = certstore.NewDiskCertStore()
-
-	certGenerator, err := certgen.NewCertGenerator(a.certStore)
-	if err != nil {
-		log.Fatalf("failed to create cert manager: %v", err)
-	}
-
-	a.proxy, err = proxy.NewProxy(filter, certGenerator)
-	if err != nil {
-		log.Fatalf("failed to create proxy: %v", err)
-	}
 }
 
 func (a *App) Shutdown(ctx context.Context) {
-	if err := a.proxy.Stop(); err != nil {
-		log.Printf("failed to stop proxy: %v", err)
+	a.proxyMu.Lock()
+	defer a.proxyMu.Unlock()
+
+	if a.proxy != nil {
+		if err := a.proxy.Stop(); err != nil {
+			log.Printf("failed to stop proxy: %v", err)
+		}
 	}
 }
 
@@ -64,7 +54,28 @@ func (a *App) DomReady(ctx context.Context) {
 
 // StartProxy starts the proxy.
 func (a *App) StartProxy() error {
+	a.proxyMu.Lock()
+	defer a.proxyMu.Unlock()
+
 	log.Println("starting proxy")
+
+	ruleMatcher := ruletree.NewRuleTree()
+	exceptionRuleMatcher := ruletree.NewRuleTree()
+
+	filter, err := filter.NewFilter(ruleMatcher, exceptionRuleMatcher, a.eventsHandler)
+	if err != nil {
+		log.Fatalf("failed to create filter: %v", err)
+	}
+
+	certGenerator, err := certgen.NewCertGenerator(a.certStore)
+	if err != nil {
+		log.Fatalf("failed to create cert manager: %v", err)
+	}
+
+	a.proxy, err = proxy.NewProxy(filter, certGenerator)
+	if err != nil {
+		log.Fatalf("failed to create proxy: %v", err)
+	}
 
 	if err := a.certStore.Init(); err != nil {
 		log.Printf("failed to initialize cert store: %v", err)
@@ -81,11 +92,18 @@ func (a *App) StartProxy() error {
 
 // StopProxy stops the proxy.
 func (a *App) StopProxy() error {
+	a.proxyMu.Lock()
+	defer a.proxyMu.Unlock()
+
 	log.Println("stopping proxy")
 
-	if err := a.proxy.Stop(); err != nil {
-		log.Printf("failed to stop proxy: %v", err)
-		return err
+	if a.proxy != nil {
+		if err := a.proxy.Stop(); err != nil {
+			log.Printf("failed to stop proxy: %v", err)
+			return err
+		}
+
+		a.proxy = nil
 	}
 
 	return nil
