@@ -31,31 +31,31 @@ import (
 	"github.com/anfragment/zen/filter"
 )
 
-// certManager represents an object capable of generating certificates for the proxy.
-type certManager interface {
+// certGenerator is an interface capable of generating certificates for the proxy.
+type certGenerator interface {
 	GetCertificate(host string) (*tls.Certificate, error)
 }
 
 type Proxy struct {
 	port           int
 	filter         *filter.Filter
-	certManager    certManager
+	certGenerator  certGenerator
 	server         *http.Server
 	ignoredHosts   []string
 	ignoredHostsMu sync.RWMutex
 }
 
-func NewProxy(filter *filter.Filter, certManager certManager) (*Proxy, error) {
+func NewProxy(filter *filter.Filter, certGenerator certGenerator) (*Proxy, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")
 	}
-	if certManager == nil {
-		return nil, errors.New("certManager is nil")
+	if certGenerator == nil {
+		return nil, errors.New("certGenerator is nil")
 	}
 
 	return &Proxy{
-		filter:      filter,
-		certManager: certManager,
+		filter:        filter,
+		certGenerator: certGenerator,
 	}, nil
 }
 
@@ -121,13 +121,12 @@ func (p *Proxy) initExclusionList() {
 }
 
 // Stop stops the proxy.
-// If clearCaches is true, the certificate cache will be cleared.
-func (p *Proxy) Stop(purgeCache bool) error {
+func (p *Proxy) Stop() error {
 	if p.server == nil {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := p.server.Shutdown(ctx); err != nil {
@@ -139,10 +138,6 @@ func (p *Proxy) Stop(purgeCache bool) error {
 
 	if err := p.unsetSystemProxy(); err != nil {
 		return fmt.Errorf("unset system proxy: %v", err)
-	}
-
-	if purgeCache {
-		p.filter = nil
 	}
 
 	return nil
@@ -238,7 +233,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tlsCert, err := p.certManager.GetCertificate(host)
+	tlsCert, err := p.certGenerator.GetCertificate(host)
 	if err != nil {
 		log.Printf("getting certificate(%s): %v", r.Host, err)
 		return

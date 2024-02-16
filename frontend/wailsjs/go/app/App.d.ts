@@ -4,3 +4,5 @@
 export function StartProxy():Promise<void>;
 
 export function StopProxy():Promise<void>;
+
+export function UninstallCA():Promise<void>;

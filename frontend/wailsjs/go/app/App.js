@@ -9,3 +9,7 @@ export function StartProxy() {
 export function StopProxy() {
   return window['go']['app']['App']['StopProxy']();
 }
+
+export function UninstallCA() {
+  return window['go']['app']['App']['UninstallCA']();
+}

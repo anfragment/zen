@@ -1,4 +1,4 @@
-package certmanager
+package certgen
 
 import (
 	"crypto/tls"

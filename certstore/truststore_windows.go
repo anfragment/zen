@@ -1,3 +1,5 @@
+package certstore
+
 /*
 This file contains code from the mkcert project,
 licensed under the BSD 3-Clause License:
@@ -28,17 +30,21 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package certmanager
 
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
 	"syscall"
 	"unsafe"
 )
+
+// caFolderName defines the name of the folder where the root CA certificate and key are stored.
+// It is capitalized to follow the general convention of using capitalized folder names on Windows.
+const caFolderName = "Certs"
 
 var (
 	modcrypt32                           = syscall.NewLazyDLL("crypt32.dll")
@@ -50,11 +56,11 @@ var (
 	procCertOpenSystemStoreW             = modcrypt32.NewProc("CertOpenSystemStoreW")
 )
 
-// installCA installs the root CA into the system trust store.
-func (cm *CertManager) installCA() error {
+// installCATrust installs the CA into the system trust store.
+func (cs *DiskCertStore) installCATrust() error {
 	var cert []byte
-	if certBlock, _ := pem.Decode(cm.certData); certBlock == nil || certBlock.Type != "CERTIFICATE" {
-		return fmt.Errorf("invalid certificate: type mismatch")
+	if certBlock, _ := pem.Decode(cs.certData); certBlock == nil || certBlock.Type != "CERTIFICATE" {
+		return errors.New("invalid certificate: type mismatch")
 	} else {
 		cert = certBlock.Bytes
 	}
@@ -70,19 +76,20 @@ func (cm *CertManager) installCA() error {
 	return nil
 }
 
-func (cm *CertManager) uninstallCA() error {
+// uninstallCATrust uninstalls the CA from the system trust store.
+func (cs *DiskCertStore) uninstallCATrust() error {
 	store, err := openWindowsRootStore()
 	if err != nil {
 		return fmt.Errorf("open root store: %v", err)
 	}
 	defer store.close()
-	deletedAny, err := store.deleteCertsWithSerial(cm.cert.SerialNumber)
+	deletedAny, err := store.deleteCertsWithSerial(cs.cert.SerialNumber)
 	if err == nil && !deletedAny {
 		// this is a non-critical error, so just log it
-		log.Printf("No certs with serial %v found in root store", cm.cert.SerialNumber)
+		log.Printf("No certs with serial %v found in root store", cs.cert.SerialNumber)
 	}
 	if err != nil {
-		return fmt.Errorf("delete certs with serial %v: %v", cm.cert.SerialNumber, err)
+		return fmt.Errorf("delete certs with serial %v: %v", cs.cert.SerialNumber, err)
 	}
 	return nil
 }

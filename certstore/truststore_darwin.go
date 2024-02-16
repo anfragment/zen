@@ -1,3 +1,5 @@
+package certstore
+
 /*
 This file contains code from the mkcert project,
 licensed under the BSD 3-Clause License:
@@ -28,21 +30,21 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package certmanager
 
 import (
 	"bytes"
 	"encoding/asn1"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
-	"path"
 
-	"github.com/anfragment/zen/config"
 	"github.com/getlantern/elevate"
 	"howett.net/plist"
 )
+
+// caFolderName defines the name of the folder where the root CA certificate and key are stored.
+// It is capitalized to follow the general convention of using capitalized folder names on macOS.
+const caFolderName = "Certs"
 
 // https://github.com/golang/go/issues/24652#issuecomment-399826583
 var trustSettings []interface{}
@@ -72,13 +74,13 @@ var trustSettingsData = []byte(`
 </array>
 `)
 
-// installCA installs the root CA certificate into the system trust store.
-func (cm *CertManager) installCA() error {
+// installCATrust installs the CA into the system trust store.
+func (cs *DiskCertStore) installCATrust() error {
 	cmd := elevate.WithPrompt("Authorize Zen to install the root CA certificate").Command(
-		"security", "add-trusted-cert", "-d", "-k", "/Library/Keychains/System.keychain", cm.certPath)
+		"security", "add-trusted-cert", "-d", "-k", "/Library/Keychains/System.keychain", cs.certPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("add-trusted-cert: %v\n%s", err, out)
+		return fmt.Errorf("add-trusted-cert: %w\n%s", err, out)
 	}
 
 	// Make trustSettings explicit, as older Go does not know the defaults.
@@ -86,30 +88,30 @@ func (cm *CertManager) installCA() error {
 
 	plistFile, err := os.CreateTemp("", "trust-settings")
 	if err != nil {
-		return fmt.Errorf("create temporary plist file: %v", err)
+		return fmt.Errorf("create temporary plist file: %w", err)
 	}
 	defer os.Remove(plistFile.Name())
 
 	cmd = exec.Command("security", "trust-settings-export", "-d", plistFile.Name())
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("trust-settings-export: %v\n%s", err, out)
+		return fmt.Errorf("trust-settings-export: %w\n%s", err, out)
 	}
 
 	plistData, err := os.ReadFile(plistFile.Name())
 	if err != nil {
-		return fmt.Errorf("read plist file: %v", err)
+		return fmt.Errorf("read plist file: %w", err)
 	}
 	var plistRoot map[string]interface{}
 	_, err = plist.Unmarshal(plistData, &plistRoot)
 	if err != nil {
-		return fmt.Errorf("parse plist file: %v", err)
+		return fmt.Errorf("parse plist file: %w", err)
 	}
 
-	rootSubjectASN1, _ := asn1.Marshal(cm.cert.Subject.ToRDNSequence())
+	rootSubjectASN1, _ := asn1.Marshal(cs.cert.Subject.ToRDNSequence())
 
 	if plistRoot["trustVersion"].(uint64) != 1 {
-		return fmt.Errorf("unexpected trustVersion: %v", plistRoot["trustVersion"])
+		return fmt.Errorf("unexpected trustVersion: %w", plistRoot["trustVersion"])
 	}
 	trustList := plistRoot["trustList"].(map[string]interface{})
 	for key := range trustList {
@@ -127,35 +129,28 @@ func (cm *CertManager) installCA() error {
 
 	plistData, err = plist.MarshalIndent(plistRoot, plist.XMLFormat, "\t")
 	if err != nil {
-		return fmt.Errorf("create plist data: %v", err)
+		return fmt.Errorf("create plist data: %w", err)
 	}
 	err = os.WriteFile(plistFile.Name(), plistData, 0600)
 	if err != nil {
-		return fmt.Errorf("write plist file: %v", err)
+		return fmt.Errorf("write plist file: %w", err)
 	}
 	cmd = exec.Command("security", "trust-settings-import", "-d", plistFile.Name())
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("trust-settings-import: %v\n%s", err, out)
+		return fmt.Errorf("trust-settings-import: %w\n%s", err, out)
 	}
 
 	return nil
 }
 
-// uninstallCA removes the root CA certificate from the system trust store.
-func (cm *CertManager) uninstallCA() error {
+// uninstallCATrust removes the root CA certificate from the system trust store.
+func (cs *DiskCertStore) uninstallCATrust() error {
 	cmd := elevate.WithPrompt("Authorize Zen to remove the root CA certificate").Command(
-		"security", "delete-certificate", "-c", cm.cert.Subject.CommonName, "-t")
+		"security", "delete-certificate", "-c", cs.cert.Subject.CommonName, "-t")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("failed to delete root CA certificate: %v\n%s", err, out)
-		return fmt.Errorf("delete root CA certificate: %v\n%s", err, out)
-	}
-
-	folderName := path.Join(config.Config.DataDir, certsFolderName())
-	if err := os.RemoveAll(folderName); err != nil {
-		log.Printf("failed to remove certs folder: %v", err)
-		return fmt.Errorf("remove certs folder: %v", err)
+		return fmt.Errorf("delete root CA certificate: %w\n%s", err, out)
 	}
 
 	return nil
