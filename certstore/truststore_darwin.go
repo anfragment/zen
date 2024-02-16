@@ -111,7 +111,7 @@ func (cs *DiskCertStore) installCATrust() error {
 	rootSubjectASN1, _ := asn1.Marshal(cs.cert.Subject.ToRDNSequence())
 
 	if plistRoot["trustVersion"].(uint64) != 1 {
-		return fmt.Errorf("unexpected trustVersion: %w", plistRoot["trustVersion"])
+		return fmt.Errorf("unexpected trustVersion: %v", plistRoot["trustVersion"])
 	}
 	trustList := plistRoot["trustList"].(map[string]interface{})
 	for key := range trustList {
