@@ -30,8 +30,8 @@ const (
 	keyFilename = "rootCA-key.pem"
 	// certOrganization is the organization name for the root CA certificate.
 	certOrganization = "Zen"
-	// certCN is the common name for the root CA certificate.
-	certCN = "Zen Root"
+	// certCommonName is the common name for the root CA certificate.
+	certCommonName = "Zen Root CA"
 )
 
 // DiskCertStore is a disk-based certificate store.
@@ -158,7 +158,7 @@ func (cs *DiskCertStore) newCA() error {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{certOrganization},
-			CommonName:   certCN,
+			CommonName:   certCommonName,
 		},
 		SubjectKeyId: skid[:],
 
