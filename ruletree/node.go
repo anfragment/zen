@@ -115,7 +115,7 @@ func (n *node) TraverseFindMatchingRules(req *http.Request, tokens []string, sho
 		return rules
 	}
 	if shouldUseNode == nil {
-		shouldUseNode = func(n *node, tokens []string) bool {
+		shouldUseNode = func(*node, []string) bool {
 			return true
 		}
 	}
