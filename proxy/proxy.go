@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anfragment/zen/config"
 	"github.com/anfragment/zen/filter"
 )
 
@@ -45,7 +44,7 @@ type Proxy struct {
 	ignoredHostsMu sync.RWMutex
 }
 
-func NewProxy(filter *filter.Filter, certGenerator certGenerator) (*Proxy, error) {
+func NewProxy(filter *filter.Filter, certGenerator certGenerator, port int) (*Proxy, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")
 	}
@@ -56,6 +55,7 @@ func NewProxy(filter *filter.Filter, certGenerator certGenerator) (*Proxy, error
 	return &Proxy{
 		filter:        filter,
 		certGenerator: certGenerator,
+		port:          port,
 	}, nil
 }
 
@@ -68,7 +68,7 @@ func (p *Proxy) Start() error {
 		Handler:           p,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", config.Config.GetPort()))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", p.port))
 	if err != nil {
 		return fmt.Errorf("listen: %v", err)
 	}

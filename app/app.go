@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"sync"
 
 	"github.com/anfragment/zen/certgen"
 	"github.com/anfragment/zen/certstore"
-	"github.com/anfragment/zen/config"
+	"github.com/anfragment/zen/cfg"
 	"github.com/anfragment/zen/filter"
 	"github.com/anfragment/zen/proxy"
 	"github.com/anfragment/zen/ruletree"
@@ -16,6 +18,7 @@ import (
 // App struct
 type App struct {
 	ctx           context.Context
+	config        *cfg.Config
 	eventsHandler *eventsHandler
 	proxy         *proxy.Proxy
 	// proxyMu ensures that proxy is only started or stopped once at a time.
@@ -24,8 +27,19 @@ type App struct {
 }
 
 // NewApp initializes the app.
-func NewApp() *App {
-	return &App{}
+func NewApp(config *cfg.Config) (*App, error) {
+	if config == nil {
+		return nil, errors.New("config is nil")
+	}
+	certStore, err := certstore.NewDiskCertStore(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cert store: %v", err)
+	}
+
+	return &App{
+		config:    config,
+		certStore: certStore,
+	}, nil
 }
 
 // Startup is called when the app starts. The context is saved
@@ -33,7 +47,6 @@ func NewApp() *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.eventsHandler = newEventsHandler(a.ctx)
-	a.certStore = certstore.NewDiskCertStore()
 }
 
 func (a *App) Shutdown(ctx context.Context) {
@@ -48,8 +61,8 @@ func (a *App) Shutdown(ctx context.Context) {
 }
 
 func (a *App) DomReady(ctx context.Context) {
-	config.RunMigrations()
-	config.SelfUpdate(ctx)
+	a.config.RunMigrations()
+	cfg.SelfUpdate(ctx)
 }
 
 // StartProxy starts the proxy.
@@ -62,7 +75,7 @@ func (a *App) StartProxy() error {
 	ruleMatcher := ruletree.NewRuleTree()
 	exceptionRuleMatcher := ruletree.NewRuleTree()
 
-	filter, err := filter.NewFilter(ruleMatcher, exceptionRuleMatcher, a.eventsHandler)
+	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, a.eventsHandler)
 	if err != nil {
 		log.Fatalf("failed to create filter: %v", err)
 	}
@@ -72,7 +85,7 @@ func (a *App) StartProxy() error {
 		log.Fatalf("failed to create cert manager: %v", err)
 	}
 
-	a.proxy, err = proxy.NewProxy(filter, certGenerator)
+	a.proxy, err = proxy.NewProxy(filter, certGenerator, a.config.GetPort())
 	if err != nil {
 		log.Fatalf("failed to create proxy: %v", err)
 	}

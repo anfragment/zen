@@ -1,7 +1,7 @@
 import { Button, FormGroup, InputGroup } from '@blueprintjs/core';
 import { useState, useRef } from 'react';
 
-import { AddFilterList } from '../../wailsjs/go/config/config';
+import { AddFilterList } from '../../wailsjs/go/cfg/config';
 import { AppToaster } from '../common/toaster';
 
 import { FilterListType } from './types';

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anfragment/zen/config"
+	"github.com/anfragment/zen/cfg"
 	"github.com/anfragment/zen/rule"
 )
 
@@ -29,17 +29,25 @@ type ruleMatcher interface {
 	FindMatchingRules(req *http.Request) []rule.Rule
 }
 
+type config interface {
+	GetFilterLists() []cfg.FilterList
+}
+
 // Filter is a filter for URLs that is capable of Adblock-style filter lists and hosts rules and matching URLs against them.
 //
 // The filter is safe for concurrent use.
 type Filter struct {
+	config               config
 	ruleMatcher          ruleMatcher
 	exceptionRuleMatcher ruleMatcher
 	eventsEmitter        filterEventsEmitter
 }
 
 // NewFilter creates a new filter with the given rule matcher, exception rule matcher and events emitter.
-func NewFilter(ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, eventsEmitter filterEventsEmitter) (*Filter, error) {
+	if config == nil {
+		return nil, errors.New("config is nil")
+	}
 	if eventsEmitter == nil {
 		return nil, errors.New("eventsEmitter is nil")
 	}
@@ -51,7 +59,10 @@ func NewFilter(ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, events
 	}
 
 	return &Filter{
-		ruleMatcher, exceptionRuleMatcher, eventsEmitter,
+		config:               config,
+		ruleMatcher:          ruleMatcher,
+		exceptionRuleMatcher: exceptionRuleMatcher,
+		eventsEmitter:        eventsEmitter,
 	}, nil
 }
 
@@ -60,7 +71,7 @@ func (f *Filter) Init() {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	for _, filterList := range config.Config.GetFilterLists() {
+	for _, filterList := range f.config.GetFilterLists() {
 		if !filterList.Enabled {
 			continue
 		}

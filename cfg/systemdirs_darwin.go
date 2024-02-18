@@ -1,4 +1,4 @@
-package config
+package cfg
 
 import (
 	"os"
@@ -11,7 +11,8 @@ const (
 )
 
 func getConfigDir() (string, error) {
-	// according to Apple's guidelines, files in the ~/Library/Preferences should be only managed using native APIs, so we use a subfolder in ~/Library/Application Support instead
+	// According to Apple's guidelines, files in the ~/Library/Preferences should be only managed using native APIs,
+	// so we use a subfolder in ~/Library/Application Support instead.
 	// https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW1
 
 	homeDir, err := os.UserHomeDir()

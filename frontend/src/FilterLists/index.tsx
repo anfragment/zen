@@ -2,9 +2,9 @@ import { Spinner, SpinnerSize, Switch, Button, MenuItem } from '@blueprintjs/cor
 import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
 
-import { GetFilterLists, RemoveFilterList, ToggleFilterList } from '../../wailsjs/go/config/config';
+import { GetFilterLists, RemoveFilterList, ToggleFilterList } from '../../wailsjs/go/cfg/config';
 // eslint-disable-next-line import/order
-import { type config } from '../../wailsjs/go/models';
+import { type cfg } from '../../wailsjs/go/models';
 
 import './index.css';
 
@@ -15,7 +15,7 @@ import { FilterListType } from './types';
 
 export function FilterLists() {
   const [state, setState] = useState<{
-    filterLists: config.filterList[];
+    filterLists: cfg.FilterList[];
     loading: boolean;
   }>({
     filterLists: [],
@@ -89,7 +89,7 @@ function ListItem({
   showDelete,
   onChange,
 }: {
-  filterList: config.filterList;
+  filterList: cfg.FilterList;
   showDelete?: boolean;
   onChange?: () => void;
 }) {

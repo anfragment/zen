@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anfragment/zen/config"
+	"github.com/anfragment/zen/cfg"
 	"github.com/hectane/go-acl"
 )
 
@@ -34,10 +34,16 @@ const (
 	certCommonName = "Zen Root CA"
 )
 
+type Config interface {
+	GetCAInstalled() bool
+	SetCAInstalled(bool)
+}
+
 // DiskCertStore is a disk-based certificate store.
 // It manages the creation, loading, and installation of the root CA.
 type DiskCertStore struct {
 	mu         sync.RWMutex
+	config     Config
 	folderPath string
 	certData   []byte
 	keyData    []byte
@@ -47,14 +53,18 @@ type DiskCertStore struct {
 	key        crypto.PrivateKey
 }
 
-func NewDiskCertStore() *DiskCertStore {
-	cs := &DiskCertStore{}
+func NewDiskCertStore(config Config) (*DiskCertStore, error) {
+	if config == nil {
+		return nil, errors.New("config is nil")
+	}
 
-	cs.folderPath = path.Join(config.Config.DataDir, caFolderName)
+	cs := &DiskCertStore{}
+	cs.config = config
+	cs.folderPath = path.Join(cfg.DataDir, caFolderName)
 	cs.certPath = path.Join(cs.folderPath, certFilename)
 	cs.keyPath = path.Join(cs.folderPath, keyFilename)
 
-	return cs
+	return cs, nil
 }
 
 func (cs *DiskCertStore) GetCertificate() (*x509.Certificate, crypto.PrivateKey, error) {
@@ -72,7 +82,7 @@ func (cs *DiskCertStore) Init() error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	if config.Config.GetCAInstalled() {
+	if cs.config.GetCAInstalled() {
 		if err := cs.loadCA(); err != nil {
 			return fmt.Errorf("CA load: %w", err)
 		}
@@ -94,7 +104,7 @@ func (cs *DiskCertStore) Init() error {
 	if err := cs.installCATrust(); err != nil {
 		return fmt.Errorf("install CA from system trust store: %v", err)
 	}
-	config.Config.SetCAInstalled(true)
+	cs.config.SetCAInstalled(true)
 
 	return nil
 }
@@ -103,7 +113,7 @@ func (cs *DiskCertStore) UninstallCA() error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	if !config.Config.GetCAInstalled() {
+	if !cs.config.GetCAInstalled() {
 		return errors.New("CA not installed")
 	}
 
@@ -119,7 +129,7 @@ func (cs *DiskCertStore) UninstallCA() error {
 	if err := cs.uninstallCATrust(); err != nil {
 		return fmt.Errorf("uninstall CA from system trust store: %w", err)
 	}
-	config.Config.SetCAInstalled(false)
+	cs.config.SetCAInstalled(false)
 
 	return nil
 }
