@@ -1,16 +1,3 @@
-/*
- * This file contains some code originally licensed under the GPL-3.0 license.
- * Original Author: Andrey Meshkov <am@adguard.com>
- * Original Source: https://github.com/AdguardTeam/gomitmproxy
- *
- * Modifications made by: Ansar Smagulov <me@anfragment.net>
- *
- * This modified code is licensed under the GPL-3.0 license. The full text of the GPL-3.0 license
- * is included in the COPYING file in the root of this project.
- *
- * Note: This project as a whole is licensed under the MIT License, but this particular file,
- * due to its use of GPL-3.0 licensed code, is an exception and remains licensed under the GPL-3.0.
- */
 package proxy
 
 import (
@@ -26,8 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/anfragment/zen/filter"
 )
 
 // certGenerator is an interface capable of generating certificates for the proxy.
@@ -35,16 +20,22 @@ type certGenerator interface {
 	GetCertificate(host string) (*tls.Certificate, error)
 }
 
+// filter is an interface capable of filtering HTTP requests.
+type filter interface {
+	HandleRequest(*http.Request) *http.Response
+}
+
+// Proxy is a forward HTTP/HTTPS proxy that can filter requests.
 type Proxy struct {
 	port           int
-	filter         *filter.Filter
+	filter         filter
 	certGenerator  certGenerator
 	server         *http.Server
 	ignoredHosts   []string
 	ignoredHostsMu sync.RWMutex
 }
 
-func NewProxy(filter *filter.Filter, certGenerator certGenerator, port int) (*Proxy, error) {
+func NewProxy(filter filter, certGenerator certGenerator, port int) (*Proxy, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")
 	}
@@ -61,7 +52,6 @@ func NewProxy(filter *filter.Filter, certGenerator certGenerator, port int) (*Pr
 
 // Start starts the proxy on the given address.
 func (p *Proxy) Start() error {
-	p.filter.Init()
 	p.initExclusionList()
 
 	p.server = &http.Server{
