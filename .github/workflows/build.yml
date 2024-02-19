@@ -52,7 +52,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
       - name: Build Linux Binary
         if: runner.os == 'Linux'
-        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'"
+        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
       - name: Archive Linux Binary
         if: runner.os == 'Linux'
         run: |
@@ -61,7 +61,7 @@ jobs:
           rm Zen
       - name: Build Linux Binary With Self-Updates Disabled
         if: runner.os == 'Linux'
-        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'"
+        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
       - name: Archive Linux Binary With Self-Updates Disabled
         if: runner.os == 'Linux'
         run: |
@@ -104,7 +104,7 @@ jobs:
       - name: Build macOS App
         if: runner.os == 'macOS'
         run: |
-          wails build -platform darwin/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'"
+          wails build -platform darwin/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
           mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
       - name: Codesign macOS App Bundle
         if: runner.os == 'macOS'
@@ -213,7 +213,7 @@ jobs:
       # -------
       - name: Build Windows App & Installer
         if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'"
+        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
       - name: Archive Windows Binary
         if: runner.os == 'Windows'
         run: |
@@ -222,7 +222,7 @@ jobs:
           Remove-Item Zen.exe
       - name: Build Windows Binary With Self-Updates Disabled
         if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'"
+        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
       - name: Archive Windows Binary With Self-Updates Disabled
         if: runner.os == 'Windows'
         run: |
