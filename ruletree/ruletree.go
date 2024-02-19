@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/anfragment/zen/filter/ruletree/rule"
+	"github.com/anfragment/zen/rule"
 )
 
 // RuleTree is a trie-based filter that is capable of parsing
@@ -40,8 +40,8 @@ var (
 	reGeneric = regexp.MustCompile(fmt.Sprintf(`^%s+$`, modifiersCG))
 )
 
-func NewRuleTree() RuleTree {
-	return RuleTree{
+func NewRuleTree() *RuleTree {
+	return &RuleTree{
 		root:  node{},
 		hosts: make(map[string]*string),
 	}

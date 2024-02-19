@@ -1,4 +1,4 @@
-package certmanager
+package certgen
 
 import (
 	"container/list"
@@ -13,8 +13,8 @@ type cacheEntry struct {
 	listElement *list.Element
 }
 
-// CertLRUCache is an LRU cache of TLS certificates.
-type CertLRUCache struct {
+// certLRUCache is an LRU cache of TLS certificates.
+type certLRUCache struct {
 	sync.Mutex
 
 	// maxSize is the maximum number of certificates the cache can store.
@@ -25,9 +25,9 @@ type CertLRUCache struct {
 	cache map[string]cacheEntry
 }
 
-// NewCertLRUCache initializes a certificate LRU cache with given parameters.
-func NewCertLRUCache(maxSize int, cleanupInterval time.Duration) *CertLRUCache {
-	c := CertLRUCache{
+// newCertLRUCache initializes a certificate LRU cache with given parameters.
+func newCertLRUCache(maxSize int, cleanupInterval time.Duration) *certLRUCache {
+	c := certLRUCache{
 		cache:   make(map[string]cacheEntry),
 		list:    list.New(),
 		maxSize: maxSize,
@@ -35,7 +35,7 @@ func NewCertLRUCache(maxSize int, cleanupInterval time.Duration) *CertLRUCache {
 
 	go func() {
 		// Periodically remove expired entries.
-		// This function never exits, which is fine since the CertManager gets accessed via a singleton. Though, be careful with spawning a lot of CertManagers or caches in tests.
+		// Warning: this function never exits.
 		ticker := time.NewTicker(cleanupInterval)
 		for range ticker.C {
 			c.Lock()
@@ -53,7 +53,7 @@ func NewCertLRUCache(maxSize int, cleanupInterval time.Duration) *CertLRUCache {
 }
 
 // Get returns the certificate for the given host, or nil if it is not cached.
-func (c *CertLRUCache) Get(host string) *tls.Certificate {
+func (c *certLRUCache) Get(host string) *tls.Certificate {
 	c.Lock()
 	defer c.Unlock()
 
@@ -73,7 +73,7 @@ func (c *CertLRUCache) Get(host string) *tls.Certificate {
 }
 
 // Put adds the certificate for the given host to the cache.
-func (c *CertLRUCache) Put(host string, expiresAt time.Time, cert *tls.Certificate) {
+func (c *certLRUCache) Put(host string, expiresAt time.Time, cert *tls.Certificate) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -103,7 +103,7 @@ func (c *CertLRUCache) Put(host string, expiresAt time.Time, cert *tls.Certifica
 }
 
 // Purge clears the cache.
-func (c *CertLRUCache) Purge() {
+func (c *certLRUCache) Purge() {
 	c.Lock()
 	defer c.Unlock()
 

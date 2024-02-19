@@ -1,4 +1,4 @@
-package config
+package cfg
 
 import (
 	"context"
@@ -18,7 +18,7 @@ var Version = "development"
 // Set at compile time using ldflags (see .github/workflows/build.yml).
 var noSelfUpdate = "false"
 
-func (c *config) GetVersion() string {
+func (c *Config) GetVersion() string {
 	return Version
 }
 

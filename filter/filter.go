@@ -3,6 +3,7 @@ package filter
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -11,36 +12,70 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anfragment/zen/config"
-	"github.com/anfragment/zen/filter/ruletree"
-	"github.com/anfragment/zen/filter/ruletree/rule"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/anfragment/zen/cfg"
+	"github.com/anfragment/zen/rule"
 )
 
-// Filter is trie-based filter for URLs that is capable of parsing
-// Adblock filters and hosts rules and matching URLs against them.
+// filterEventsEmitter is an interface that can emit filter events.
+type filterEventsEmitter interface {
+	OnFilterBlock(method, url, referer string, rules []rule.Rule)
+	OnFilterRedirect(method, url, to, referer string, rules []rule.Rule)
+	OnFilterModify(method, url, referer string, rules []rule.Rule)
+}
+
+// ruleMatcher is an interface that can match requests against rules.
+type ruleMatcher interface {
+	AddRule(rule string, filterName *string) error
+	FindMatchingRules(req *http.Request) []rule.Rule
+}
+
+// config is an interface that provides filter configuration.
+type config interface {
+	GetFilterLists() []cfg.FilterList
+}
+
+// Filter is a filter for URLs that is capable of Adblock-style filter lists and hosts rules and matching URLs against them.
 //
 // The filter is safe for concurrent use.
 type Filter struct {
-	ruleTree          ruletree.RuleTree
-	exceptionRuleTree ruletree.RuleTree
+	config               config
+	ruleMatcher          ruleMatcher
+	exceptionRuleMatcher ruleMatcher
+	eventsEmitter        filterEventsEmitter
 }
 
-func NewFilter() *Filter {
-	filter := &Filter{
-		ruleTree:          ruletree.NewRuleTree(),
-		exceptionRuleTree: ruletree.NewRuleTree(),
+// NewFilter creates and initializes a new filter.
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, eventsEmitter filterEventsEmitter) (*Filter, error) {
+	if config == nil {
+		return nil, errors.New("config is nil")
+	}
+	if eventsEmitter == nil {
+		return nil, errors.New("eventsEmitter is nil")
+	}
+	if ruleMatcher == nil {
+		return nil, errors.New("ruleMatcher is nil")
+	}
+	if exceptionRuleMatcher == nil {
+		return nil, errors.New("exceptionRuleMatcher is nil")
 	}
 
-	return filter
+	f := &Filter{
+		config:               config,
+		ruleMatcher:          ruleMatcher,
+		exceptionRuleMatcher: exceptionRuleMatcher,
+		eventsEmitter:        eventsEmitter,
+	}
+	f.init()
+
+	return f, nil
 }
 
-// Init initializes the filter by downloading and parsing the filter lists.
-func (f *Filter) Init() {
+// init initializes the filter by downloading and parsing the filter lists.
+func (f *Filter) init() {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	for _, filterList := range config.Config.GetFilterLists() {
+	for _, filterList := range f.config.GetFilterLists() {
 		if !filterList.Enabled {
 			continue
 		}
@@ -52,7 +87,7 @@ func (f *Filter) Init() {
 				log.Printf("filter initialization: %v", err)
 				return
 			}
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := http.DefaultClient.Do(req) // FIXME: use a custom client with a timeout
 			if err != nil {
 				log.Printf("filter initialization: %v", err)
 				return
@@ -82,14 +117,13 @@ func (f *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 		}
 
 		if reException.MatchString(line) {
-			if err := f.exceptionRuleTree.AddRule(line[2:], nil); err != nil {
-				// filterName is only needed for logging blocked requests
+			if err := f.exceptionRuleMatcher.AddRule(line[2:], filterName); err != nil {
 				// log.Printf("error adding exception rule %q: %v", rule, err)
 				continue
 			}
 			exceptionCount++
 		} else {
-			if err := f.ruleTree.AddRule(line, filterName); err != nil {
+			if err := f.ruleMatcher.AddRule(line, filterName); err != nil {
 				// log.Printf("error adding rule %q: %v", rule, err)
 				continue
 			}
@@ -100,46 +134,26 @@ func (f *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 	return ruleCount, exceptionCount
 }
 
-type filterActionKind string
-
-const (
-	filterActionBlocked    filterActionKind = "blocked"
-	filterActionRedirected filterActionKind = "redirected"
-	filterActionModified   filterActionKind = "modified"
-)
-
-// filterAction is the data structure that is emitted as an event when a request matches filter rules.
-// See its usage at: frontend/src/RequestLog/index.tsx
-type filterAction struct {
-	Kind    filterActionKind `json:"kind"`
-	Method  string           `json:"method"`
-	URL     string           `json:"url"`
-	To      string           `json:"to,omitempty"`
-	Referer string           `json:"referer,omitempty"`
-	Rules   []rule.Rule      `json:"rules"`
-}
-
 // HandleRequest handles the given request by matching it against the filter rules.
 // If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
-func (f *Filter) HandleRequest(ctx context.Context, req *http.Request) *http.Response {
-	if len(f.exceptionRuleTree.FindMatchingRules(req)) > 0 {
+func (f *Filter) HandleRequest(req *http.Request) *http.Response {
+	if len(f.exceptionRuleMatcher.FindMatchingRules(req)) > 0 {
 		// TODO: implement precise exception handling
 		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#removeheader-modifier (see "Negating $removeheader")
 		return nil
 	}
 
-	matchingRules := f.ruleTree.FindMatchingRules(req)
-	appliedRules := make([]rule.Rule, 0, len(matchingRules))
+	matchingRules := f.ruleMatcher.FindMatchingRules(req)
+	if len(matchingRules) == 0 {
+		return nil
+	}
+
+	var appliedRules []rule.Rule
 	initialURL := req.URL.String()
+
 	for _, r := range matchingRules {
 		if r.ShouldBlock(req) {
-			runtime.EventsEmit(ctx, "filter:action", filterAction{
-				Kind:    filterActionBlocked,
-				Method:  req.Method,
-				URL:     req.URL.String(),
-				Referer: req.Header.Get("Referer"),
-				Rules:   []rule.Rule{r},
-			})
+			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []rule.Rule{r})
 			return f.createBlockResponse(req, r)
 		}
 		if r.Modify(req) {
@@ -149,27 +163,12 @@ func (f *Filter) HandleRequest(ctx context.Context, req *http.Request) *http.Res
 
 	finalURL := req.URL.String()
 	if initialURL != finalURL {
-		runtime.EventsEmit(ctx, "filter:action", filterAction{
-			Kind:    filterActionRedirected,
-			Method:  req.Method,
-			URL:     initialURL,
-			To:      finalURL,
-			Referer: req.Header.Get("Referer"),
-			// This is not entirely accurate since not all applied rules necessarily contribute to the redirect.
-			// Tracking the URL in each loop iteration could fix this, but I don't think it's worth the effort.
-			Rules: appliedRules,
-		})
+		f.eventsEmitter.OnFilterRedirect(req.Method, initialURL, finalURL, req.Header.Get("Referer"), appliedRules)
 		return f.createRedirectResponse(req, finalURL)
 	}
 
 	if len(appliedRules) > 0 {
-		runtime.EventsEmit(ctx, "filter:action", filterAction{
-			Kind:    filterActionModified,
-			Method:  req.Method,
-			URL:     initialURL,
-			Referer: req.Header.Get("Referer"),
-			Rules:   appliedRules,
-		})
+		f.eventsEmitter.OnFilterModify(req.Method, initialURL, req.Header.Get("Referer"), appliedRules)
 	}
 
 	return nil

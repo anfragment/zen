@@ -2,7 +2,7 @@ import { FormGroup, NumericInput } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
-import { GetPort, SetPort } from '../../wailsjs/go/config/config';
+import { GetPort, SetPort } from '../../wailsjs/go/cfg/Config';
 
 export function PortInput() {
   const [state, setState] = useState({

@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import './index.css';
 
-import { UninstallCA } from '../../../wailsjs/go/certmanager/CertManager';
+import { UninstallCA } from '../../../wailsjs/go/app/App';
 import { AppToaster } from '../../common/toaster';
 import { ProxyState } from '../../types';
 
@@ -56,19 +56,20 @@ export function UninstallCADialog({ proxyState }: UninstallCADialogProps) {
               loading={state.loading}
               onClick={async () => {
                 setState((state) => ({ ...state, loading: true }));
-                const err = await UninstallCA();
-                if (err) {
-                  AppToaster.show({
-                    message: `Failed to uninstall CA: ${err}`,
-                    intent: 'danger',
-                  });
-                } else {
+                try {
+                  await UninstallCA();
                   AppToaster.show({
                     message: 'CA uninstalled successfully',
                     intent: 'success',
                   });
+                } catch (err) {
+                  AppToaster.show({
+                    message: `Failed to uninstall CA: ${err}`,
+                    intent: 'danger',
+                  });
+                } finally {
+                  setState((state) => ({ ...state, isOpen: false, loading: false }));
                 }
-                setState((state) => ({ ...state, isOpen: false, loading: false }));
               }}
             >
               Uninstall

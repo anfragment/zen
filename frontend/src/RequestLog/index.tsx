@@ -1,4 +1,4 @@
-import { CardList, Card, Tag, Collapse, HTMLTable } from '@blueprintjs/core';
+import { CardList, Card, Tag, Collapse, HTMLTable, Intent } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-packages
@@ -11,7 +11,11 @@ type Rule = {
   RawRule: string;
 };
 
-type FilterActionKind = 'blocked' | 'redirected' | 'modified';
+enum FilterActionKind {
+  Block = 'block',
+  Redirect = 'redirect',
+  Modify = 'modify',
+}
 
 type FilterAction = {
   id: string;
@@ -66,10 +70,21 @@ function RequestLogCard({ log }: { log: FilterAction }) {
 
   const { hostname } = new URL(log.url, 'http://foo'); // Setting the base url somehow helps with parsing //hostname:port URLs
 
+  let tagIntent: Intent;
+  switch (log.kind) {
+    case FilterActionKind.Block:
+      tagIntent = Intent.DANGER;
+      break;
+    case (FilterActionKind.Modify, FilterActionKind.Redirect):
+      tagIntent = Intent.WARNING;
+      break;
+    default:
+      tagIntent = Intent.NONE;
+  }
   return (
     <>
       <Card key={log.id} className="request-log__card" interactive onClick={() => setIsOpen(!isOpen)}>
-        <Tag minimal intent={log.kind === 'blocked' ? 'danger' : 'warning'}>
+        <Tag minimal intent={tagIntent}>
           {hostname}
         </Tag>
         <div className="bp5-text-muted">{log.createdAt.toLocaleTimeString([], { timeStyle: 'short' })}</div>
@@ -87,7 +102,7 @@ function RequestLogCard({ log }: { log: FilterAction }) {
             <strong>URL: </strong>
             {log.url}
           </p>
-          {log.kind === 'redirected' && (
+          {log.kind === FilterActionKind.Redirect && (
             <p className="request-log__card__details__value">
               <strong>Redirected to: </strong>
               {log.to}

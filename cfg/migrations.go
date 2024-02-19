@@ -1,4 +1,4 @@
-package config
+package cfg
 
 import (
 	"errors"
@@ -11,9 +11,9 @@ import (
 
 // migrations is a map of version to migration function.
 // Warning: RunMigration() runs the migrations in arbitrary order.
-var migrations = map[string]func() error{
-	"v0.3.0": func() error {
-		errStr := Config.AddFilterList(filterList{
+var migrations = map[string]func(c *Config) error{
+	"v0.3.0": func(c *Config) error {
+		errStr := c.AddFilterList(FilterList{
 			Name:    "DandelionSprout's URL Shortener",
 			Type:    "privacy",
 			URL:     "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/LegitimateURLShortener.txt",
@@ -28,15 +28,15 @@ var migrations = map[string]func() error{
 }
 
 // RunMigrations runs the version-to-version migrations.
-func RunMigrations() {
+func (c *Config) RunMigrations() {
 	if Version == "development" {
 		log.Println("skipping migrations in development mode")
 		return
 	}
 
 	var lastMigration string
-	lastMigrationFile := path.Join(Config.ConfigDir, "last_migration")
-	if firstLaunch {
+	lastMigrationFile := path.Join(ConfigDir, "last_migration")
+	if c.firstLaunch {
 		lastMigration = Version
 	} else {
 		if _, err := os.Stat(lastMigrationFile); !os.IsNotExist(err) {
@@ -65,7 +65,7 @@ func RunMigrations() {
 		}
 
 		if lastMigrationV.LT(versionV) {
-			if err := migration(); err != nil {
+			if err := migration(c); err != nil {
 				log.Printf("error running migration(%s): %v\n", version, err)
 			} else {
 				log.Printf("ran migration %s\n", version)

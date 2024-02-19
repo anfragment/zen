@@ -1,13 +1,13 @@
-export namespace config {
+export namespace cfg {
 	
-	export class filterList {
+	export class FilterList {
 	    name: string;
 	    type: string;
 	    url: string;
 	    enabled: boolean;
 	
 	    static createFrom(source: any = {}) {
-	        return new filterList(source);
+	        return new FilterList(source);
 	    }
 	
 	    constructor(source: any = {}) {

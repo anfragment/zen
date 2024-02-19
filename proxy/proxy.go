@@ -1,22 +1,10 @@
-/*
- * This file contains some code originally licensed under the GPL-3.0 license.
- * Original Author: Andrey Meshkov <am@adguard.com>
- * Original Source: https://github.com/AdguardTeam/gomitmproxy
- *
- * Modifications made by: Ansar Smagulov <me@anfragment.net>
- *
- * This modified code is licensed under the GPL-3.0 license. The full text of the GPL-3.0 license
- * is included in the COPYING file in the root of this project.
- *
- * Note: This project as a whole is licensed under the MIT License, but this particular file,
- * due to its use of GPL-3.0 licensed code, is an exception and remains licensed under the GPL-3.0.
- */
 package proxy
 
 import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,45 +13,52 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/anfragment/zen/certmanager"
-	"github.com/anfragment/zen/config"
-	"github.com/anfragment/zen/filter"
 )
 
+// certGenerator is an interface capable of generating certificates for the proxy.
+type certGenerator interface {
+	GetCertificate(host string) (*tls.Certificate, error)
+}
+
+// filter is an interface capable of filtering HTTP requests.
+type filter interface {
+	HandleRequest(*http.Request) *http.Response
+}
+
+// Proxy is a forward HTTP/HTTPS proxy that can filter requests.
 type Proxy struct {
 	port           int
-	filter         *filter.Filter
+	filter         filter
+	certGenerator  certGenerator
 	server         *http.Server
 	ignoredHosts   []string
 	ignoredHostsMu sync.RWMutex
-	ctx            context.Context
 }
 
-func NewProxy(ctx context.Context) *Proxy {
-	p := Proxy{
-		filter:       filter.NewFilter(),
-		ignoredHosts: []string{},
-		ctx:          ctx,
+func NewProxy(filter filter, certGenerator certGenerator, port int) (*Proxy, error) {
+	if filter == nil {
+		return nil, errors.New("filter is nil")
+	}
+	if certGenerator == nil {
+		return nil, errors.New("certGenerator is nil")
 	}
 
-	return &p
+	return &Proxy{
+		filter:        filter,
+		certGenerator: certGenerator,
+		port:          port,
+	}, nil
 }
 
 // Start starts the proxy on the given address.
 func (p *Proxy) Start() error {
-	p.filter.Init()
-	if err := certmanager.GetCertManager().Init(); err != nil {
-		log.Printf("failed to initialize certmanager: %v", err)
-		return fmt.Errorf("initialize certmanager: %v", err)
-	}
 	p.initExclusionList()
 
 	p.server = &http.Server{
 		Handler:           p,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", config.Config.GetPort()))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", p.port))
 	if err != nil {
 		return fmt.Errorf("listen: %v", err)
 	}
@@ -116,13 +111,12 @@ func (p *Proxy) initExclusionList() {
 }
 
 // Stop stops the proxy.
-// If clearCaches is true, the certificate cache will be cleared.
-func (p *Proxy) Stop(purgeCache bool) error {
+func (p *Proxy) Stop() error {
 	if p.server == nil {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := p.server.Shutdown(ctx); err != nil {
@@ -134,11 +128,6 @@ func (p *Proxy) Stop(purgeCache bool) error {
 
 	if err := p.unsetSystemProxy(); err != nil {
 		return fmt.Errorf("unset system proxy: %v", err)
-	}
-
-	if purgeCache {
-		certmanager.GetCertManager().PurgeCache()
-		p.filter = nil
 	}
 
 	return nil
@@ -154,7 +143,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // proxyHTTP proxies the HTTP request to the remote server.
 func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
-	if res := p.filter.HandleRequest(p.ctx, r); res != nil {
+	if res := p.filter.HandleRequest(r); res != nil {
 		res.Write(w)
 		return
 	}
@@ -216,7 +205,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 	removeHopHeaders(r.Header)
 	removeConnectionHeaders(r.Header)
 
-	if res := p.filter.HandleRequest(p.ctx, r); res != nil {
+	if res := p.filter.HandleRequest(r); res != nil {
 		res.Write(clientConn)
 		return
 	}
@@ -234,7 +223,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tlsCert, err := certmanager.GetCertManager().GetCertificate(host)
+	tlsCert, err := p.certGenerator.GetCertificate(host)
 	if err != nil {
 		log.Printf("getting certificate(%s): %v", r.Host, err)
 		return
@@ -279,7 +268,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 		req.URL.Scheme = "https"
 
-		if res := p.filter.HandleRequest(p.ctx, req); res != nil {
+		if res := p.filter.HandleRequest(req); res != nil {
 			res.Write(tlsConn)
 			break
 		}

@@ -1,7 +1,7 @@
 import { Button, ButtonGroup, Icon, IconSize, FocusStyleManager, NonIdealState } from '@blueprintjs/core';
 import { useState, useEffect } from 'react';
 
-import { StartProxy, StopProxy } from '../wailsjs/go/main/App';
+import { StartProxy, StopProxy } from '../wailsjs/go/app/App';
 
 import './App.css';
 import { AppToaster } from './common/toaster';
@@ -18,10 +18,11 @@ function App() {
   const [proxyState, setProxyState] = useState<ProxyState>('off');
   const [activeTab, setActiveTab] = useState<'home' | 'filterLists' | 'settings'>('home');
 
-  const start = async () => {
+  const startProxy = async () => {
     setProxyState('loading');
-    const err = await StartProxy();
-    if (err) {
+    try {
+      await StartProxy();
+    } catch (err) {
       AppToaster.show({
         message: `Failed to start proxy: ${err}`,
         intent: 'danger',
@@ -31,10 +32,18 @@ function App() {
     }
     setProxyState('on');
   };
-  const stop = async () => {
+  const stopProxy = async () => {
     setProxyState('loading');
-    await StopProxy();
-    setProxyState('off');
+    try {
+      await StopProxy();
+    } catch (err) {
+      AppToaster.show({
+        message: `Failed to stop proxy: ${err}`,
+        intent: 'danger',
+      });
+    } finally {
+      setProxyState('off');
+    }
   };
 
   return (
@@ -75,7 +84,7 @@ function App() {
       </div>
 
       <Button
-        onClick={proxyState === 'off' ? start : stop}
+        onClick={proxyState === 'off' ? startProxy : stopProxy}
         fill
         intent="primary"
         className="footer"

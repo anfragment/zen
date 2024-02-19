@@ -1,4 +1,4 @@
-package certmanager
+package certgen
 
 import (
 	"crypto/ecdsa"
@@ -17,8 +17,13 @@ import (
 const certTTL = 24 * time.Hour
 
 // GetCertificate returns a self-signed certificate for the given host.
-func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
-	if cert := cm.certCache.Get(host); cert != nil {
+func (cg *CertGenerator) GetCertificate(host string) (*tls.Certificate, error) {
+	rootCert, rootKey, err := cg.store.GetCertificate()
+	if err != nil {
+		return nil, fmt.Errorf("get root certificate: %v", err)
+	}
+
+	if cert := cg.cache.Get(host); cert != nil {
 		return cert, nil
 	}
 
@@ -48,7 +53,7 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 		BasicConstraintsValid: true,
 	}
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, cm.cert, &privateKey.PublicKey, cm.key)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, rootCert, &privateKey.PublicKey, rootKey)
 	if err != nil {
 		return nil, fmt.Errorf("create certificate: %v", err)
 	}
@@ -71,7 +76,7 @@ func (cm *CertManager) GetCertificate(host string) (*tls.Certificate, error) {
 		return nil, fmt.Errorf("load key pair: %v", err)
 	}
 
-	cm.certCache.Put(host, notAfter.Add(-5*time.Minute), &cert) // 5 minute buffer in case a TLS handshake takes a while, the system clock is off, etc.
+	cg.cache.Put(host, notAfter.Add(-5*time.Minute), &cert) // 5 minute buffer in case a TLS handshake takes a while, the system clock is off, etc.
 
 	return &cert, nil
 }
