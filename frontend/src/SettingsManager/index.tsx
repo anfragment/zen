@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 import './index.css';
 
-import { GetVersion } from '../../wailsjs/go/cfg/config';
+import { GetVersion } from '../../wailsjs/go/cfg/Config';
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { ProxyState } from '../types';
 

@@ -2,7 +2,7 @@ import { Spinner, SpinnerSize, Switch, Button, MenuItem } from '@blueprintjs/cor
 import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
 
-import { GetFilterLists, RemoveFilterList, ToggleFilterList } from '../../wailsjs/go/cfg/config';
+import { GetFilterLists, RemoveFilterList, ToggleFilterList } from '../../wailsjs/go/cfg/Config';
 // eslint-disable-next-line import/order
 import { type cfg } from '../../wailsjs/go/models';
 
