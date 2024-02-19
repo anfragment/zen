@@ -34,7 +34,8 @@ const (
 	certCommonName = "Zen Root CA"
 )
 
-type Config interface {
+// config provides access to the relevant configuration settings.
+type config interface {
 	GetCAInstalled() bool
 	SetCAInstalled(bool)
 }
@@ -43,7 +44,7 @@ type Config interface {
 // It manages the creation, loading, and installation of the root CA.
 type DiskCertStore struct {
 	mu         sync.RWMutex
-	config     Config
+	config     config
 	folderPath string
 	certData   []byte
 	keyData    []byte
@@ -53,7 +54,7 @@ type DiskCertStore struct {
 	key        crypto.PrivateKey
 }
 
-func NewDiskCertStore(config Config) (*DiskCertStore, error) {
+func NewDiskCertStore(config config) (*DiskCertStore, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
