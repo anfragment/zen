@@ -16,19 +16,20 @@ import (
 	"github.com/anfragment/zen/rule"
 )
 
-// filterEventsEmitter represents an object that can emit filter events.
+// filterEventsEmitter is an interface that can emit filter events.
 type filterEventsEmitter interface {
 	OnFilterBlock(method, url, referer string, rules []rule.Rule)
 	OnFilterRedirect(method, url, to, referer string, rules []rule.Rule)
 	OnFilterModify(method, url, referer string, rules []rule.Rule)
 }
 
-// ruleMatcher represents an object that can match requests against rules.
+// ruleMatcher is an interface that can match requests against rules.
 type ruleMatcher interface {
 	AddRule(rule string, filterName *string) error
 	FindMatchingRules(req *http.Request) []rule.Rule
 }
 
+// config is an interface that provides filter configuration.
 type config interface {
 	GetFilterLists() []cfg.FilterList
 }
@@ -43,7 +44,7 @@ type Filter struct {
 	eventsEmitter        filterEventsEmitter
 }
 
-// NewFilter creates a new filter with the given rule matcher, exception rule matcher and events emitter.
+// NewFilter creates and initializes a new filter.
 func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
@@ -58,16 +59,19 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 		return nil, errors.New("exceptionRuleMatcher is nil")
 	}
 
-	return &Filter{
+	f := &Filter{
 		config:               config,
 		ruleMatcher:          ruleMatcher,
 		exceptionRuleMatcher: exceptionRuleMatcher,
 		eventsEmitter:        eventsEmitter,
-	}, nil
+	}
+	f.init()
+
+	return f, nil
 }
 
-// Init initializes the filter by downloading and parsing the filter lists.
-func (f *Filter) Init() {
+// init initializes the filter by downloading and parsing the filter lists.
+func (f *Filter) init() {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -83,7 +87,7 @@ func (f *Filter) Init() {
 				log.Printf("filter initialization: %v", err)
 				return
 			}
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := http.DefaultClient.Do(req) // FIXME: use a custom client with a timeout
 			if err != nil {
 				log.Printf("filter initialization: %v", err)
 				return
