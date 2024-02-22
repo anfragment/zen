@@ -13,8 +13,8 @@ var (
 		"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
 		"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/apple.txt",
 	}
-	interfaceNameRegex = regexp.MustCompile(`[\w\d]+`)
-	networkService     string
+	reInterfaceName = regexp.MustCompile(`^[\w\d]+$`)
+	networkService  string
 )
 
 // setSystemProxy sets the system proxy to the proxy address
@@ -28,7 +28,7 @@ func (p *Proxy) setSystemProxy() error {
 	if len(interfaceName) == 0 {
 		return errors.New("no default interface found")
 	}
-	if !interfaceNameRegex.MatchString(interfaceName) {
+	if !reInterfaceName.MatchString(interfaceName) {
 		// I am pretty sure that interface names can only contain alphanumeric characters,
 		// but just to be sure not to introduce a shell injection vulnerability, let's check it.
 		return fmt.Errorf("invalid interface name: %s", interfaceName)
