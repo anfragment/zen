@@ -21,5 +21,10 @@ jobs:
           check-latest: true
       - name: Run go version
         run: go version
+      - name: Create placeholder asset
+        # go:embed requires the directory to exist and be non-empty
+        run: |
+          mkdir -p ./frontend/dist
+          touch ./frontend/dist/placeholder
       - name: Run tests
         run: make test
