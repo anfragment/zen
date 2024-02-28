@@ -7,13 +7,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  # Required by golangci-lint action to create annotations on PRs.
-  # https://github.com/golangci/golangci-lint-action?tab=readme-ov-file#comments-and-annotations
-  contents: read
-  pull-requests: read
-  checks: write
-
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -26,6 +19,10 @@ jobs:
           check-latest: true
       - name: Run go version
         run: go version
+      - name: Install golangci-lint
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.56.2
+      - name: Run golangci-lint --version
+        run: golangci-lint --version
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -38,9 +35,7 @@ jobs:
         run: npm ci
         working-directory: frontend
       - name: Lint Go
-        uses: golangci/golangci-lint-action@v4
-        with:
-          version: v1.56
+        run: make lint-go
       - name: Lint frontend
         run: make lint-frontend
       
