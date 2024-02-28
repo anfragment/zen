@@ -65,7 +65,7 @@ func NewProxy(filter filter, certGenerator certGenerator, port int) (*Proxy, err
 		Timeout:   60 * time.Second,
 		Transport: p.requestTransport,
 		// Let the client handle any redirects.
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
@@ -282,7 +282,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 		req.URL.Host = r.Host
 
 		if isWS(req) {
-			p.proxyWebsocketTLS(w, req, tlsConfig, tlsConn)
+			p.proxyWebsocketTLS(req, tlsConfig, tlsConn)
 			break
 		}
 

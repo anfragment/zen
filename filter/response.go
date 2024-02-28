@@ -2,12 +2,10 @@ package filter
 
 import (
 	"net/http"
-
-	"github.com/anfragment/zen/rule"
 )
 
 // createBlockResponse creates a response for a blocked request.
-func (f *Filter) createBlockResponse(req *http.Request, rule rule.Rule) *http.Response {
+func (f *Filter) createBlockResponse(req *http.Request) *http.Response {
 	return &http.Response{
 		StatusCode: http.StatusForbidden,
 		ProtoMajor: req.ProtoMajor,

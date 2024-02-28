@@ -92,7 +92,7 @@ func (cs *DiskCertStore) installCATrust() error {
 	}
 	defer os.Remove(plistFile.Name())
 
-	cmd = exec.Command("security", "trust-settings-export", "-d", plistFile.Name())
+	cmd = exec.Command("security", "trust-settings-export", "-d", plistFile.Name()) // #nosec G204
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("trust-settings-export: %w\n%s", err, out)
@@ -135,7 +135,7 @@ func (cs *DiskCertStore) installCATrust() error {
 	if err != nil {
 		return fmt.Errorf("write plist file: %w", err)
 	}
-	cmd = exec.Command("security", "trust-settings-import", "-d", plistFile.Name())
+	cmd = exec.Command("security", "trust-settings-import", "-d", plistFile.Name()) // #nosec G204
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("trust-settings-import: %w\n%s", err, out)

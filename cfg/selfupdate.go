@@ -64,7 +64,7 @@ func SelfUpdate(ctx context.Context) {
 		log.Printf("error occurred while showing restart dialog: %v", err)
 	}
 	if action == "Yes" {
-		cmd := exec.Command(os.Args[0], os.Args[1:]...)
+		cmd := exec.Command(os.Args[0], os.Args[1:]...) // #nosec G204
 		if err := cmd.Start(); err != nil {
 			log.Printf("error occurred while restarting: %v", err)
 			return

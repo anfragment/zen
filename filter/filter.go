@@ -154,7 +154,7 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 	for _, r := range matchingRules {
 		if r.ShouldBlock(req) {
 			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []rule.Rule{r})
-			return f.createBlockResponse(req, r)
+			return f.createBlockResponse(req)
 		}
 		if r.Modify(req) {
 			appliedRules = append(appliedRules, r)

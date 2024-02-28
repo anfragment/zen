@@ -5,7 +5,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505 -- SHA-1 is used for certificate fingerprinting, not for hashing passwords or data.
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -157,7 +157,7 @@ func (cs *DiskCertStore) newCA() error {
 		return fmt.Errorf("unmarshal public key: %v", err)
 	}
 
-	skid := sha1.Sum(spki.SubjectPublicKey.Bytes)
+	skid := sha1.Sum(spki.SubjectPublicKey.Bytes) // #nosec G401
 
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)

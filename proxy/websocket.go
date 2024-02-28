@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func (p *Proxy) proxyWebsocketTLS(w http.ResponseWriter, req *http.Request, tlsConfig *tls.Config, clientConn *tls.Conn) {
+func (p *Proxy) proxyWebsocketTLS(req *http.Request, tlsConfig *tls.Config, clientConn *tls.Conn) {
 	dialer := &tls.Dialer{NetDialer: p.netDialer, Config: tlsConfig}
 	targetConn, err := dialer.Dial("tcp", req.URL.Host)
 	if err != nil {

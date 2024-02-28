@@ -106,7 +106,7 @@ func (rm *Rule) ShouldMatch(req *http.Request) bool {
 }
 
 // ShouldBlock returns true if the request should be blocked.
-func (rm *Rule) ShouldBlock(req *http.Request) bool {
+func (rm *Rule) ShouldBlock(*http.Request) bool {
 	return len(rm.modifyingModifiers) == 0
 }
 

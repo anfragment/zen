@@ -160,7 +160,7 @@ func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 	}
 
 	// address root
-	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRules(req, tokens, func(n *node, t []string) bool {
+	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRules(req, tokens, func(_ *node, t []string) bool {
 		// address root rules have to match the entire URL
 		return len(t) == 0
 	})...)

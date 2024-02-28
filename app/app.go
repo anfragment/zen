@@ -49,7 +49,7 @@ func (a *App) Startup(ctx context.Context) {
 	a.eventsHandler = newEventsHandler(a.ctx)
 }
 
-func (a *App) Shutdown(ctx context.Context) {
+func (a *App) Shutdown(context.Context) {
 	a.proxyMu.Lock()
 	defer a.proxyMu.Unlock()
 
@@ -77,26 +77,34 @@ func (a *App) StartProxy() error {
 
 	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, a.eventsHandler)
 	if err != nil {
-		log.Fatalf("failed to create filter: %v", err)
+		err = fmt.Errorf("failed to create filter: %v", err)
+		log.Println(err)
+		return err
 	}
 
 	certGenerator, err := certgen.NewCertGenerator(a.certStore)
 	if err != nil {
-		log.Fatalf("failed to create cert manager: %v", err)
+		err = fmt.Errorf("failed to create cert manager: %v", err)
+		log.Println(err)
+		return err
 	}
 
 	a.proxy, err = proxy.NewProxy(filter, certGenerator, a.config.GetPort())
 	if err != nil {
-		log.Fatalf("failed to create proxy: %v", err)
+		err = fmt.Errorf("failed to create proxy: %v", err)
+		log.Println(err)
+		return err
 	}
 
 	if err := a.certStore.Init(); err != nil {
-		log.Printf("failed to initialize cert store: %v", err)
+		err = fmt.Errorf("failed to initialize cert store: %v", err)
+		log.Println(err)
 		return err
 	}
 
 	if err := a.proxy.Start(); err != nil {
-		log.Printf("failed to start proxy: %v", err)
+		err = fmt.Errorf("failed to start proxy: %v", err)
+		log.Println(err)
 		return err
 	}
 
