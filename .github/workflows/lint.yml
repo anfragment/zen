@@ -7,6 +7,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  # These permissions are required by golangci-lint to create annotations for PRs.
+  # https://github.com/golangci/golangci-lint-action?tab=readme-ov-file
+  contents: read
+  pull-requests: read
+  checks: write
+
 jobs:
   lint-go:
     name: Lint Go (${{ matrix.os }})
@@ -21,20 +28,17 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: ./go.mod
-          check-latest: true
       - name: Run go version
         run: go version
-      - name: Install golangci-lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.56.2
-      - name: Run golangci-lint --version
-        run: golangci-lint --version
       - name: Create placeholder asset
         # go:embed requires the directory to exist and be non-empty
         run: |
           mkdir -p ./frontend/dist
           touch ./frontend/dist/placeholder
       - name: Run go linter
-        run: make lint-go
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.56
 
   lint-frontend:
     name: Lint Frontend
