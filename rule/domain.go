@@ -14,6 +14,10 @@ type domainModifier struct {
 	inverted bool
 }
 
+var (
+	domainModifierRegex = regexp.MustCompile(`~?((/.*/)|[^|]+)+`)
+)
+
 func (m *domainModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
 	if eqIndex == -1 {
@@ -22,9 +26,9 @@ func (m *domainModifier) Parse(modifier string) error {
 	value := modifier[eqIndex+1:]
 
 	m.inverted = strings.HasPrefix(value, "~")
-	entries := strings.Split(value, "|")
-	m.entries = make([]domainModifierEntry, len(entries))
-	for i, entry := range entries {
+	matches := domainModifierRegex.FindAllString(value, -1)
+	m.entries = make([]domainModifierEntry, len(matches))
+	for i, entry := range matches {
 		if entry == "" {
 			return errors.New("empty method modifier entry")
 		}
