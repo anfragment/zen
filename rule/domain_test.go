@@ -5,179 +5,78 @@ import (
 	"testing"
 )
 
-func TestSingleDomain(t *testing.T) {
-	t.Parallel()
-
-	m := domainModifier{}
-	if err := m.Parse("domain=example.com"); err != nil {
-		t.Fatal(err)
+func TestDomainModifierMatching(t *testing.T) {
+	var tests = []struct {
+		name        string
+		modifier    string
+		referer     string
+		shouldMatch bool
+	}{
+		{"Single domain - match", "domain=example.com", "http://example.com/", true},
+		{"Single domain - subdomain match", "domain=example.com", "http://sub.example.com/path", true},
+		{"Single domain - no match", "domain=example.com", "http://example.org/", false},
+		{"Single inverted domain - match", "domain=~example.com", "http://test.com/", true},
+		{"Single inverted domain - no match", "domain=~example.com", "http://example.com/", false},
+		{"TLD - match", "domain=example.*", "http://example.com/", true},
+		{"TLD - subdomain and path match", "domain=example.*", "https://example.co.uk/some/path", true},
+		{"TLD - no match", "domain=example.*", "http://test.com", false},
+		{"Regex - match com", `domain=/^example\.(com|org)$/`, "http://example.com/", true},
+		{"Regex - match org", `domain=/^example\.(com|org)$/`, "http://example.org/", true},
+		{"Regex - no match", `domain=/^example\.(com|org)$/`, "http://example.net/", false},
+		{"Multiple domains - match com", "domain=example.com|example.org", "http://example.com/", true},
+		{"Multiple domains - match org", "domain=example.com|example.org", "http://example.org/", true},
+		{"Multiple domains - no match", "domain=example.com|example.org", "http://example.net/", false},
+		{"Multiple inverted domains - match", "domain=~example.com|~example.org", "http://example.net/", true},
+		{"Multiple inverted domains - no match com", "domain=~example.com|~example.org", "http://example.com/", false},
+		{"Multiple inverted domains - no match org", "domain=~example.com|~example.org", "http://example.org/", false},
 	}
 
-	req := http.Request{
-		Header: http.Header{
-			"Referer": []string{"http://example.com/"},
-		},
-	}
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=example.com should match a request with example.com as the referer")
-	}
-
-	req.Header.Set("Referer", "http://sub.example.com/path")
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=example.com should match a request with sub.example.com as the referer")
-	}
-
-	req.Header.Set("Referer", "http://example.org/")
-	if m.ShouldMatch(&req) {
-		t.Error("domain=example.com should not match a request with example.org as the referer")
-	}
-}
-
-func TestSingleInvertedDomain(t *testing.T) {
-	t.Parallel()
-
-	m := domainModifier{}
-	if err := m.Parse("domain=~example.com"); err != nil {
-		t.Fatal(err)
-	}
-
-	req := http.Request{
-		Header: http.Header{
-			"Referer": []string{"http://test.com/"},
-		},
-	}
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=~example.com should match a request with test.com as the referer")
-	}
-
-	req.Header.Set("Referer", "http://example.com/")
-	if m.ShouldMatch(&req) {
-		t.Error("domain=~example.com should not match a request with example.com as the referer")
-	}
-
-	req.Header.Set("Referer", "http://sub.example.com/path")
-	if m.ShouldMatch(&req) {
-		t.Error("domain=~example.com should not match a request with sub.example.com as the referer")
+	for _, tt := range tests {
+		tt := tt // TODO: remove when updating to Go 1.22
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := newDomainModifier(t, tt.modifier)
+			req := newRequestWithReferer(tt.referer)
+			if got := m.ShouldMatch(req); got != tt.shouldMatch {
+				t.Errorf("domainModifier{%s}.ShouldMatch(%s) = %v, want %v", tt.modifier, tt.referer, got, tt.shouldMatch)
+			}
+		})
 	}
 }
 
-func TestTLD(t *testing.T) {
+func TestDomainModifierParse(t *testing.T) {
 	t.Parallel()
 
-	m := domainModifier{}
-	if err := m.Parse("domain=example.*"); err != nil {
-		t.Fatal(err)
-	}
+	t.Run("Should fail on empty modifier", func(t *testing.T) {
+		t.Parallel()
+		m := domainModifier{}
+		if err := m.Parse("domain="); err == nil {
+			t.Error("domainModifier.Parse(\"domain=\") = nil, want error")
+		}
+	})
 
-	req := http.Request{
-		Header: http.Header{
-			"Referer": []string{"http://example.com/"},
-		},
-	}
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=example.* should match a request with example.com as the referer")
-	}
-
-	req.Header.Set("Referer", "https://example.co.uk/some/path")
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=example.* should match a request with example.co.uk as the referer")
-	}
-
-	req.Header.Set("Referer", "http://test.com")
-	if m.ShouldMatch(&req) {
-		t.Error("domain=example.* should not match a request with test.com as the referer")
-	}
+	t.Run("Should fail on inverted and non-inverted domains", func(t *testing.T) {
+		t.Parallel()
+		m := domainModifier{}
+		if err := m.Parse("domain=example.com|~example.org"); err == nil {
+			t.Error("domainModifier.Parse(\"domain=example.com|~example.org\") = nil, want error")
+		}
+	})
 }
 
-func TestRegex(t *testing.T) {
-	t.Parallel()
-
+func newDomainModifier(t *testing.T, domain string) domainModifier {
+	t.Helper()
 	m := domainModifier{}
-	if err := m.Parse(`domain=/^example\.(com|org)$/`); err != nil {
+	if err := m.Parse(domain); err != nil {
 		t.Fatal(err)
 	}
-	req := http.Request{
-		Header: http.Header{
-			"Referer": []string{"http://example.com/"},
-		},
-	}
-	if !m.ShouldMatch(&req) {
-		t.Error(`domain=/^example\.(com|org)$/ should match a request with example.com as the referer`)
-	}
-
-	req.Header.Set("Referer", "http://example.org/")
-	if !m.ShouldMatch(&req) {
-		t.Error(`domain=/^example\.(com|org)$/ should match a request with example.org as the referer`)
-	}
-
-	req.Header.Set("Referer", "http://example.net/")
-	if m.ShouldMatch(&req) {
-		t.Error(`domain=/^example\.(com|org)$/ should not match a request with example.net as the referer`)
-	}
+	return m
 }
 
-func TestMultipleDomains(t *testing.T) {
-	t.Parallel()
-
-	m := domainModifier{}
-	if err := m.Parse("domain=example.com|example.org"); err != nil {
-		t.Fatal(err)
-	}
-
-	req := http.Request{
+func newRequestWithReferer(referer string) *http.Request {
+	return &http.Request{
 		Header: http.Header{
-			"Referer": []string{"http://example.com/"},
+			"Referer": []string{referer},
 		},
-	}
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=example.com|example.org should match a request with example.com as the referer")
-	}
-
-	req.Header.Set("Referer", "http://example.org/")
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=example.com|example.org should match a request with example.org as the referer")
-	}
-
-	req.Header.Set("Referer", "http://example.net/")
-	if m.ShouldMatch(&req) {
-		t.Error("domain=example.com|example.org should not match a request with example.net as the referer")
-	}
-}
-
-func TestMultipleInvertedDomains(t *testing.T) {
-	t.Parallel()
-
-	m := domainModifier{}
-	if err := m.Parse("domain=~example.com|~example.org"); err != nil {
-		t.Fatal(err)
-	}
-
-	req := http.Request{
-		Header: http.Header{
-			"Referer": []string{"http://example.com/"},
-		},
-	}
-	if m.ShouldMatch(&req) {
-		t.Error("domain=~example.com|~example.org should not match a request with example.com as the referer")
-	}
-
-	req.Header.Set("Referer", "http://example.org/")
-	if m.ShouldMatch(&req) {
-		t.Error("domain=~example.com|~example.org should not match a request with example.org as the referer")
-	}
-
-	req.Header.Set("Referer", "http://example.net/")
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=~example.com|~example.org should match a request with example.net as the referer")
-	}
-}
-
-func TestMixedInvertedAndNonInvertedDomains(t *testing.T) {
-	t.Parallel()
-
-	m := domainModifier{}
-	err := m.Parse("domain=example.com|~example.org")
-	if err == nil {
-		t.Error("domain=example.com|~example.org should not be valid")
 	}
 }
