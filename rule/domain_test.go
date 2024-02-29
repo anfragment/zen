@@ -2,7 +2,6 @@ package rule
 
 import (
 	"net/http"
-	"net/url"
 	"testing"
 )
 
@@ -170,53 +169,6 @@ func TestMultipleInvertedDomains(t *testing.T) {
 	req.Header.Set("Referer", "http://example.net/")
 	if !m.ShouldMatch(&req) {
 		t.Error("domain=~example.com|~example.org should match a request with example.net as the referer")
-	}
-}
-
-func TestURLMatching(t *testing.T) {
-	t.Parallel()
-
-	m := domainModifier{}
-	if err := m.Parse("domain=example.com"); err != nil {
-		t.Fatal(err)
-	}
-
-	url, _ := url.Parse("http://example.com/")
-	req := http.Request{
-		URL:    url,
-		Header: http.Header{},
-	}
-
-	if !m.ShouldMatch(&req) {
-		t.Error("domain=example.com should match a request with example.com as the hostname")
-	}
-
-	url, _ = url.Parse("http://example.org/")
-	req.URL = url
-	if m.ShouldMatch(&req) {
-		t.Error("domain=example.com should not match a request with example.org as the hostname")
-	}
-}
-
-// TestURLMatchingWithReferer tests whether the Referer header takes precedence over the URL.
-func TestURLMatchingWithReferer(t *testing.T) {
-	t.Parallel()
-
-	m := domainModifier{}
-	if err := m.Parse("domain=example.com"); err != nil {
-		t.Fatal(err)
-	}
-
-	url, _ := url.Parse("http://example.com/")
-	req := http.Request{
-		URL: url,
-		Header: http.Header{
-			"Referer": []string{"http://example.org/"},
-		},
-	}
-
-	if m.ShouldMatch(&req) {
-		t.Error("domain=example.com should not match a request with example.org as the referer")
 	}
 }
 

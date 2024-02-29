@@ -47,16 +47,14 @@ func (m *domainModifier) Parse(modifier string) error {
 }
 
 func (m *domainModifier) ShouldMatch(req *http.Request) bool {
-	var hostname string
-	if referer := req.Header.Get("Referer"); referer != "" {
-		if url, err := url.Parse(referer); err == nil {
-			hostname = url.Hostname()
-		} else {
-			hostname = req.URL.Hostname()
-		}
-	} else {
-		hostname = req.URL.Hostname()
+	if referer := req.Header.Get("Referer"); referer == "" {
+		return false
 	}
+	url, err := url.Parse(req.Header.Get("Referer"))
+	if err != nil {
+		return false
+	}
+	hostname := url.Hostname()
 
 	matches := false
 	for _, entry := range m.entries {
