@@ -20,8 +20,8 @@ var (
 
 func (m *domainModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
-	if eqIndex == -1 {
-		return fmt.Errorf("invalid method modifier")
+	if eqIndex == -1 || eqIndex == len(modifier)-1 {
+		return errors.New("invalid domain modifier")
 	}
 	value := modifier[eqIndex+1:]
 
