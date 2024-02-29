@@ -17,7 +17,7 @@ var (
 	networkService  string
 )
 
-// setSystemProxy sets the system proxy to the proxy address
+// setSystemProxy sets the system proxy to the proxy address.
 func (p *Proxy) setSystemProxy() error {
 	cmd := exec.Command("sh", "-c", "scutil --nwi | grep 'Network interfaces' | cut -d ' ' -f 3")
 	out, err := cmd.CombinedOutput()

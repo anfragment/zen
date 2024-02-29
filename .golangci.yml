@@ -23,6 +23,8 @@ linters:
     - predeclared
     - makezero
     - bidichk
+    - godot
+    - tparallel
   disable:
     - errcheck
 

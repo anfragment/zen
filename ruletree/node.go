@@ -105,7 +105,7 @@ func (n *node) FindChild(key nodeKey) *node {
 var (
 	// reSeparator is a regular expression that matches the separator token.
 	// According to https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters:
-	// "Separator character is any character, but a letter, a digit, or one of the following: _ - . %. ... The end of the address is also accepted as separator."
+	// "Separator character is any character, but a letter, a digit, or one of the following: _ - . %. ... The end of the address is also accepted as separator.".
 	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9_\-\.%]`)
 )
 

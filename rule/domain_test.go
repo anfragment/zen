@@ -6,6 +6,7 @@ import (
 )
 
 func TestDomainModifierMatching(t *testing.T) {
+	t.Parallel()
 	var tests = []struct {
 		name        string
 		modifier    string

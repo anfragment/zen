@@ -392,7 +392,7 @@ func isCloseable(err error) (ok bool) {
 
 // Hop-by-hop headers. These are removed when sent to the backend.
 // http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html
-// Note: this may be out of date, see RFC 7230 Section 6.1
+// Note: this may be out of date, see RFC 7230 Section 6.1.
 var hopHeaders = []string{
 	"Connection",
 	"Proxy-Connection",
@@ -412,7 +412,7 @@ func removeHopHeaders(header http.Header) {
 }
 
 // removeConnectionHeaders removes hop-by-hop headers listed in the "Connection"
-// header of h. See RFC 7230, section 6.1
+// header of h. See RFC 7230, section 6.1.
 func removeConnectionHeaders(h http.Header) {
 	for _, f := range h["Connection"] {
 		for _, sf := range strings.Split(f, ",") {

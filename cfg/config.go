@@ -131,8 +131,6 @@ func (c *Config) Save() error {
 }
 
 // GetFilterLists returns the list of enabled filter lists.
-//
-// @frontend
 func (c *Config) GetFilterLists() []FilterList {
 	c.RLock()
 	defer c.RUnlock()
@@ -141,8 +139,6 @@ func (c *Config) GetFilterLists() []FilterList {
 }
 
 // AddFilterList adds a new filter list to the list of enabled filter lists.
-//
-// @frontend
 func (c *Config) AddFilterList(list FilterList) string {
 	c.Lock()
 	defer c.Unlock()
@@ -156,8 +152,6 @@ func (c *Config) AddFilterList(list FilterList) string {
 }
 
 // RemoveFilterList removes a filter list from the list of enabled filter lists.
-//
-// @frontend
 func (c *Config) RemoveFilterList(url string) string {
 	c.Lock()
 	defer c.Unlock()
@@ -176,8 +170,6 @@ func (c *Config) RemoveFilterList(url string) string {
 }
 
 // ToggleFilterList toggles the enabled state of a filter list.
-//
-// @frontend
 func (c *Config) ToggleFilterList(url string, enabled bool) string {
 	c.Lock()
 	defer c.Unlock()
@@ -196,8 +188,6 @@ func (c *Config) ToggleFilterList(url string, enabled bool) string {
 }
 
 // GetPort returns the port the proxy is set to listen on.
-//
-// @frontend
 func (c *Config) GetPort() int {
 	c.RLock()
 	defer c.RUnlock()
@@ -206,8 +196,6 @@ func (c *Config) GetPort() int {
 }
 
 // SetPort sets the port the proxy is set to listen on.
-//
-// @frontend
 func (c *Config) SetPort(port int) string {
 	c.Lock()
 	defer c.Unlock()

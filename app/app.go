@@ -15,7 +15,6 @@ import (
 	"github.com/anfragment/zen/ruletree"
 )
 
-// App struct
 type App struct {
 	ctx           context.Context
 	config        *cfg.Config
@@ -42,8 +41,7 @@ func NewApp(config *cfg.Config) (*App, error) {
 	}, nil
 }
 
-// Startup is called when the app starts. The context is saved
-// so we can call the runtime methods
+// Startup is called when the app starts.
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.eventsHandler = newEventsHandler(a.ctx)
