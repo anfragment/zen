@@ -58,12 +58,11 @@ var (
 
 // installCATrust installs the CA into the system trust store.
 func (cs *DiskCertStore) installCATrust() error {
-	var cert []byte
-	if certBlock, _ := pem.Decode(cs.certData); certBlock == nil || certBlock.Type != "CERTIFICATE" {
+	certBlock, _ := pem.Decode(cs.certData)
+	if certBlock == nil || certBlock.Type != "CERTIFICATE" {
 		return errors.New("invalid certificate: type mismatch")
-	} else {
-		cert = certBlock.Bytes
 	}
+	cert := certBlock.Bytes
 	store, err := openWindowsRootStore()
 	if err != nil {
 		return fmt.Errorf("open root store: %v", err)

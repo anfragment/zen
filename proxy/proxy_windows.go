@@ -13,10 +13,10 @@ var exclusionListURLs = []string{
 }
 
 var (
-	wininet                          = windows.NewLazySystemDLL("wininet.dll")
-	internetSetOption                = wininet.NewProc("InternetSetOptionW")
-	INTERNET_OPTION_SETTINGS_CHANGED = 39
-	INTERNET_OPTION_REFRESH          = 37
+	wininet                       = windows.NewLazySystemDLL("wininet.dll")
+	internetSetOption             = wininet.NewProc("InternetSetOptionW")
+	internetOptionSettingsChanged = 39
+	internetOptionRefresh         = 37
 )
 
 func (p *Proxy) setSystemProxy() error {
@@ -37,8 +37,8 @@ func (p *Proxy) setSystemProxy() error {
 		return err
 	}
 
-	callInternetSetOption(INTERNET_OPTION_SETTINGS_CHANGED)
-	callInternetSetOption(INTERNET_OPTION_REFRESH)
+	callInternetSetOption(internetOptionSettingsChanged)
+	callInternetSetOption(internetOptionRefresh)
 
 	return nil
 }
@@ -54,8 +54,8 @@ func (p *Proxy) unsetSystemProxy() error {
 		return err
 	}
 
-	callInternetSetOption(INTERNET_OPTION_SETTINGS_CHANGED)
-	callInternetSetOption(INTERNET_OPTION_REFRESH)
+	callInternetSetOption(internetOptionSettingsChanged)
+	callInternetSetOption(internetOptionRefresh)
 
 	return nil
 }
