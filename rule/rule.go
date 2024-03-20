@@ -58,6 +58,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		case isKind("document"),
 			isKind("doc"),
 			isKind("xmlhttprequest"),
+			isKind("xhr"),
 			isKind("font"),
 			isKind("subdocument"),
 			isKind("image"),
