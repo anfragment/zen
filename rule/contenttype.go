@@ -9,6 +9,8 @@ type contentTypeModifier struct {
 	inverted    bool
 }
 
+var _ matchingModifier = (*contentTypeModifier)(nil)
+
 var (
 	// secFetchDestMap maps Sec-Fetch-Dest header values to corresponding content type modifiers.
 	secFetchDestMap = map[string]string{
@@ -45,7 +47,7 @@ func (m *contentTypeModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *contentTypeModifier) ShouldMatch(req *http.Request) bool {
+func (m *contentTypeModifier) ShouldMatchReq(req *http.Request) bool {
 	secFetchDest := req.Header.Get("Sec-Fetch-Dest")
 	if secFetchDest == "" {
 		return false
@@ -61,4 +63,8 @@ func (m *contentTypeModifier) ShouldMatch(req *http.Request) bool {
 		return contentType != m.contentType
 	}
 	return contentType == m.contentType
+}
+
+func (m *contentTypeModifier) ShouldMatchRes(_ *http.Response) bool {
+	return false
 }

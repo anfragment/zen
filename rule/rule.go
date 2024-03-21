@@ -24,7 +24,8 @@ type modifier interface {
 // matchingModifier defines whether a rule matches a request.
 type matchingModifier interface {
 	modifier
-	ShouldMatch(req *http.Request) bool
+	ShouldMatchReq(req *http.Request) bool
+	ShouldMatchRes(res *http.Response) bool
 }
 
 // modifyingModifier modifies a request.
@@ -98,7 +99,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 // ShouldMatch returns true if the rule should match the request.
 func (rm *Rule) ShouldMatch(req *http.Request) bool {
 	for _, modifier := range rm.matchingModifiers {
-		if !modifier.ShouldMatch(req) {
+		if !modifier.ShouldMatchReq(req) {
 			return false
 		}
 	}

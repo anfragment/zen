@@ -22,6 +22,8 @@ type domainModifier struct {
 	inverted bool
 }
 
+var _ matchingModifier = (*domainModifier)(nil)
+
 func (m *domainModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
 	if eqIndex == -1 || eqIndex == len(modifier)-1 {
@@ -49,7 +51,7 @@ func (m *domainModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *domainModifier) ShouldMatch(req *http.Request) bool {
+func (m *domainModifier) ShouldMatchReq(req *http.Request) bool {
 	if referer := req.Header.Get("Referer"); referer == "" {
 		return false
 	}
@@ -70,6 +72,10 @@ func (m *domainModifier) ShouldMatch(req *http.Request) bool {
 		return !matches
 	}
 	return matches
+}
+
+func (m *domainModifier) ShouldMatchRes(_ *http.Response) bool {
+	return false
 }
 
 type domainModifierEntry struct {

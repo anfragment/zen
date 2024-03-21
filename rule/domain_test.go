@@ -38,8 +38,8 @@ func TestDomainModifierMatching(t *testing.T) {
 			t.Parallel()
 			m := newDomainModifier(t, tt.modifier)
 			req := newRequestWithReferer(tt.referer)
-			if got := m.ShouldMatch(req); got != tt.shouldMatch {
-				t.Errorf("domainModifier{%s}.ShouldMatch(%s) = %v, want %v", tt.modifier, tt.referer, got, tt.shouldMatch)
+			if got := m.ShouldMatchReq(req); got != tt.shouldMatch {
+				t.Errorf("domainModifier{%s}.ShouldMatchReq(%s) = %v, want %v", tt.modifier, tt.referer, got, tt.shouldMatch)
 			}
 		})
 	}
