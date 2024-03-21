@@ -12,6 +12,8 @@ type methodModifier struct {
 	inverted bool
 }
 
+var _ matchingModifier = (*methodModifier)(nil)
+
 func (m *methodModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
 	if eqIndex == -1 {
@@ -40,7 +42,7 @@ func (m *methodModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *methodModifier) ShouldMatch(req *http.Request) bool {
+func (m *methodModifier) ShouldMatchReq(req *http.Request) bool {
 	matches := false
 	for _, entry := range m.entries {
 		if entry.MatchesMethod(req.Method) {
@@ -52,6 +54,10 @@ func (m *methodModifier) ShouldMatch(req *http.Request) bool {
 		return !matches
 	}
 	return matches
+}
+
+func (m *methodModifier) ShouldMatchRes(_ *http.Response) bool {
+	return false
 }
 
 type methodModifierEntry struct {

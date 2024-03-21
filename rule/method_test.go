@@ -13,7 +13,7 @@ func TestSingleMethod(t *testing.T) {
 	req := http.Request{
 		Method: "GET",
 	}
-	if !m.ShouldMatch(&req) {
+	if !m.ShouldMatchReq(&req) {
 		t.Error("method=GET should match a GET request")
 	}
 }
@@ -26,7 +26,7 @@ func TestSingleInvertedMethod(t *testing.T) {
 	req := http.Request{
 		Method: "GET",
 	}
-	if m.ShouldMatch(&req) {
+	if m.ShouldMatchReq(&req) {
 		t.Error("method=~GET should not match a GET request")
 	}
 }
@@ -39,7 +39,7 @@ func TestLowercaseMethod(t *testing.T) {
 	req := http.Request{
 		Method: "GET",
 	}
-	if !m.ShouldMatch(&req) {
+	if !m.ShouldMatchReq(&req) {
 		t.Error("method=get should match a GET request")
 	}
 }
@@ -53,17 +53,17 @@ func TestMultipleMethods(t *testing.T) {
 	req := http.Request{
 		Method: "GET",
 	}
-	if !m.ShouldMatch(&req) {
+	if !m.ShouldMatchReq(&req) {
 		t.Error("method=GET|POST should match a GET request")
 	}
 
 	req.Method = "POST"
-	if !m.ShouldMatch(&req) {
+	if !m.ShouldMatchReq(&req) {
 		t.Error("method=GET|POST should match a POST request")
 	}
 
 	req.Method = "HEAD"
-	if m.ShouldMatch(&req) {
+	if m.ShouldMatchReq(&req) {
 		t.Error("method=GET|POST should not match a HEAD request")
 	}
 }
@@ -77,22 +77,22 @@ func TestMultipleInvertedMethods(t *testing.T) {
 	req := http.Request{
 		Method: "GET",
 	}
-	if m.ShouldMatch(&req) {
+	if m.ShouldMatchReq(&req) {
 		t.Error("method=~GET|~POST should not match a GET request")
 	}
 
 	req.Method = "POST"
-	if m.ShouldMatch(&req) {
+	if m.ShouldMatchReq(&req) {
 		t.Error("method=~GET|~POST should not match a POST request")
 	}
 
 	req.Method = "HEAD"
-	if !m.ShouldMatch(&req) {
+	if !m.ShouldMatchReq(&req) {
 		t.Error("method=~GET|~POST should match a HEAD request")
 	}
 
 	req.Method = "PUT"
-	if !m.ShouldMatch(&req) {
+	if !m.ShouldMatchReq(&req) {
 		t.Error("method=~GET|~POST should match a PUT request")
 	}
 }
