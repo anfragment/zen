@@ -73,6 +73,8 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			modifier = &thirdPartyModifier{}
 		case isKind("removeparam"):
 			modifier = &removeParamModifier{}
+		case isKind("header"):
+			modifier = &headerModifier{}
 		case isKind("all"):
 			// TODO: should act as "popup" modifier once it gets implemented
 			continue
