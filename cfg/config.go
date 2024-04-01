@@ -60,12 +60,13 @@ func init() {
 			if err := os.MkdirAll(ConfigDir, 0755); err != nil {
 				log.Fatalf("failed to create config dir: %v", err)
 			}
+			stat, err = os.Stat(ConfigDir)
 		} else {
 			log.Fatalf("failed to stat config dir: %v", err)
 		}
 	}
 	if !stat.IsDir() {
-		log.Fatalf("config dir is not a directory")
+		log.Fatalf("config dir is not a directory: %s", ConfigDir)
 	}
 
 	DataDir, err = getDataDir()
@@ -78,12 +79,13 @@ func init() {
 			if err := os.MkdirAll(DataDir, 0755); err != nil {
 				log.Fatalf("failed to create data dir: %v", err)
 			}
+			stat, err = os.Stat(DataDir)
 		} else {
 			log.Fatalf("failed to stat data dir: %v", err)
 		}
 	}
 	if !stat.IsDir() {
-		log.Fatalf("data dir is not a directory")
+		log.Fatalf("data dir is not a directory: %s", DataDir)
 	}
 }
 
