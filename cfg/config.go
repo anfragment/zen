@@ -33,7 +33,8 @@ type Config struct {
 		CAInstalled bool `json:"caInstalled"`
 	} `json:"certmanager"`
 	Proxy struct {
-		Port int `json:"port"`
+		Port         int      `json:"port"`
+		IgnoredHosts []string `json:"ignoredHosts"`
 	} `json:"proxy"`
 
 	// firstLaunch is true if the application is being run for the first time.
@@ -206,6 +207,27 @@ func (c *Config) SetPort(port int) string {
 		return err.Error()
 	}
 	return ""
+}
+
+// GetIgnoredHosts returns the list of ignored hosts.
+func (c *Config) GetIgnoredHosts() []string {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.Proxy.IgnoredHosts
+}
+
+// SetIgnoredHosts sets the list of ignored hosts.
+func (c *Config) SetIgnoredHosts(hosts []string) error {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Proxy.IgnoredHosts = hosts
+	if err := c.Save(); err != nil {
+		log.Printf("failed to save config: %v", err)
+		return err
+	}
+	return nil
 }
 
 // GetCAInstalled returns whether the CA is installed.

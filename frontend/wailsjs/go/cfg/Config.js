@@ -14,6 +14,10 @@ export function GetFilterLists() {
   return window['go']['cfg']['Config']['GetFilterLists']();
 }
 
+export function GetIgnoredHosts() {
+  return window['go']['cfg']['Config']['GetIgnoredHosts']();
+}
+
 export function GetPort() {
   return window['go']['cfg']['Config']['GetPort']();
 }
@@ -52,6 +56,10 @@ export function Save() {
 
 export function SetCAInstalled(arg1) {
   return window['go']['cfg']['Config']['SetCAInstalled'](arg1);
+}
+
+export function SetIgnoredHosts(arg1) {
+  return window['go']['cfg']['Config']['SetIgnoredHosts'](arg1);
 }
 
 export function SetPort(arg1) {

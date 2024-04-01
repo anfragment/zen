@@ -87,7 +87,7 @@ func (a *App) StartProxy() error {
 		return err
 	}
 
-	a.proxy, err = proxy.NewProxy(filter, certGenerator, a.config.GetPort())
+	a.proxy, err = proxy.NewProxy(filter, certGenerator, a.config.GetPort(), a.config.GetIgnoredHosts())
 	if err != nil {
 		err = fmt.Errorf("failed to create proxy: %v", err)
 		log.Println(err)

@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import './index.css';
 
 import { GetVersion } from '../../wailsjs/go/cfg/Config';
-import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { BrowserOpenURL } from '../../wailsjs/runtime';
 import { ProxyState } from '../types';
 
+import { IgnoredHostsInput } from './IgnoredHostsInput';
 import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
 
@@ -34,6 +35,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
         <div className="settings-manager__section-body">
           <PortInput />
+          <IgnoredHostsInput />
           <UninstallCADialog proxyState={proxyState} />
         </div>
       </div>
