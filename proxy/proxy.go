@@ -38,7 +38,7 @@ type Proxy struct {
 	ignoredHostsMu   sync.RWMutex
 }
 
-func NewProxy(filter filter, certGenerator certGenerator, port int) (*Proxy, error) {
+func NewProxy(filter filter, certGenerator certGenerator, port int, ignoredHosts []string) (*Proxy, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")
 	}
@@ -50,6 +50,7 @@ func NewProxy(filter filter, certGenerator certGenerator, port int) (*Proxy, err
 		filter:        filter,
 		certGenerator: certGenerator,
 		port:          port,
+		ignoredHosts:  ignoredHosts,
 	}
 
 	p.netDialer = &net.Dialer{

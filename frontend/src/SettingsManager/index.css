@@ -13,6 +13,11 @@
   margin-bottom: 4px;
 }
 
+.settings-manager__ignored-hosts-input {
+  width: 100% !important;
+  max-height: 40vh;
+}
+
 .settings-manager__section-body {
   padding: 10px 10px 0 10px;
 }
