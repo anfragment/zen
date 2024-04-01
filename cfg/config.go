@@ -55,15 +55,14 @@ func init() {
 		log.Fatalf("failed to get config dir: %v", err)
 	}
 	stat, err := os.Stat(ConfigDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(ConfigDir, 0755); err != nil {
-				log.Fatalf("failed to create config dir: %v", err)
-			}
-			stat, err = os.Stat(ConfigDir)
-		} else {
-			log.Fatalf("failed to stat config dir: %v", err)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(ConfigDir, 0755); err != nil {
+			log.Fatalf("failed to create config dir: %v", err)
 		}
+		stat, err = os.Stat(ConfigDir)
+	}
+	if err != nil {
+		log.Fatalf("failed to stat config dir: %v", err)
 	}
 	if !stat.IsDir() {
 		log.Fatalf("config dir is not a directory: %s", ConfigDir)
@@ -74,15 +73,14 @@ func init() {
 		log.Fatalf("failed to get data dir: %v", err)
 	}
 	stat, err = os.Stat(DataDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(DataDir, 0755); err != nil {
-				log.Fatalf("failed to create data dir: %v", err)
-			}
-			stat, err = os.Stat(DataDir)
-		} else {
-			log.Fatalf("failed to stat data dir: %v", err)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(DataDir, 0755); err != nil {
+			log.Fatalf("failed to create data dir: %v", err)
 		}
+		stat, err = os.Stat(DataDir)
+	}
+	if err != nil {
+		log.Fatalf("failed to stat data dir: %v", err)
 	}
 	if !stat.IsDir() {
 		log.Fatalf("data dir is not a directory: %s", DataDir)
