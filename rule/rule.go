@@ -31,7 +31,8 @@ type matchingModifier interface {
 // modifyingModifier modifies a request.
 type modifyingModifier interface {
 	modifier
-	Modify(req *http.Request) (modified bool)
+	ModifyReq(req *http.Request) (modified bool)
+	ModifyRes(res *http.Response) (modified bool)
 }
 
 func (rm *Rule) ParseModifiers(modifiers string) error {
@@ -75,6 +76,8 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			modifier = &removeParamModifier{}
 		case isKind("header"):
 			modifier = &headerModifier{}
+		case isKind("removeheader"):
+			modifier = &removeHeaderModifier{}
 		case isKind("all"):
 			// TODO: should act as "popup" modifier once it gets implemented
 			continue
@@ -98,8 +101,8 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 	return nil
 }
 
-// ShouldMatch returns true if the rule should match the request.
-func (rm *Rule) ShouldMatch(req *http.Request) bool {
+// ShouldMatchRes returns true if the rule should match the request.
+func (rm *Rule) ShouldMatchRes(req *http.Request) bool {
 	for _, modifier := range rm.matchingModifiers {
 		if !modifier.ShouldMatchReq(req) {
 			return false
@@ -114,10 +117,10 @@ func (rm *Rule) ShouldBlock(*http.Request) bool {
 	return len(rm.modifyingModifiers) == 0
 }
 
-// Modify modifies a request. Returns true if the request was modified.
-func (rm *Rule) Modify(req *http.Request) (modified bool) {
+// ModifyReq modifies a request. Returns true if the request was modified.
+func (rm *Rule) ModifyReq(req *http.Request) (modified bool) {
 	for _, modifier := range rm.modifyingModifiers {
-		if modifier.Modify(req) {
+		if modifier.ModifyReq(req) {
 			modified = true
 		}
 	}
