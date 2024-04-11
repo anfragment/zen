@@ -39,7 +39,7 @@ Unsure which version to download? Learn at [Apple's website](https://support.app
 - AUR: [👾 zen-adblocker-bin](https://aur.archlinux.org/packages/zen-adblocker-bin)
 - x64: [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_linux_amd64.tar.gz)
 
-Zen currently only works on GNOME-based desktop environments. If you want to help bring it to your favorite desktop environment, please see [#21](https://github.com/anfragment/zen/issues/21). Support for installation via other package managers is coming soon.
+Zen is currently only supported on GNOME-based desktop environments.
 
 ## Screenshots
 
