@@ -23,6 +23,7 @@ type certGenerator interface {
 // filter is an interface capable of filtering HTTP requests.
 type filter interface {
 	HandleRequest(*http.Request) *http.Response
+	HandleResponse(*http.Request, *http.Response)
 }
 
 // Proxy is a forward HTTP/HTTPS proxy that can filter requests.
@@ -171,8 +172,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // proxyHTTP proxies the HTTP request to the remote server.
 func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
-	if res := p.filter.HandleRequest(r); res != nil {
-		res.Write(w)
+	if filterResp := p.filter.HandleRequest(r); filterResp != nil {
+		filterResp.Write(w)
 		return
 	}
 
@@ -197,6 +198,8 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 
 	removeConnectionHeaders(resp.Header)
 	removeHopHeaders(resp.Header)
+
+	p.filter.HandleResponse(r, resp)
 
 	for k, vv := range resp.Header {
 		for _, v := range vv {
@@ -226,8 +229,8 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 	removeHopHeaders(r.Header)
 	removeConnectionHeaders(r.Header)
 
-	if res := p.filter.HandleRequest(r); res != nil {
-		res.Write(clientConn)
+	if filterResp := p.filter.HandleRequest(r); filterResp != nil {
+		filterResp.Write(clientConn)
 		return
 	}
 
@@ -289,8 +292,8 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 		req.URL.Scheme = "https"
 
-		if res := p.filter.HandleRequest(req); res != nil {
-			res.Write(tlsConn)
+		if filterResp := p.filter.HandleRequest(req); filterResp != nil {
+			filterResp.Write(tlsConn)
 			break
 		}
 
@@ -304,9 +307,13 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 			}
 
 			log.Printf("roundtrip(%s): %v", r.Host, err)
-			tlsConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
+			// TODO: better error presentation
+			response := fmt.Sprintf("HTTP/1.1 502 Bad Gateway\r\n\r\n%s", err.Error())
+			tlsConn.Write([]byte(response))
 			break
 		}
+
+		p.filter.HandleResponse(req, resp)
 
 		if err := resp.Write(tlsConn); err != nil {
 			log.Printf("writing response(%s): %v", r.Host, err)

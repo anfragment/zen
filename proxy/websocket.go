@@ -13,8 +13,8 @@ func (p *Proxy) proxyWebsocketTLS(req *http.Request, tlsConfig *tls.Config, clie
 	dialer := &tls.Dialer{NetDialer: p.netDialer, Config: tlsConfig}
 	targetConn, err := dialer.Dial("tcp", req.URL.Host)
 	if err != nil {
-		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
 		log.Printf("dialing websocket backend(%s): %v", req.URL.Host, err)
+		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
 		return
 	}
 	defer targetConn.Close()

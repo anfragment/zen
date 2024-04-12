@@ -57,7 +57,7 @@ func (rm *removeParamModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (rm *removeParamModifier) Modify(req *http.Request) (modified bool) {
+func (rm *removeParamModifier) ModifyReq(req *http.Request) (modified bool) {
 	query := req.URL.Query()
 	params := make([]string, 0, len(query))
 	for param := range query {
@@ -101,4 +101,8 @@ func (rm *removeParamModifier) Modify(req *http.Request) (modified bool) {
 		req.URL.RawQuery = query.Encode()
 	}
 	return modified
+}
+
+func (rm *removeParamModifier) ModifyRes(res *http.Response) (modified bool) {
+	return false
 }

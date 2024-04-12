@@ -101,8 +101,8 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 	return nil
 }
 
-// ShouldMatchRes returns true if the rule should match the request.
-func (rm *Rule) ShouldMatchRes(req *http.Request) bool {
+// ShouldMatchReq returns true if the rule should match the request.
+func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
 	for _, modifier := range rm.matchingModifiers {
 		if !modifier.ShouldMatchReq(req) {
 			return false
@@ -112,8 +112,19 @@ func (rm *Rule) ShouldMatchRes(req *http.Request) bool {
 	return true
 }
 
-// ShouldBlock returns true if the request should be blocked.
-func (rm *Rule) ShouldBlock(*http.Request) bool {
+// ShouldMatchRes returns true if the rule should match the response.
+func (rm *Rule) ShouldMatchRes(res *http.Response) bool {
+	for _, modifier := range rm.matchingModifiers {
+		if !modifier.ShouldMatchRes(res) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// ShouldBlockReq returns true if the request should be blocked.
+func (rm *Rule) ShouldBlockReq(*http.Request) bool {
 	return len(rm.modifyingModifiers) == 0
 }
 
@@ -121,6 +132,17 @@ func (rm *Rule) ShouldBlock(*http.Request) bool {
 func (rm *Rule) ModifyReq(req *http.Request) (modified bool) {
 	for _, modifier := range rm.modifyingModifiers {
 		if modifier.ModifyReq(req) {
+			modified = true
+		}
+	}
+
+	return modified
+}
+
+// ModifyRes modifies a response. Returns true if the response was modified.
+func (rm *Rule) ModifyRes(res *http.Response) (modified bool) {
+	for _, modifier := range rm.modifyingModifiers {
+		if modifier.ModifyRes(res) {
 			modified = true
 		}
 	}

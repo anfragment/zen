@@ -2,7 +2,6 @@ package rule
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -42,7 +41,6 @@ func (rm *removeHeaderModifier) ModifyReq(req *http.Request) (modified bool) {
 	if rm.kind != removeHeaderKindRequest {
 		return false
 	}
-	log.Println("RemoveHeaderModifier.ModifyReq", req.Header.Get(rm.headerName), rm.headerName)
 	if req.Header.Get(rm.headerName) == "" {
 		return false
 	}
