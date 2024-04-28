@@ -76,7 +76,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			// TODO: should act as "popup" modifier once it gets implemented
 			continue
 		default:
-			return fmt.Errorf("unknown modifier %s", modifier)
+			return fmt.Errorf("unknown modifier %s", m)
 		}
 
 		if err := modifier.Parse(m); err != nil {
