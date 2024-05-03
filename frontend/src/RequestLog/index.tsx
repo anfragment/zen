@@ -75,7 +75,10 @@ function RequestLogCard({ log }: { log: FilterAction }) {
     case FilterActionKind.Block:
       tagIntent = Intent.DANGER;
       break;
-    case (FilterActionKind.Modify, FilterActionKind.Redirect):
+    case FilterActionKind.Modify:
+      tagIntent = Intent.WARNING;
+      break;
+    case FilterActionKind.Redirect:
       tagIntent = Intent.WARNING;
       break;
     default:

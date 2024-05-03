@@ -125,7 +125,8 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 	return nil
 }
 
-func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
+// FindMatchingRulesReq finds all rules that match the given request.
+func (rt *RuleTree) FindMatchingRulesReq(req *http.Request) (rules []rule.Rule) {
 	host := req.URL.Hostname()
 	rt.hostsMu.RLock()
 	if filterName, ok := rt.hosts[host]; ok {
@@ -146,9 +147,7 @@ func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 		Host:     host,
 		Path:     req.URL.Path,
 		RawQuery: req.URL.RawQuery,
-		Fragment: req.URL.Fragment,
 	}
-
 	url := urlWithoutPort.String()
 	tokens := tokenize(url)
 
@@ -156,20 +155,21 @@ func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 
 	// generic rules
 	if genericNode := rt.root.FindChild(nodeKey{kind: nodeKindGeneric}); genericNode != nil {
-		rules = append(rules, genericNode.FindMatchingRules(req)...)
+		rules = append(rules, genericNode.FindMatchingRulesReq(req)...)
 	}
 
 	// address root
-	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRules(req, tokens, func(_ *node, t []string) bool {
+	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRulesReq(req, tokens, func(_ *node, t []string) bool {
 		// address root rules have to match the entire URL
+		// TODO: look into whether we can match the rule if the remaining tokens only contain the query
 		return len(t) == 0
 	})...)
 
-	rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
+	rules = append(rules, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
 	tokens = tokens[1:]
 
 	// protocol separator
-	rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
+	rules = append(rules, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
 	tokens = tokens[1:]
 
 	// domain segments
@@ -178,16 +178,68 @@ func (rt *RuleTree) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
 			break
 		}
 		if tokens[0] != "." {
-			rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseFindMatchingRules(req, tokens, nil)...)
+			rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseFindMatchingRulesReq(req, tokens, nil)...)
 		}
-		rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
+		rules = append(rules, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
 		tokens = tokens[1:]
 	}
 
 	// rest of the URL
-	// TODO: handle query parameters, fragments
+	// TODO: handle query parameters
 	for len(tokens) > 0 {
-		rules = append(rules, rt.root.TraverseFindMatchingRules(req, tokens, nil)...)
+		rules = append(rules, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
+		tokens = tokens[1:]
+	}
+
+	return rules
+}
+
+// FindMatchingRulesRes finds all rules that match the given response.
+// It assumes that the request that generated the response has already been matched by FindMatchingRulesReq.
+func (rt *RuleTree) FindMatchingRulesRes(req *http.Request, res *http.Response) (rules []rule.Rule) {
+	urlWithoutPort := url.URL{
+		Scheme:   req.URL.Scheme,
+		Host:     req.URL.Hostname(),
+		Path:     req.URL.Path,
+		RawQuery: req.URL.RawQuery,
+	}
+	url := urlWithoutPort.String()
+	tokens := tokenize(url)
+
+	// generic rules -> address root -> hostname root -> domain -> etc.
+
+	// generic rules
+	if genericNode := rt.root.FindChild(nodeKey{kind: nodeKindGeneric}); genericNode != nil {
+		rules = append(rules, genericNode.FindMatchingRulesRes(res)...)
+	}
+
+	// address root
+	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRulesRes(res, tokens, func(_ *node, t []string) bool {
+		return len(t) == 0
+	})...)
+
+	rules = append(rules, rt.root.TraverseFindMatchingRulesRes(res, tokens, nil)...)
+	tokens = tokens[1:]
+
+	// protocol separator
+	rules = append(rules, rt.root.TraverseFindMatchingRulesRes(res, tokens, nil)...)
+	tokens = tokens[1:]
+
+	// domain segments
+	for len(tokens) > 0 {
+		if tokens[0] == "/" {
+			break
+		}
+		if tokens[0] != "." {
+			rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseFindMatchingRulesRes(res, tokens, nil)...)
+		}
+		rules = append(rules, rt.root.TraverseFindMatchingRulesRes(res, tokens, nil)...)
+		tokens = tokens[1:]
+	}
+
+	// rest of the URL
+	for len(tokens) > 0 {
+		rules = append(rules, rt.root.TraverseFindMatchingRulesRes(res, tokens, nil)...)
 		tokens = tokens[1:]
 	}
 

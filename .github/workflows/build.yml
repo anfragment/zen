@@ -100,7 +100,7 @@ jobs:
       # -----
       - name: Install create-dmg
         if: runner.os == 'macOS'
-        run: pip3 install setuptools && npm install -g create-dmg
+        run: npm install -g create-dmg
       - name: Build macOS App
         if: runner.os == 'macOS'
         run: |

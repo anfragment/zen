@@ -109,8 +109,8 @@ var (
 	reSeparator = regexp.MustCompile(`[^a-zA-Z0-9_\-\.%]`)
 )
 
-// TraverseFindMatchingRules traverses the trie and returns the rules that match the given request.
-func (n *node) TraverseFindMatchingRules(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) (rules []rule.Rule) {
+// TraverseFindMatchingRulesReq traverses the trie and returns the rules that match the given request.
+func (n *node) TraverseFindMatchingRulesReq(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) (rules []rule.Rule) {
 	if n == nil {
 		return rules
 	}
@@ -121,28 +121,70 @@ func (n *node) TraverseFindMatchingRules(req *http.Request, tokens []string, sho
 	}
 
 	if shouldUseNode(n, tokens) {
-		// check the node itself
-		rules = append(rules, n.FindMatchingRules(req)...)
+		// Check the node itself
+		rules = append(rules, n.FindMatchingRulesReq(req)...)
 	}
 
 	if len(tokens) == 0 {
-		// end of an address is a valid separator
-		// see: https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters
-		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRules(req, tokens, shouldUseNode)...)
+		// End of an address is a valid separator, see:
+		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters.
+		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRulesReq(req, tokens, shouldUseNode)...)
 		return rules
 	}
 	if reSeparator.MatchString(tokens[0]) {
-		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRules(req, tokens[1:], shouldUseNode)...)
+		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRulesReq(req, tokens[1:], shouldUseNode)...)
 	}
-	rules = append(rules, n.FindChild(nodeKey{kind: nodeKindWildcard}).TraverseFindMatchingRules(req, tokens[1:], shouldUseNode)...)
-	rules = append(rules, n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).TraverseFindMatchingRules(req, tokens[1:], shouldUseNode)...)
+	rules = append(rules, n.FindChild(nodeKey{kind: nodeKindWildcard}).TraverseFindMatchingRulesReq(req, tokens[1:], shouldUseNode)...)
+	rules = append(rules, n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).TraverseFindMatchingRulesReq(req, tokens[1:], shouldUseNode)...)
 
 	return rules
 }
 
-func (n *node) FindMatchingRules(req *http.Request) (rules []rule.Rule) {
+// TraverseFindMatchingRulesRes traverses the trie and returns the rules that match the given response.
+func (n *node) TraverseFindMatchingRulesRes(res *http.Response, tokens []string, shouldUseNode func(*node, []string) bool) (rules []rule.Rule) {
+	if n == nil {
+		return rules
+	}
+	if shouldUseNode == nil {
+		shouldUseNode = func(*node, []string) bool {
+			return true
+		}
+	}
+
+	if shouldUseNode(n, tokens) {
+		// Check the node itself
+		rules = append(rules, n.FindMatchingRulesRes(res)...)
+	}
+
+	if len(tokens) == 0 {
+		// End of an address is a valid separator, see:
+		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#basic-rules-special-characters.
+		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRulesRes(res, tokens, shouldUseNode)...)
+		return rules
+	}
+	if reSeparator.MatchString(tokens[0]) {
+		rules = append(rules, n.FindChild(nodeKey{kind: nodeKindSeparator}).TraverseFindMatchingRulesRes(res, tokens[1:], shouldUseNode)...)
+	}
+	rules = append(rules, n.FindChild(nodeKey{kind: nodeKindWildcard}).TraverseFindMatchingRulesRes(res, tokens[1:], shouldUseNode)...)
+	rules = append(rules, n.FindChild(nodeKey{kind: nodeKindExactMatch, token: tokens[0]}).TraverseFindMatchingRulesRes(res, tokens[1:], shouldUseNode)...)
+
+	return rules
+}
+
+// FindMatchingRulesReq returns the rules that match the given request.
+func (n *node) FindMatchingRulesReq(req *http.Request) (rules []rule.Rule) {
 	for _, r := range n.rules {
-		if r.ShouldMatch(req) {
+		if r.ShouldMatchReq(req) {
+			rules = append(rules, r)
+		}
+	}
+	return rules
+}
+
+// FindMatchingRulesRes returns the rules that match the given response.
+func (n *node) FindMatchingRulesRes(res *http.Response) (rules []rule.Rule) {
+	for _, r := range n.rules {
+		if r.ShouldMatchRes(res) {
 			rules = append(rules, r)
 		}
 	}

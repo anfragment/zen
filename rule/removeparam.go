@@ -22,10 +22,7 @@ type removeParamModifier struct {
 	regexp *regexp.Regexp
 }
 
-var (
-	// regexpRegexp is a regexp that matches a regexp.
-	regexpRegexp = regexp.MustCompile(`^/(.+)/i?$`)
-)
+var _ modifyingModifier = (*removeParamModifier)(nil)
 
 func (rm *removeParamModifier) Parse(modifier string) error {
 	if modifier == "removeparam" {
@@ -39,17 +36,11 @@ func (rm *removeParamModifier) Parse(modifier string) error {
 	}
 	value := modifier[eqIndex+1:]
 
-	if match := regexpRegexp.FindStringSubmatch(value); match != nil {
-		// TODO: use this in other regexp modifiers.
-		regexpBody := match[1]
-		if value[len(value)-1] == 'i' {
-			// Convert JS-style case insensitivity to Go-style.
-			regexpBody = "(?i)" + regexpBody
-		}
-		regexp, err := regexp.Compile(regexpBody)
-		if err != nil {
-			return fmt.Errorf("regexp parsing(%s): %w", regexpBody, err)
-		}
+	regexp, err := parseRegexp(value)
+	if err != nil {
+		return fmt.Errorf("parse regexp: %w", err)
+	}
+	if regexp != nil {
 		rm.kind = removeparamKindRegexp
 		rm.regexp = regexp
 		return nil
@@ -66,7 +57,7 @@ func (rm *removeParamModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (rm *removeParamModifier) Modify(req *http.Request) (modified bool) {
+func (rm *removeParamModifier) ModifyReq(req *http.Request) (modified bool) {
 	query := req.URL.Query()
 	params := make([]string, 0, len(query))
 	for param := range query {
@@ -110,4 +101,8 @@ func (rm *removeParamModifier) Modify(req *http.Request) (modified bool) {
 		req.URL.RawQuery = query.Encode()
 	}
 	return modified
+}
+
+func (rm *removeParamModifier) ModifyRes(*http.Response) (modified bool) {
+	return false
 }

@@ -26,7 +26,7 @@ type filterEventsEmitter interface {
 // ruleMatcher is an interface that can match requests against rules.
 type ruleMatcher interface {
 	AddRule(rule string, filterName *string) error
-	FindMatchingRules(req *http.Request) []rule.Rule
+	FindMatchingRulesReq(req *http.Request) []rule.Rule
 }
 
 // config is an interface that provides filter configuration.
@@ -137,13 +137,13 @@ func (f *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 // HandleRequest handles the given request by matching it against the filter rules.
 // If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
 func (f *Filter) HandleRequest(req *http.Request) *http.Response {
-	if len(f.exceptionRuleMatcher.FindMatchingRules(req)) > 0 {
+	if len(f.exceptionRuleMatcher.FindMatchingRulesReq(req)) > 0 {
 		// TODO: implement precise exception handling
 		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#removeheader-modifier (see "Negating $removeheader")
 		return nil
 	}
 
-	matchingRules := f.ruleMatcher.FindMatchingRules(req)
+	matchingRules := f.ruleMatcher.FindMatchingRulesReq(req)
 	if len(matchingRules) == 0 {
 		return nil
 	}
@@ -152,11 +152,11 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 	initialURL := req.URL.String()
 
 	for _, r := range matchingRules {
-		if r.ShouldBlock(req) {
+		if r.ShouldBlockReq(req) {
 			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []rule.Rule{r})
 			return f.createBlockResponse(req)
 		}
-		if r.Modify(req) {
+		if r.ModifyReq(req) {
 			appliedRules = append(appliedRules, r)
 		}
 	}
@@ -172,4 +172,32 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 	}
 
 	return nil
+}
+
+// HandleResponse handles the given response by matching it against the filter rules.
+// If the response should be modified, it modifies it in-place.
+//
+// As of April 2024, there are no response-only rules that can block or redirect responses.
+// For that reason, this method does not return a blocking or redirecting response itself.
+func (f *Filter) HandleResponse(req *http.Request, res *http.Response) {
+	if len(f.exceptionRuleMatcher.FindMatchingRulesReq(req)) > 0 {
+		return
+	}
+
+	matchingRules := f.ruleMatcher.FindMatchingRulesReq(req)
+	if len(matchingRules) == 0 {
+		return
+	}
+
+	var appliedRules []rule.Rule
+
+	for _, r := range matchingRules {
+		if r.ModifyRes(res) {
+			appliedRules = append(appliedRules, r)
+		}
+	}
+
+	if len(appliedRules) > 0 {
+		f.eventsEmitter.OnFilterModify(req.Method, req.URL.String(), req.Header.Get("Referer"), appliedRules)
+	}
 }
