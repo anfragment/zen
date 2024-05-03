@@ -103,6 +103,6 @@ func (rm *removeParamModifier) ModifyReq(req *http.Request) (modified bool) {
 	return modified
 }
 
-func (rm *removeParamModifier) ModifyRes(res *http.Response) (modified bool) {
+func (rm *removeParamModifier) ModifyRes(*http.Response) (modified bool) {
 	return false
 }

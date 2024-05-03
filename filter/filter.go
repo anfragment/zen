@@ -200,6 +200,4 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) {
 	if len(appliedRules) > 0 {
 		f.eventsEmitter.OnFilterModify(req.Method, req.URL.String(), req.Header.Get("Referer"), appliedRules)
 	}
-
-	return
 }
