@@ -7,12 +7,12 @@ import (
 	"log"
 	"sync"
 
-	"github.com/anfragment/zen/certgen"
-	"github.com/anfragment/zen/certstore"
-	"github.com/anfragment/zen/cfg"
-	"github.com/anfragment/zen/filter"
-	"github.com/anfragment/zen/proxy"
-	"github.com/anfragment/zen/ruletree"
+	"github.com/anfragment/zen/internal/certgen"
+	"github.com/anfragment/zen/internal/certstore"
+	"github.com/anfragment/zen/internal/cfg"
+	"github.com/anfragment/zen/internal/filter"
+	"github.com/anfragment/zen/internal/proxy"
+	"github.com/anfragment/zen/internal/ruletree"
 )
 
 type App struct {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/anfragment/zen/rule"
+	"github.com/anfragment/zen/internal/rule"
 )
 
 // RuleTree is a trie-based filter that is capable of parsing
