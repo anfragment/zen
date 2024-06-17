@@ -6,8 +6,8 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/anfragment/zen/app"
-	"github.com/anfragment/zen/cfg"
+	"github.com/anfragment/zen/internal/app"
+	"github.com/anfragment/zen/internal/cfg"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"

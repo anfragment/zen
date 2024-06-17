@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anfragment/zen/cfg"
-	"github.com/anfragment/zen/rule"
+	"github.com/anfragment/zen/internal/cfg"
+	"github.com/anfragment/zen/internal/rule"
 )
 
 // filterEventsEmitter is an interface that can emit filter events.

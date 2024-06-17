@@ -1,0 +1,1 @@
+This `exclusions` subfolder exists for compatibility reasons (see files in the `internal/proxy` folder).

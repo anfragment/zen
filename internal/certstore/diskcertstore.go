@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anfragment/zen/cfg"
+	"github.com/anfragment/zen/internal/cfg"
 	"github.com/hectane/go-acl"
 )
 
