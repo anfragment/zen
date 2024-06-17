@@ -1,0 +1,34 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task: dev
+
+  dev:
+    cmds:
+      - wails dev
+
+  test:
+    cmds:
+      - go test -cover ./...
+
+  lint:
+    deps: [lint-frontend, lint-go]
+    cmds:
+      - cmd: echo "Checks passed"
+        silent: true
+
+  lint-frontend:
+    dir: frontend
+    cmds:
+      - npm run lint
+  
+  lint-frontend-fix:
+    dir: frontend
+    cmds:
+      - npm run lint -- --fix
+
+  lint-go:
+    cmds:
+      - golangci-lint run
