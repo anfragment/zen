@@ -25,10 +25,15 @@ jobs:
           go-version-file: ./go.mod
       - name: Run go version
         run: go version
+      - name: Set up Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create placeholder asset
         # go:embed requires the directory to exist and be non-empty
         run: |
           mkdir -p ./frontend/dist
           touch ./frontend/dist/placeholder
       - name: Run tests
-        run: make test
+        run: task test
