@@ -14,8 +14,9 @@ tasks:
       - go test -cover ./...
 
   lint:
-    deps: [lint-frontend, lint-go]
     cmds:
+      - task: lint-frontend
+      - task: lint-go
       - cmd: echo "Checks passed"
         silent: true
 
