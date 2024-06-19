@@ -2,18 +2,22 @@ version: '3'
 
 tasks:
   default:
+    desc: Runs the dev task.
     cmds:
       - task: dev
 
   dev:
+    desc: Runs the application in development mode.
     cmds:
       - wails dev
 
   test:
+    desc: Runs the tests.
     cmds:
       - go test -cover ./...
 
   lint:
+    desc: Runs the frontend (eslint) and go (golangci-lint) linters.
     cmds:
       - task: lint-frontend
       - task: lint-go
@@ -21,15 +25,18 @@ tasks:
         silent: true
 
   lint-frontend:
+    desc: Runs the frontend (eslint) linter.
     dir: frontend
     cmds:
       - npm run lint
   
   lint-frontend-fix:
+    desc: Runs the frontend (eslint) linter with --fix flag (automatically fixes applicable issues).
     dir: frontend
     cmds:
       - npm run lint -- --fix
 
   lint-go:
+    desc: Runs the go (golangci-lint) linter.
     cmds:
       - golangci-lint run
