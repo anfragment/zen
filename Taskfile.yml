@@ -1,5 +1,8 @@
 version: '3'
 
+includes:
+  build: tasks/build/Taskfile-{{OS}}.yml
+
 tasks:
   default:
     desc: Runs the dev task.
@@ -10,6 +13,11 @@ tasks:
     desc: Runs the application in development mode.
     cmds:
       - wails dev
+
+  build-dev:
+    desc: Create a development build of the application.
+    cmds:
+      - wails build
 
   test:
     desc: Runs the tests.
