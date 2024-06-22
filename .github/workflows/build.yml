@@ -142,7 +142,7 @@ jobs:
         with:
           files: build/bin/Zen-${{ matrix.arch }}.dmg
           tag_name: ${{ github.ref }}
-          draft: truen
+          draft: true
       - name: Archive macOS App Bundle
         if: runner.os == 'macOS'
         run: |
@@ -154,12 +154,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Zen_darwin_${{ matrix.arch }}_app
-          path: build/bin/Zen_darwin_${{ matrix.arch }}.zip
+          path: Zen_darwin_${{ matrix.arch }}.zip
       - name: Release Archived macOS App Bundle
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
-          files: build/bin/Zen_darwin_${{ matrix.arch }}.zip
+          files: Zen_darwin_${{ matrix.arch }}.zip
           tag_name: ${{ github.ref }}
           draft: true
 
