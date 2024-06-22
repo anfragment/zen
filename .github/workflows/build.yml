@@ -135,18 +135,18 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Zen_darwin_${{ matrix.arch }}_installer
-          path: Zen-${{ matrix.arch }}.dmg
+          path: build/bin/Zen-${{ matrix.arch }}.dmg
       - name: Release macOS Installer
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
-          files: Zen-${{ matrix.arch }}.dmg
+          files: build/bin/Zen-${{ matrix.arch }}.dmg
           tag_name: ${{ github.ref }}
-          draft: true
+          draft: truen
       - name: Archive macOS App Bundle
         if: runner.os == 'macOS'
         run: |
-          mv Zen-${{ matrix.arch }}.app Zen.app
+          mv build/bin/Zen-${{ matrix.arch }}.app Zen.app
           ditto -c -k --keepParent Zen.app Zen_darwin_${{ matrix.arch }}.zip
           rm -rf Zen.app
       - name: Upload Archived macOS App Bundle Artifact
@@ -154,12 +154,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Zen_darwin_${{ matrix.arch }}_app
-          path: Zen_darwin_${{ matrix.arch }}.zip
+          path: build/bin/Zen_darwin_${{ matrix.arch }}.zip
       - name: Release Archived macOS App Bundle
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
-          files: Zen_darwin_${{ matrix.arch }}.zip
+          files: build/bin/Zen_darwin_${{ matrix.arch }}.zip
           tag_name: ${{ github.ref }}
           draft: true
 
