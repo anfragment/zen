@@ -130,6 +130,9 @@ jobs:
           NOTARIZATION_TEAM_ID=$NOTARIZATION_TEAM_ID \
           NOTARIZATION_PWD=$NOTARIZATION_PWD \
           task build:prod ARCH=${{ matrix.arch }}
+      - name: Rename macOS installer
+        if: runner.os == 'macOS'
+        run: mv build/bin/Zen.dmg build/bin/Zen-${{ matrix.arch }}.dmg
       - name: Upload macOS installer artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
@@ -145,10 +148,7 @@ jobs:
           draft: true
       - name: Archive macOS App Bundle
         if: runner.os == 'macOS'
-        run: |
-          mv build/bin/Zen-${{ matrix.arch }}.app Zen.app
-          ditto -c -k --keepParent Zen.app Zen_darwin_${{ matrix.arch }}.zip
-          rm -rf Zen.app
+        run: ditto -c -k --keepParent build/bin/Zen.app Zen_darwin_${{ matrix.arch }}.zip
       - name: Upload Archived macOS App Bundle Artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4

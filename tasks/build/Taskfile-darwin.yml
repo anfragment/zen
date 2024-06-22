@@ -12,19 +12,19 @@ tasks:
       - task: app
       - task: codesign
         vars:
-          FILENAME: build/bin/Zen-{{default .ARCH64 .ARCH}}.app
+          FILENAME: build/bin/Zen.app
       - task: notarize
         vars:
-          FILENAME: build/bin/Zen-{{default .ARCH64 .ARCH}}.app
+          FILENAME: build/bin/Zen.app
       - task: dmg
         vars:
-          APP_FILENAME: build/bin/Zen-{{default .ARCH64 .ARCH}}.app
+          APP_FILENAME: build/bin/Zen.app
       - task: codesign
         vars:
-          FILENAME: build/bin/Zen-{{default .ARCH64 .ARCH}}.dmg
+          FILENAME: build/bin/Zen.dmg
       - task: notarize
         vars:
-          FILENAME: build/bin/Zen-{{default .ARCH64 .ARCH}}.dmg
+          FILENAME: build/bin/Zen.dmg
 
   deps:
     desc: Install the dependencies required to create a production build.
@@ -35,17 +35,15 @@ tasks:
     desc: Build the .app application bundle. The .app file will be placed in the build/bin directory.
     cmds:
       - wails build -platform "darwin/{{default .ARCH64 .ARCH}}" -m -skipbindings -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version={{.GIT_TAG}}'"
-      - mv build/bin/Zen.app "build/bin/Zen-{{default .ARCH64 .ARCH}}.app"
-      - echo "Built Zen-{{default .ARCH64 .ARCH}}.app"
 
   dmg:
-    desc: Create a DMG installer for the application.
+    desc: Create a DMG installer for the application. The DMG file will be placed in the build/bin directory.
     cmds:
       - create-dmg "{{default .DEFAULT_APP_FILENAME .APP_FILENAME}}" --overwrite
-      - mv Zen*.dmg "build/bin/Zen-{{default .ARCH64 .ARCH}}.dmg" # create-dmg creates the disk image in the current directory
-      - echo "Built Zen-{{default .ARCH64 .ARCH}}.dmg"
+      - mv Zen*.dmg build/bin/Zen.dmg # create-dmg creates the disk image in the current directory
+      - echo "Built Zen.dmg"
     vars:
-      DEFAULT_APP_FILENAME: build/bin/Zen-{{default .ARCH64 .ARCH}}.app
+      DEFAULT_APP_FILENAME: build/bin/Zen.app
 
   setup-keychain:
     desc: Set up the keychain profile for signing the application.
