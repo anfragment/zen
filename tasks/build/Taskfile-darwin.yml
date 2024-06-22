@@ -9,8 +9,6 @@ tasks:
   prod:
     desc: Create a production build of the application. Only recommended for use in CI/CD pipelines.
     cmds:
-      - task: deps
-      - task: setup-keychain
       - task: app
       - task: codesign
         vars:
