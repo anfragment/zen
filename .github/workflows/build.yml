@@ -43,6 +43,11 @@ jobs:
       - run: node --version
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      - name: Set up Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       # -----
       # Linux
