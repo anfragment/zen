@@ -9,9 +9,9 @@ tasks:
   prod:
     desc: Create a production build of the application.
     cmds:
-      - wails build -o Zen.exe -platform "windows/{{default .ARCH64 .ARCH}}" -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
+      - wails build -o Zen.exe -platform "windows/{{default .ARCH64 .ARCH}}" -nsis -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
 
   prod-noupdate:
     desc: Create a production build of the application with self-updates disabled.
     cmds:
-      - wails build -o Zen.exe -platform "windows/{{default .ARCH64 .ARCH}}" -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
+      - wails build -o Zen.exe -platform "windows/{{default .ARCH64 .ARCH}}" -nsis -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
