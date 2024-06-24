@@ -14,7 +14,7 @@ tasks:
   prod-noupdate: 
     desc: Create a production build of the application with self-updates disabled.
     cmds:
-      - wails build -o Zen -platform "linux/{{default .ARCH64 .ARCH}}"" -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0) -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
+      - wails build -o Zen -platform "linux/{{default .ARCH64 .ARCH}}" -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0) -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
 
   deps:
     desc: Install the apt dependencies required to create a production build.
