@@ -176,7 +176,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
-          name: Zen_windows_${{ matrix.arch }}-installer
+          name: Zen_windows_${{ matrix.arch }}_installer
           path: build/bin/Zen-${{ matrix.arch }}-installer.exe
       - name: Release Archived Windows Binary
         if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
