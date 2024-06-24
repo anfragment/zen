@@ -53,8 +53,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Run node --version
         run: node --version
+      - name: Set up Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
       - name: Run frontend linter
-        run: make lint-frontend
+        run: task lint-frontend

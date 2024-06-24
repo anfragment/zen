@@ -43,40 +43,39 @@ jobs:
       - run: node --version
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      - name: Set up Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # -----
-      # Linux
-      # -----
+        # -----
+        # Linux
+        # -----
       - name: Install Linux Wails Dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-dev gcc-aarch64-linux-gnu
+        run: task build:deps
       - name: Build Linux Binary
         if: runner.os == 'Linux'
-        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
+        run: task build:prod ARCH=${{ matrix.arch }}
       - name: Archive Linux Binary
         if: runner.os == 'Linux'
-        run: |
-          mv build/bin/Zen-${{ matrix.arch }} Zen
-          tar -czvf Zen_linux_${{ matrix.arch }}.tar.gz Zen
-          rm Zen
+        run: tar -czvf Zen_linux_${{ matrix.arch }}.tar.gz -C build/bin Zen
       - name: Build Linux Binary With Self-Updates Disabled
         if: runner.os == 'Linux'
-        run: wails build -o Zen-${{ matrix.arch }} -platform linux/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
+        run: task build:prod-noupdate ARCH=${{ matrix.arch }}
       - name: Archive Linux Binary With Self-Updates Disabled
         if: runner.os == 'Linux'
-        run: |
-          mv build/bin/Zen-${{ matrix.arch }} Zen
-          tar -czvf Zen_linux_${{ matrix.arch }}_noselfupdate.tar.gz Zen
-          rm Zen
+        run: tar -czvf Zen_linux_${{ matrix.arch }}_noselfupdate.tar.gz -C build/bin Zen
       - name: Upload Linux Binary Artifact
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Zen_linux_${{ matrix.arch }}
           path: Zen_linux_${{ matrix.arch }}.tar.gz
       - name: Upload Linux Binary With Self-Updates Disabled Artifact
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Zen_linux_${{ matrix.arch }}_noselfupdate
           path: Zen_linux_${{ matrix.arch }}_noselfupdate.tar.gz
@@ -95,110 +94,60 @@ jobs:
           tag_name: ${{ github.ref }}
           draft: true
 
-      # -----
-      # macOS
-      # -----
-      - name: Install create-dmg
+        # -----
+        # macOS
+        # -----
+      - name: Install required macOS dependencies
         if: runner.os == 'macOS'
-        run: npm install -g create-dmg
-      - name: Build macOS App
-        if: runner.os == 'macOS'
-        run: |
-          wails build -platform darwin/${{ matrix.arch }} -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
-          mv build/bin/Zen.app build/bin/Zen-${{ matrix.arch }}.app
-      - name: Codesign macOS App Bundle
-        if: runner.os == 'macOS'
-        env: 
-          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
-          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
-          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
-        run: |
-          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
-
-          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" app.keychain 
-          security default-keychain -s app.keychain
-          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" app.keychain
-          security import certificate.p12 -k app.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" app.keychain
-          
-          /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime build/bin/Zen-${{ matrix.arch }}.app -v
-      - name: Notarize macOS App Bundle
+        run: task build:deps
+      - name: Set up keychain profile
         if: runner.os == 'macOS'
         env:
-          PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
-          PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
-          PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+          CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+          CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
         run: |
-          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
-
-          ditto -c -k --keepParent build/bin/Zen-${{ matrix.arch }}.app notarization.zip
-
-          xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
-
-          xcrun stapler staple build/bin/Zen-${{ matrix.arch }}.app
-      - name: Build macOS Installer
-        if: runner.os == 'macOS'
-        run: |
-          cp -a build/bin/Zen-${{ matrix.arch }}.app Zen.app
-          create-dmg Zen.app
-          mv "Zen 1.0.0.dmg" Zen-${{ matrix.arch }}.dmg
-          rm -rf Zen.app
-      - name: Codesign macOS Installer
-        if: runner.os == 'macOS'
-        env: 
-          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
-          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
-          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
-        run: |
-          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
-
-          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
-          security default-keychain -s installer.keychain
-          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
-          security import certificate.p12 -k installer.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" installer.keychain
-          
-          /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime Zen-${{ matrix.arch }}.dmg -v
-      - name: Notarize macOS Installer
+          CI_KEYCHAIN_PWD=$CI_KEYCHAIN_PWD \
+          CERTIFICATE=$CERTIFICATE \
+          CERTIFICATE_PWD=$CERTIFICATE_PWD \
+          task build:setup-keychain
+      - name: Build macOS App & Installer
         if: runner.os == 'macOS'
         env:
-          PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
-          PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
-          PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+          CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+          NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
         run: |
-          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
-
-          ditto -c -k --keepParent Zen-${{ matrix.arch }}.dmg notarization.zip
-
-          xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
-
-          xcrun stapler staple Zen-${{ matrix.arch }}.dmg
+          CERTIFICATE_NAME=$CERTIFICATE_NAME \
+          NOTARIZATION_APPLE_ID=$NOTARIZATION_APPLE_ID \
+          NOTARIZATION_TEAM_ID=$NOTARIZATION_TEAM_ID \
+          NOTARIZATION_PWD=$NOTARIZATION_PWD \
+          task build:prod ARCH=${{ matrix.arch }}
+      - name: Rename macOS installer
+        if: runner.os == 'macOS'
+        run: mv build/bin/Zen.dmg build/bin/Zen-${{ matrix.arch }}.dmg
       - name: Upload macOS installer artifact
         if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Zen_macos_${{ matrix.arch }}-installer
-          path: Zen-${{ matrix.arch }}.dmg
+          name: Zen_darwin_${{ matrix.arch }}_installer
+          path: build/bin/Zen-${{ matrix.arch }}.dmg
       - name: Release macOS Installer
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
-          files: Zen-${{ matrix.arch }}.dmg
+          files: build/bin/Zen-${{ matrix.arch }}.dmg
           tag_name: ${{ github.ref }}
           draft: true
       - name: Archive macOS App Bundle
         if: runner.os == 'macOS'
-        run: |
-          cp -a build/bin/Zen-${{ matrix.arch }}.app Zen.app
-          ditto -c -k --keepParent Zen.app Zen_darwin_${{ matrix.arch }}.zip
-          rm -rf Zen.app
+        run: ditto -c -k --keepParent build/bin/Zen.app Zen_darwin_${{ matrix.arch }}.zip
       - name: Upload Archived macOS App Bundle Artifact
         if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Zen_darwin_${{ matrix.arch }}
+          name: Zen_darwin_${{ matrix.arch }}_app
           path: Zen_darwin_${{ matrix.arch }}.zip
       - name: Release Archived macOS App Bundle
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
@@ -208,45 +157,27 @@ jobs:
           tag_name: ${{ github.ref }}
           draft: true
 
-      # -------
-      # Windows
-      # -------
+        # -------
+        # Windows
+        # -------
       - name: Build Windows App & Installer
         if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
+        run: task build:prod ARCH=${{ matrix.arch }}
       - name: Archive Windows Binary
         if: runner.os == 'Windows'
-        run: |
-          move build/bin/Zen-${{ matrix.arch }}.exe Zen.exe
-          Compress-Archive -Path Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}.zip
-          Remove-Item Zen.exe
-      - name: Build Windows Binary With Self-Updates Disabled
-        if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
-      - name: Archive Windows Binary With Self-Updates Disabled
-        if: runner.os == 'Windows'
-        run: |
-          move build/bin/Zen-${{ matrix.arch }}.exe Zen.exe
-          Compress-Archive -Path Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}_noselfupdate.zip
-          Remove-Item Zen.exe
+        run: Compress-Archive -Path .\build\bin\Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}.zip
       - name: Upload Archived Windows Binary Artifact
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Zen_windows_${{ matrix.arch }}
           path: Zen_windows_${{ matrix.arch }}.zip
       - name: Upload Windows Installer Artifact
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Zen_windows_${{ matrix.arch }}-installer
+          name: Zen_windows_${{ matrix.arch }}_installer
           path: build/bin/Zen-${{ matrix.arch }}-installer.exe
-      - name: Upload Archived Windows Binary With Self-Updates Disabled Artifact
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: Zen_windows_${{ matrix.arch }}_noselfupdate
-          path: Zen_windows_${{ matrix.arch }}_noselfupdate.zip
       - name: Release Archived Windows Binary
         if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
@@ -261,6 +192,19 @@ jobs:
           files: build/bin/Zen-${{ matrix.arch }}-installer.exe
           tag_name: ${{ github.ref }}
           draft: true
+
+      - name: Build Windows Binary With Self-Updates Disabled
+        if: runner.os == 'Windows'
+        run: task build:prod-noupdate ARCH=${{ matrix.arch }}
+      - name: Archive Windows Binary With Self-Updates Disabled
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path .\build\bin\Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}_noselfupdate.zip
+      - name: Upload Archived Windows Binary With Self-Updates Disabled Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zen_windows_${{ matrix.arch }}_noselfupdate
+          path: Zen_windows_${{ matrix.arch }}_noselfupdate.zip
       - name: Release Archived Windows Binary With Self-Updates Disabled
         if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
