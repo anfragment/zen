@@ -1,6 +1,6 @@
 module github.com/anfragment/zen
 
-go 1.22
+go 1.22.4
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
