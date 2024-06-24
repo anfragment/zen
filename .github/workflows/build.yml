@@ -157,27 +157,15 @@ jobs:
           tag_name: ${{ github.ref }}
           draft: true
 
-      # -------
-      # Windows
-      # -------
+        # -------
+        # Windows
+        # -------
       - name: Build Windows App & Installer
         if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)'" -m -skipbindings
+        run: task build:prod ARCH=${{ matrix.arch }}
       - name: Archive Windows Binary
         if: runner.os == 'Windows'
-        run: |
-          move build/bin/Zen-${{ matrix.arch }}.exe Zen.exe
-          Compress-Archive -Path Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}.zip
-          Remove-Item Zen.exe
-      - name: Build Windows Binary With Self-Updates Disabled
-        if: runner.os == 'Windows'
-        run: wails build -o Zen-${{ matrix.arch }}.exe -platform windows/${{ matrix.arch }} -nsis -ldflags "-X 'github.com/anfragment/zen/cfg.Version=$(git describe --tags --always --abbrev=0)' -X 'github.com/anfragment/zen/cfg.noSelfUpdate=true'" -m -skipbindings
-      - name: Archive Windows Binary With Self-Updates Disabled
-        if: runner.os == 'Windows'
-        run: |
-          move build/bin/Zen-${{ matrix.arch }}.exe Zen.exe
-          Compress-Archive -Path Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}_noselfupdate.zip
-          Remove-Item Zen.exe
+        run: Compress-Archive -Path .\build\bin\Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}.zip
       - name: Upload Archived Windows Binary Artifact
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
@@ -190,12 +178,6 @@ jobs:
         with:
           name: Zen_windows_${{ matrix.arch }}-installer
           path: build/bin/Zen-${{ matrix.arch }}-installer.exe
-      - name: Upload Archived Windows Binary With Self-Updates Disabled Artifact
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Zen_windows_${{ matrix.arch }}_noselfupdate
-          path: Zen_windows_${{ matrix.arch }}_noselfupdate.zip
       - name: Release Archived Windows Binary
         if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
@@ -210,6 +192,19 @@ jobs:
           files: build/bin/Zen-${{ matrix.arch }}-installer.exe
           tag_name: ${{ github.ref }}
           draft: true
+
+      - name: Build Windows Binary With Self-Updates Disabled
+        if: runner.os == 'Windows'
+        run: task build:prod-noupdate ARCH=${{ matrix.arch }}
+      - name: Archive Windows Binary With Self-Updates Disabled
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path .\build\bin\Zen.exe -DestinationPath Zen_windows_${{ matrix.arch }}_noselfupdate.zip
+      - name: Upload Archived Windows Binary With Self-Updates Disabled Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zen_windows_${{ matrix.arch }}_noselfupdate
+          path: Zen_windows_${{ matrix.arch }}_noselfupdate.zip
       - name: Release Archived Windows Binary With Self-Updates Disabled
         if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
