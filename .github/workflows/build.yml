@@ -106,7 +106,7 @@ jobs:
       - name: Install required macOS dependencies
         if: runner.os == 'macOS'
         run: task build:deps
-      - name: Setup up keychain profile
+      - name: Set up keychain profile
         if: runner.os == 'macOS'
         env:
           CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
