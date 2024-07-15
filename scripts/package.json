@@ -3,10 +3,11 @@
   "type": "module",
   "private": true,
   "engines": {
-    "node": ">=20.15.0"
+    "node": ">=20.15.1"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "upload-manifest": "node build/upload-manifest.js"
   },
   "devDependencies": {
     "@types/html-to-text": "^9.0.4",

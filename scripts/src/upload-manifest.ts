@@ -5,7 +5,7 @@
  * 
  * Usage:
  *   npm run build
- *   node build/upload-manifest.js
+ *   npm run upload-manifest
  */
 import { Octokit } from '@octokit/rest';
 import { createHash } from 'node:crypto';
