@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "experimentalDecorators": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "lib": ["es2016", "esnext", "dom"],
+    "outDir": "build",
+    "strict": true,
+    "strictNullChecks": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "removeComments": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["build"]
+}
