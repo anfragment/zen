@@ -1,19 +1,24 @@
 {
   "name": "scripts",
+  "type": "module",
   "private": true,
   "engines": {
     "node": ">=20.15.0"
   },
+  "scripts": {
+    "build": "tsc"
+  },
   "devDependencies": {
+    "@types/html-to-text": "^9.0.4",
     "@types/node": "^20.14.10",
+    "@types/semver": "^7.5.8",
     "typescript": "^5.5.3"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.614.0",
     "@octokit/rest": "^21.0.0",
-    "@types/semver": "^7.5.8",
-    "lodash": "^4.17.21",
-    "markdown-to-txt": "^2.0.1",
+    "html-to-text": "^9.0.5",
+    "marked": "^13.0.2",
     "semver": "^7.6.2"
   }
 }
