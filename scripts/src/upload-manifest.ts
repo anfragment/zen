@@ -1,11 +1,11 @@
 /**
- * build-manifest.ts is a script that fetches the latest release from a GitHub repository and uploads manifests for each
+ * upload-manifest.ts is a script that fetches the latest release from a GitHub repository and uploads manifests for each
  * platform/architecture. The manifest contains the version, description, asset URL, and the SHA256 hash of the asset.
  * The manifest is uploaded to an S3 bucket that serves as the update server for Zen.
  * 
  * Usage:
  *   npm run build
- *   node build/build-manifest.js
+ *   node build/upload-manifest.js
  */
 import { Octokit } from '@octokit/rest';
 import { createHash } from 'node:crypto';
