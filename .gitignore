@@ -4,3 +4,4 @@ frontend/dist
 .DS_Store
 *.dmg
 *.app
+.env.local

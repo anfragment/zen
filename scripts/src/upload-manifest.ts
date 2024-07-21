@@ -35,14 +35,14 @@ const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const S3_API_ENDPOINT = process.env.S3_API_ENDPOINT;
 const S3_API_REGION = process.env.S3_API_REGION || 'auto';
 const S3_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID;
-const S3_BUCKET_SECRET_ACCESS_KEY = process.env.S3_BUCKET_SECRET_ACCESS_KEY;
+const S3_SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY;
 
 const s3Client = new S3Client({
   endpoint: S3_API_ENDPOINT as string,
   region: S3_API_REGION as string,
   credentials: {
     accessKeyId: S3_ACCESS_KEY_ID as string,
-    secretAccessKey: S3_BUCKET_SECRET_ACCESS_KEY as string,
+    secretAccessKey: S3_SECRET_ACCESS_KEY as string,
   },
 });
 
@@ -71,11 +71,7 @@ type Manifest = {
   }
 
   const release = res.data;
-
-  const releaseVersion = semver.clean(release.tag_name);
-  if (releaseVersion === null) {
-    throw new Error(`Failed to parse release version: ${release.tag_name}`);
-  }
+  const releaseVersion = release.tag_name;
   const releaseBody = release.body;
   if (releaseBody == undefined) {
     throw new Error('Release body is empty');
@@ -120,11 +116,7 @@ async function fetchAndCompareManifest({ platform, arch, releaseVersion }: { pla
   }
 
   const manifest: Manifest = await res.json();
-  const manifestVersion = semver.clean(manifest.version);
-  if (manifestVersion === null) {
-    throw new Error(`Failed to parse manifest release version: ${manifest.version}`);
-  }
-  if (semver.lte(releaseVersion, manifestVersion)) {
+  if (semver.lte(releaseVersion, manifest.version)) {
     throw new Error(`${platform}/${arch} manifest version is ${manifest.version}, release version is ${releaseVersion}`);
   }
 }
