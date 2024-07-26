@@ -47,11 +47,9 @@ func (m Manager) IsEnabled() (bool, error) {
 }
 
 func (m Manager) Enable() error {
-	enabled, err := m.IsEnabled()
-	if err != nil {
+	if enabled, err := m.IsEnabled(); err != nil {
 		return fmt.Errorf("check enabled: %w", err)
-	}
-	if enabled {
+	} else if enabled {
 		return nil
 	}
 
@@ -90,11 +88,9 @@ func (m Manager) Enable() error {
 }
 
 func (m Manager) Disable() error {
-	enabled, err := m.IsEnabled()
-	if err != nil {
+	if enabled, err := m.IsEnabled(); err != nil {
 		return fmt.Errorf("check enabled: %w", err)
-	}
-	if !enabled {
+	} else if !enabled {
 		return nil
 	}
 
