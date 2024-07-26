@@ -52,7 +52,9 @@ func (m Manager) Enable() error {
 	}
 	defer key.Close()
 
-	if err := key.SetStringValue(registryKey, execPath); err != nil {
+	cmd := execPath + " " + "--start"
+
+	if err := key.SetStringValue(registryKey, cmd); err != nil {
 		return fmt.Errorf("set string value: %w", err)
 	}
 
