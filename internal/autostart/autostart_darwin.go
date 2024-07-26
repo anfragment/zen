@@ -9,7 +9,12 @@ import (
 
 const (
 	reverseDNSAppName = "net.zenprivacy.zen"
-	plistTemplate     = `<?xml version="1.0" encoding="UTF-8"?>
+	// plistTemplate is a template for defining a launchd daemon.
+	//
+	// References:
+	// - https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html
+	// - man launchd.plist
+	plistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
@@ -18,9 +23,9 @@ const (
 		<key>Program</key>
 		<string>{{.Program}}</string>
 		<key>ProgramArguments</key>
-			<array>
-				<string>--start</string>
-			</array>
+		<array>
+			<string>--start</string>
+		</array>
 		<key>RunAtLoad</key>
 		<true/>
 		<key>AbandonProcessGroup</key>
