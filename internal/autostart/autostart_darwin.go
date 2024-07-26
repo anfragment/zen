@@ -55,12 +55,9 @@ func (m Manager) Enable() error {
 		return nil
 	}
 
-	execPath, err := os.Executable()
+	execPath, err := getExecPath()
 	if err != nil {
-		return fmt.Errorf("get executable path: %w", err)
-	}
-	if execPath, err = filepath.EvalSymlinks(execPath); err != nil {
-		return fmt.Errorf("eval symlinks: %w", err)
+		return fmt.Errorf("get exec path: %w", err)
 	}
 
 	launchDir, err := getLaunchDir()
