@@ -45,7 +45,7 @@ type plistTemplateParameters struct {
 }
 
 func (m Manager) IsEnabled() (bool, error) {
-	plistPath, err := m.getPath()
+	plistPath, err := getPath()
 	if err != nil {
 		return false, fmt.Errorf("get launch plist path: %w", err)
 	}
@@ -70,7 +70,7 @@ func (m Manager) Enable() error {
 	if err != nil {
 		return fmt.Errorf("get launch dir: %w", err)
 	}
-	plistPath, err := m.getPath()
+	plistPath, err := getPath()
 	if err != nil {
 		return fmt.Errorf("get launch plist path: %w", err)
 	}
@@ -102,7 +102,7 @@ func (m Manager) Disable() error {
 		return nil
 	}
 
-	plistPath, err := m.getPath()
+	plistPath, err := getPath()
 	if err != nil {
 		return fmt.Errorf("get launch plist path: %w", err)
 	}
@@ -113,7 +113,7 @@ func (m Manager) Disable() error {
 	return nil
 }
 
-func (m Manager) getPath() (string, error) {
+func getPath() (string, error) {
 	launchDir, err := getLaunchDir()
 	if err != nil {
 		return "", fmt.Errorf("get launch dir: %w", err)
