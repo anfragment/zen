@@ -1,3 +1,10 @@
+// autostart_darwin.go provides autostart capabilities for macOS.
+// To add the app to autostart, it creates a launchd daemon definition under ~/Library/LaunchAgents.
+//
+// References:
+// - https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html
+// - man launchd.plist
+
 package autostart
 
 import (
@@ -10,10 +17,6 @@ import (
 const (
 	reverseDNSAppName = "net.zenprivacy.zen"
 	// plistTemplate is a template for defining a launchd daemon.
-	//
-	// References:
-	// - https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html
-	// - man launchd.plist
 	plistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">

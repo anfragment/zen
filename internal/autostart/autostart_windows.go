@@ -1,3 +1,9 @@
+// autostart_windows.go provides autostart capabilities for Windows.
+// To add the app to autostart, it creates a registry key under HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run.
+//
+// References:
+// - https://learn.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys
+
 package autostart
 
 import (
