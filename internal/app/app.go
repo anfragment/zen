@@ -7,7 +7,6 @@ import (
 	"log"
 	"sync"
 
-	"github.com/anfragment/zen/internal/autostart"
 	"github.com/anfragment/zen/internal/certgen"
 	"github.com/anfragment/zen/internal/certstore"
 	"github.com/anfragment/zen/internal/cfg"
@@ -46,10 +45,6 @@ func NewApp(config *cfg.Config) (*App, error) {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.eventsHandler = newEventsHandler(a.ctx)
-	m := autostart.Manager{}
-	if err := m.Enable(); err != nil {
-		log.Println("failed to enable autostart: %v", err)
-	}
 }
 
 func (a *App) Shutdown(context.Context) {
