@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	"github.com/anfragment/zen/internal/app"
+	"github.com/anfragment/zen/internal/autostart"
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -22,6 +23,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	autostart := &autostart.Manager{}
 	app, err := app.NewApp(config)
 	if err != nil {
 		log.Fatalf("failed to create app: %v", err)
@@ -42,6 +44,7 @@ func main() {
 		Bind: []interface{}{
 			app,
 			config,
+			autostart,
 		},
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
