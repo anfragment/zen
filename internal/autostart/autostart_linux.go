@@ -5,6 +5,7 @@ package autostart
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -25,7 +26,13 @@ type desktopTemplateParameters struct {
 	ExecPath string
 }
 
-func (m Manager) IsEnabled() (bool, error) {
+func (m Manager) IsEnabled() (enabled bool, err error) {
+	defer func() {
+		if err != nil {
+			log.Printf("error checking registry key: %s", err)
+		}
+	}()
+
 	path, err := getDesktopPath()
 	if err != nil {
 		return false, fmt.Errorf("get desktop path: %w", err)
@@ -35,7 +42,13 @@ func (m Manager) IsEnabled() (bool, error) {
 	return err == nil, nil
 }
 
-func (m Manager) Enable() error {
+func (m Manager) Enable() (err error) {
+	defer func() {
+		if err != nil {
+			log.Printf("error enabling autostart: %s", err)
+		}
+	}()
+
 	if enabled, err := m.IsEnabled(); err != nil {
 		return fmt.Errorf("check enabled: %w", err)
 	} else if enabled {
@@ -76,7 +89,13 @@ func (m Manager) Enable() error {
 	return nil
 }
 
-func (m Manager) Disable() error {
+func (m Manager) Disable() (err error) {
+	defer func() {
+		if err != nil {
+			log.Printf("error disabling autostart: %s", err)
+		}
+	}()
+
 	if enabled, err := m.IsEnabled(); err != nil {
 		return fmt.Errorf("check enabled: %w", err)
 	} else if !enabled {
