@@ -18,6 +18,7 @@ func newEventsHandler(ctx context.Context) *eventsHandler {
 type filterActionKind string
 
 const (
+	filterChannel                         = "filter:action"
 	filterActionBlock    filterActionKind = "block"
 	filterActionRedirect filterActionKind = "redirect"
 	filterActionModify   filterActionKind = "modify"
@@ -32,7 +33,20 @@ type filterAction struct {
 	Rules   []rule.Rule      `json:"rules"`
 }
 
-const filterChannel = "filter:action"
+type proxyState string
+
+// Only these states are handled via eventsHandler because the proxy can only start without any input from the user.
+const (
+	proxyChannel               = "proxy:action"
+	proxyStarting   proxyState = "starting"
+	proxyStarted    proxyState = "on"
+	proxyStartError proxyState = "startError"
+)
+
+type proxyAction struct {
+	Kind  proxyState `json:"kind"`
+	Error error      `json:"error"`
+}
 
 func (e *eventsHandler) OnFilterBlock(method, url, referer string, rules []rule.Rule) {
 	runtime.EventsEmit(e.ctx, filterChannel, filterAction{
@@ -62,5 +76,24 @@ func (e *eventsHandler) OnFilterModify(method, url, referer string, rules []rule
 		URL:     url,
 		Referer: referer,
 		Rules:   rules,
+	})
+}
+
+func (e *eventsHandler) OnProxyStarting() {
+	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
+		Kind: proxyStarting,
+	})
+}
+
+func (e *eventsHandler) OnProxyStarted() {
+	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
+		Kind: proxyStarted,
+	})
+}
+
+func (e *eventsHandler) OnProxyStartError(err error) {
+	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
+		Kind:  proxyStartError,
+		Error: err,
 	})
 }

@@ -7,6 +7,12 @@
   font-weight: bold;
 }
 
+.settings-manager__section--app {
+  border: 1px solid #245ac7;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
 .settings-manager__section--advanced {
   border: 1px solid #fbb360;
   border-radius: 4px;
