@@ -7,15 +7,27 @@
 package autostart
 
 import (
+	"errors"
 	"fmt"
+	"log"
+	"strings"
 
 	"golang.org/x/sys/windows/registry"
 )
 
-const registryKey = "Zen"
+const (
+	regKey  = "Zen"
+	regPath = `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
+)
 
-func (m Manager) IsEnabled() (bool, error) {
-	key, err := openRegKey()
+func (m Manager) IsEnabled() (enabled bool, err error) {
+	defer func() {
+		if err != nil {
+			log.Println("error checking registry key: %s", err)
+		}
+	}()
+
+	key, err := registry.OpenKey(registry.CURRENT_USER, regPath, registry.QUERY_VALUE)
 	if err != nil {
 		return false, fmt.Errorf("open registry key: %w", err)
 	}
@@ -26,15 +38,24 @@ func (m Manager) IsEnabled() (bool, error) {
 		return false, fmt.Errorf("get exec path: %w", err)
 	}
 
-	value, _, err := key.GetStringValue(registryKey)
-	if err != nil {
+	value, _, err := key.GetStringValue(regKey)
+	switch {
+	case errors.Is(err, registry.ErrNotExist) || errors.Is(err, registry.ErrUnexpectedType):
+		return false, nil
+	case err != nil:
 		return false, fmt.Errorf("get string value: %w", err)
 	}
 
-	return value == execPath, nil
+	return strings.HasPrefix(value, execPath), nil // Use strings.HasPrefix to account for --start and any other future potential cli flags.
 }
 
-func (m Manager) Enable() error {
+func (m Manager) Enable() (err error) {
+	defer func() {
+		if err != nil {
+			log.Println("error enabling autostart: %s", err)
+		}
+	}()
+
 	if enabled, err := m.IsEnabled(); err != nil {
 		return fmt.Errorf("check enabled: %w", err)
 	} else if enabled {
@@ -46,7 +67,7 @@ func (m Manager) Enable() error {
 		return fmt.Errorf("get exec path: %w", err)
 	}
 
-	key, err := openRegKey()
+	key, err := registry.OpenKey(registry.CURRENT_USER, regPath, registry.WRITE)
 	if err != nil {
 		return fmt.Errorf("open registry key: %w", err)
 	}
@@ -54,33 +75,35 @@ func (m Manager) Enable() error {
 
 	cmd := execPath + " " + "--start"
 
-	if err := key.SetStringValue(registryKey, cmd); err != nil {
+	if err := key.SetStringValue(regKey, cmd); err != nil {
 		return fmt.Errorf("set string value: %w", err)
 	}
 
 	return nil
 }
 
-func (m Manager) Disable() error {
+func (m Manager) Disable() (err error) {
+	defer func() {
+		if err != nil {
+			log.Println("error disabling autostart: %s", err)
+		}
+	}()
+
 	if enabled, err := m.IsEnabled(); err != nil {
 		return fmt.Errorf("check enabled: %w", err)
 	} else if !enabled {
 		return nil
 	}
 
-	key, err := openRegKey()
+	key, err := registry.OpenKey(registry.CURRENT_USER, regPath, registry.SET_VALUE)
 	if err != nil {
 		return fmt.Errorf("open registry key: %w", err)
 	}
 	defer key.Close()
 
-	if err := key.DeleteValue(registryKey); err != nil {
+	if err := key.DeleteValue(regKey); err != nil {
 		return fmt.Errorf("delete value: %w", err)
 	}
 
 	return nil
-}
-
-func openRegKey() (registry.Key, error) {
-	return registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.ALL_ACCESS)
 }
