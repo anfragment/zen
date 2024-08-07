@@ -23,7 +23,7 @@ const (
 func (m Manager) IsEnabled() (enabled bool, err error) {
 	defer func() {
 		if err != nil {
-			log.Println("error checking registry key: %s", err)
+			log.Printf("error checking registry key: %s", err)
 		}
 	}()
 
@@ -52,7 +52,7 @@ func (m Manager) IsEnabled() (enabled bool, err error) {
 func (m Manager) Enable() (err error) {
 	defer func() {
 		if err != nil {
-			log.Println("error enabling autostart: %s", err)
+			log.Printf("error enabling autostart: %s", err)
 		}
 	}()
 
@@ -85,7 +85,7 @@ func (m Manager) Enable() (err error) {
 func (m Manager) Disable() (err error) {
 	defer func() {
 		if err != nil {
-			log.Println("error disabling autostart: %s", err)
+			log.Printf("error disabling autostart: %s", err)
 		}
 	}()
 
