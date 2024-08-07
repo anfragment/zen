@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/anfragment/zen/internal/certgen"
 	"github.com/anfragment/zen/internal/certstore"
@@ -16,17 +17,19 @@ import (
 )
 
 type App struct {
-	ctx           context.Context
-	config        *cfg.Config
-	eventsHandler *eventsHandler
-	proxy         *proxy.Proxy
+	ctx             context.Context
+	startOnDomReady bool
+	config          *cfg.Config
+	eventsHandler   *eventsHandler
+	proxy           *proxy.Proxy
+	proxyOn         bool
 	// proxyMu ensures that proxy is only started or stopped once at a time.
 	proxyMu   sync.Mutex
 	certStore *certstore.DiskCertStore
 }
 
 // NewApp initializes the app.
-func NewApp(config *cfg.Config) (*App, error) {
+func NewApp(config *cfg.Config, startOnDomReady bool) (*App, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -36,8 +39,9 @@ func NewApp(config *cfg.Config) (*App, error) {
 	}
 
 	return &App{
-		config:    config,
-		certStore: certStore,
+		config:          config,
+		certStore:       certStore,
+		startOnDomReady: startOnDomReady,
 	}, nil
 }
 
@@ -61,12 +65,33 @@ func (a *App) Shutdown(context.Context) {
 func (a *App) DomReady(ctx context.Context) {
 	a.config.RunMigrations()
 	cfg.SelfUpdate(ctx)
+	time.AfterFunc(time.Second, func() {
+		// This is a workaround for the issue where not all React components are mounted in time.
+		// StartProxy requires an active event listener on the frontend to show the user the correct proxy state.
+		if a.startOnDomReady {
+			a.StartProxy()
+		}
+	})
 }
 
 // StartProxy starts the proxy.
-func (a *App) StartProxy() error {
+func (a *App) StartProxy() (err error) {
 	a.proxyMu.Lock()
 	defer a.proxyMu.Unlock()
+
+	if a.proxyOn {
+		return nil
+	}
+
+	a.eventsHandler.OnProxyStarting()
+	defer func() {
+		if err != nil {
+			log.Println(err)
+			a.eventsHandler.OnProxyStartError(err)
+		} else {
+			a.eventsHandler.OnProxyStarted()
+		}
+	}()
 
 	log.Println("starting proxy")
 
@@ -75,36 +100,28 @@ func (a *App) StartProxy() error {
 
 	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, a.eventsHandler)
 	if err != nil {
-		err = fmt.Errorf("failed to create filter: %v", err)
-		log.Println(err)
-		return err
+		return fmt.Errorf("failed to create filter: %v", err)
 	}
 
 	certGenerator, err := certgen.NewCertGenerator(a.certStore)
 	if err != nil {
-		err = fmt.Errorf("failed to create cert manager: %v", err)
-		log.Println(err)
-		return err
+		return fmt.Errorf("failed to create cert manager: %v", err)
 	}
 
 	a.proxy, err = proxy.NewProxy(filter, certGenerator, a.config.GetPort(), a.config.GetIgnoredHosts())
 	if err != nil {
-		err = fmt.Errorf("failed to create proxy: %v", err)
-		log.Println(err)
-		return err
+		return fmt.Errorf("failed to create proxy: %v", err)
 	}
 
 	if err := a.certStore.Init(); err != nil {
-		err = fmt.Errorf("failed to initialize cert store: %v", err)
-		log.Println(err)
-		return err
+		return fmt.Errorf("failed to initialize cert store: %v", err)
 	}
 
 	if err := a.proxy.Start(); err != nil {
-		err = fmt.Errorf("failed to start proxy: %v", err)
-		log.Println(err)
-		return err
+		return fmt.Errorf("failed to start proxy: %v", err)
 	}
+
+	a.proxyOn = true
 
 	return nil
 }
@@ -114,16 +131,18 @@ func (a *App) StopProxy() error {
 	a.proxyMu.Lock()
 	defer a.proxyMu.Unlock()
 
+	if !a.proxyOn {
+		return nil
+	}
+
 	log.Println("stopping proxy")
 
-	if a.proxy != nil {
-		if err := a.proxy.Stop(); err != nil {
-			log.Printf("failed to stop proxy: %v", err)
-			return err
-		}
-
-		a.proxy = nil
+	if err := a.proxy.Stop(); err != nil {
+		log.Printf("failed to stop proxy: %v", err)
+		return err
 	}
+	a.proxy = nil
+	a.proxyOn = false
 
 	return nil
 }
