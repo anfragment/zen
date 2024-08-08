@@ -74,7 +74,7 @@ func (m *Manager) OnProxyStarted() {
 func (m *Manager) OnProxyStopped() {
 	m.proxyStateMu.Lock()
 	defer m.proxyStateMu.Unlock()
-	m.proxyActive = true
+	m.proxyActive = false
 
 	if m.startStopMenuItem == nil {
 		// Sanity check.
