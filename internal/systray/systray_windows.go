@@ -864,7 +864,7 @@ func SetTitle(title string) {
 	// do nothing
 }
 
-func (item *MenuItem) parentId() uint32 {
+func (item *menuItem) parentId() uint32 {
 	if item.parent != nil {
 		return uint32(item.parent.id)
 	}
@@ -873,7 +873,7 @@ func (item *MenuItem) parentId() uint32 {
 
 // SetIcon sets the icon of a menu item. Only works on macOS and Windows.
 // iconBytes should be the content of .ico/.jpg/.png
-func (item *MenuItem) SetIcon(iconBytes []byte) {
+func (item *menuItem) SetIcon(iconBytes []byte) {
 	iconFilePath, err := iconBytesToFilePath(iconBytes)
 	if err != nil {
 		log.Printf("Unable to write icon data to temp file: %v", err)
@@ -916,7 +916,7 @@ func SetTooltip(tooltip string) {
 func SetRemovalAllowed(allowed bool) {
 }
 
-func addOrUpdateMenuItem(item *MenuItem) {
+func addOrUpdateMenuItem(item *menuItem) {
 	err := wt.addOrUpdateMenuItem(uint32(item.id), item.parentId(), item.title, item.disabled, item.checked)
 	if err != nil {
 		log.Printf("Unable to addOrUpdateMenuItem: %v", err)
@@ -928,7 +928,7 @@ func addOrUpdateMenuItem(item *MenuItem) {
 // falls back to the regular icon bytes and on Linux it does nothing.
 // templateIconBytes and regularIconBytes should be the content of .ico for windows and
 // .ico/.jpg/.png for other platforms.
-func (item *MenuItem) SetTemplateIcon(templateIconBytes []byte, regularIconBytes []byte) {
+func (item *menuItem) SetTemplateIcon(templateIconBytes []byte, regularIconBytes []byte) {
 	item.SetIcon(regularIconBytes)
 }
 
@@ -940,7 +940,7 @@ func addSeparator(id uint32) {
 	}
 }
 
-func hideMenuItem(item *MenuItem) {
+func hideMenuItem(item *menuItem) {
 	err := wt.hideMenuItem(uint32(item.id), item.parentId())
 	if err != nil {
 		log.Printf("Unable to hideMenuItem: %v", err)
@@ -948,6 +948,6 @@ func hideMenuItem(item *MenuItem) {
 	}
 }
 
-func showMenuItem(item *MenuItem) {
+func showMenuItem(item *menuItem) {
 	addOrUpdateMenuItem(item)
 }

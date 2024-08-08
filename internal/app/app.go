@@ -14,31 +14,39 @@ import (
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/ruletree"
+	"github.com/anfragment/zen/internal/systray"
 )
 
 type App struct {
-	ctx             context.Context
+	// name is the name of the application.
+	name            string
 	startOnDomReady bool
 	config          *cfg.Config
 	eventsHandler   *eventsHandler
 	proxy           *proxy.Proxy
 	proxyOn         bool
 	// proxyMu ensures that proxy is only started or stopped once at a time.
-	proxyMu   sync.Mutex
-	certStore *certstore.DiskCertStore
+	proxyMu    sync.Mutex
+	certStore  *certstore.DiskCertStore
+	systrayMgr *systray.Manager
 }
 
 // NewApp initializes the app.
-func NewApp(config *cfg.Config, startOnDomReady bool) (*App, error) {
+func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error) {
+	if name == "" {
+		return nil, errors.New("name is empty")
+	}
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
+
 	certStore, err := certstore.NewDiskCertStore(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cert store: %v", err)
 	}
 
 	return &App{
+		name:            name,
 		config:          config,
 		certStore:       certStore,
 		startOnDomReady: startOnDomReady,
@@ -46,24 +54,28 @@ func NewApp(config *cfg.Config, startOnDomReady bool) (*App, error) {
 }
 
 // Startup is called when the app starts.
-func (a *App) Startup(ctx context.Context) {
-	a.ctx = ctx
-	a.eventsHandler = newEventsHandler(a.ctx)
-}
+func (a *App) Startup(ctx context.Context) {}
 
 func (a *App) Shutdown(context.Context) {
 	a.proxyMu.Lock()
 	defer a.proxyMu.Unlock()
-
-	if a.proxy != nil {
-		if err := a.proxy.Stop(); err != nil {
-			log.Printf("failed to stop proxy: %v", err)
-		}
-	}
+	a.StopProxy()
 }
 
 func (a *App) DomReady(ctx context.Context) {
+	systrayMgr, err := systray.NewManager(a.name, func() {
+		a.StartProxy()
+	}, func() {
+		a.StopProxy()
+	})
+	if err != nil {
+		log.Fatalf("failed to initialize systray manager: %v", err)
+	}
+	a.systrayMgr = systrayMgr
+	a.eventsHandler = newEventsHandler(ctx)
+
 	a.config.RunMigrations()
+	a.systrayMgr.Init(ctx)
 	cfg.SelfUpdate(ctx)
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
@@ -76,6 +88,16 @@ func (a *App) DomReady(ctx context.Context) {
 
 // StartProxy starts the proxy.
 func (a *App) StartProxy() (err error) {
+	defer func() {
+		// You might see this pattern both in this file and throughout the application.
+		// It is used in functions that get called by the frontend, in which case we cannot log the error at the callerp level.
+		if err != nil {
+			log.Println("error starting proxy: %v", err)
+		} else {
+			log.Println("proxy started successfully")
+		}
+	}()
+
 	a.proxyMu.Lock()
 	defer a.proxyMu.Unlock()
 
@@ -86,7 +108,6 @@ func (a *App) StartProxy() (err error) {
 	a.eventsHandler.OnProxyStarting()
 	defer func() {
 		if err != nil {
-			log.Println(err)
 			a.eventsHandler.OnProxyStartError(err)
 		} else {
 			a.eventsHandler.OnProxyStarted()
@@ -100,34 +121,44 @@ func (a *App) StartProxy() (err error) {
 
 	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, a.eventsHandler)
 	if err != nil {
-		return fmt.Errorf("failed to create filter: %v", err)
+		return fmt.Errorf("create filter: %v", err)
 	}
 
 	certGenerator, err := certgen.NewCertGenerator(a.certStore)
 	if err != nil {
-		return fmt.Errorf("failed to create cert manager: %v", err)
+		return fmt.Errorf("create cert manager: %v", err)
 	}
 
 	a.proxy, err = proxy.NewProxy(filter, certGenerator, a.config.GetPort(), a.config.GetIgnoredHosts())
 	if err != nil {
-		return fmt.Errorf("failed to create proxy: %v", err)
+		return fmt.Errorf("create proxy: %v", err)
 	}
 
 	if err := a.certStore.Init(); err != nil {
-		return fmt.Errorf("failed to initialize cert store: %v", err)
+		return fmt.Errorf("initialize cert store: %v", err)
 	}
 
 	if err := a.proxy.Start(); err != nil {
-		return fmt.Errorf("failed to start proxy: %v", err)
+		return fmt.Errorf("start proxy: %v", err)
 	}
 
 	a.proxyOn = true
+
+	a.systrayMgr.OnProxyStarted()
 
 	return nil
 }
 
 // StopProxy stops the proxy.
-func (a *App) StopProxy() error {
+func (a *App) StopProxy() (err error) {
+	defer func() {
+		if err != nil {
+			log.Println("error stopping proxy: %v", err)
+		} else {
+			log.Println("proxy stopped successfully")
+		}
+	}()
+
 	a.proxyMu.Lock()
 	defer a.proxyMu.Unlock()
 
@@ -138,11 +169,12 @@ func (a *App) StopProxy() error {
 	log.Println("stopping proxy")
 
 	if err := a.proxy.Stop(); err != nil {
-		log.Printf("failed to stop proxy: %v", err)
-		return err
+		return fmt.Errorf("stop proxy: %w", err)
 	}
 	a.proxy = nil
 	a.proxyOn = false
+
+	a.systrayMgr.OnProxyStopped()
 
 	return nil
 }
