@@ -16,8 +16,11 @@ export interface StartStopButtonProps {
 
 enum ProxyActionKind {
   Starting = 'starting',
-  On = 'on',
-  Error = 'error',
+  Started = 'started',
+  StartError = 'startError',
+  Stopping = 'stopping',
+  Stopped = 'stopped',
+  StopError = 'stopError',
 }
 
 interface ProxyAction {
@@ -32,14 +35,28 @@ export function StartStopButton({ proxyState, setProxyState }: StartStopButtonPr
         case ProxyActionKind.Starting:
           setProxyState('loading');
           break;
-        case ProxyActionKind.On:
+        case ProxyActionKind.Started:
           setProxyState('on');
           break;
-        case ProxyActionKind.Error:
+        case ProxyActionKind.StartError:
           AppToaster.show({
             message: `Failed to start proxy: ${action.error}`,
             intent: 'danger',
           });
+          setProxyState('on'); // Still worth it to give the option to shut down in case the error is recoverable.
+          break;
+        case ProxyActionKind.Stopping:
+          setProxyState('loading');
+          break;
+        case ProxyActionKind.Stopped:
+          setProxyState('off');
+          break;
+        case ProxyActionKind.StopError:
+          AppToaster.show({
+            message: `Failed to stop proxy: ${action.error}`,
+            intent: 'danger',
+          });
+          setProxyState('off');
           break;
         default:
           console.log('unknown proxy action', action);

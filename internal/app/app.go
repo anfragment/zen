@@ -105,6 +105,8 @@ func (a *App) StartProxy() (err error) {
 		return nil
 	}
 
+	log.Println("starting proxy")
+
 	a.eventsHandler.OnProxyStarting()
 	defer func() {
 		if err != nil {
@@ -113,8 +115,6 @@ func (a *App) StartProxy() (err error) {
 			a.eventsHandler.OnProxyStarted()
 		}
 	}()
-
-	log.Println("starting proxy")
 
 	ruleMatcher := ruletree.NewRuleTree()
 	exceptionRuleMatcher := ruletree.NewRuleTree()
@@ -167,6 +167,15 @@ func (a *App) StopProxy() (err error) {
 	}
 
 	log.Println("stopping proxy")
+
+	a.eventsHandler.OnProxyStopping()
+	defer func() {
+		if err != nil {
+			a.eventsHandler.OnProxyStopError(err)
+		} else {
+			a.eventsHandler.OnProxyStopped()
+		}
+	}()
 
 	if err := a.proxy.Stop(); err != nil {
 		return fmt.Errorf("stop proxy: %w", err)
