@@ -49,9 +49,16 @@ func NewManager(appName string, proxyStart func(), proxyStop func()) (*Manager, 
 }
 
 func (m *Manager) Init(ctx context.Context) error {
-	run(m.onReady(ctx), nil)
+	go func() {
+		run(m.onReady(ctx), nil)
+	}()
 
 	return nil
+}
+
+// Quit needs to be called on application quit.
+func (m *Manager) Quit() {
+	quit()
 }
 
 // OnProxyStarted should be called when the proxy gets started.
@@ -93,32 +100,21 @@ func (m *Manager) onReady(ctx context.Context) func() {
 
 		openMenuItem := addMenuItem("Open", "Open the application window")
 		go func() {
-			for {
-				select {
-				case <-openMenuItem.ClickedCh:
-					runtime.Show(ctx)
-				case <-ctx.Done():
-					return
-				}
+			for range openMenuItem.ClickedCh {
+				runtime.Show(ctx)
 			}
 		}()
 
 		m.startStopMenuItem = addMenuItem("Start", "Start")
 		go func() {
-			for {
-				select {
-				case <-m.startStopMenuItem.ClickedCh:
-					m.proxyStateMu.Lock()
-					active := m.proxyActive
-					m.proxyStateMu.Unlock()
-					switch active {
-					case true:
-						m.proxyStop()
-					case false:
-						m.proxyStart()
-					}
-				case <-ctx.Done():
-					return
+			for range m.startStopMenuItem.ClickedCh {
+				m.proxyStateMu.Lock()
+				active := m.proxyActive
+				m.proxyStateMu.Unlock()
+				if active {
+					m.proxyStop()
+				} else {
+					m.proxyStart()
 				}
 			}
 		}()
@@ -127,13 +123,8 @@ func (m *Manager) onReady(ctx context.Context) func() {
 
 		quitMenuItem := addMenuItem("Quit", "Quit the application")
 		go func() {
-			for {
-				select {
-				case <-quitMenuItem.ClickedCh:
-					runtime.Quit(ctx)
-				case <-ctx.Done():
-					return
-				}
+			for range quitMenuItem.ClickedCh {
+				runtime.Quit(ctx)
 			}
 		}()
 	}

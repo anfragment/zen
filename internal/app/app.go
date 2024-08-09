@@ -57,9 +57,9 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 func (a *App) Startup(ctx context.Context) {}
 
 func (a *App) Shutdown(context.Context) {
-	a.proxyMu.Lock()
-	defer a.proxyMu.Unlock()
+	log.Println("shutting down")
 	a.StopProxy()
+	a.systrayMgr.Quit()
 }
 
 func (a *App) DomReady(ctx context.Context) {

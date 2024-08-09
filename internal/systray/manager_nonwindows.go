@@ -18,6 +18,8 @@ func (m *Manager) Init(ctx context.Context) error {
 	return nil
 }
 
+func (m *Manager) Quit() {}
+
 // OnProxyStarted should be called when the proxy gets started.
 func (m *Manager) OnProxyStarted() {}
 
