@@ -54,7 +54,7 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 }
 
 // Startup is called when the app starts.
-func (a *App) Startup(ctx context.Context) {}
+func (a *App) Startup(context.Context) {}
 
 func (a *App) Shutdown(context.Context) {
 	log.Println("shutting down")
@@ -92,7 +92,7 @@ func (a *App) StartProxy() (err error) {
 		// You might see this pattern both in this file and throughout the application.
 		// It is used in functions that get called by the frontend, in which case we cannot log the error at the callerp level.
 		if err != nil {
-			log.Println("error starting proxy: %v", err)
+			log.Printf("error starting proxy: %v", err)
 		} else {
 			log.Println("proxy started successfully")
 		}
@@ -153,7 +153,7 @@ func (a *App) StartProxy() (err error) {
 func (a *App) StopProxy() (err error) {
 	defer func() {
 		if err != nil {
-			log.Println("error stopping proxy: %v", err)
+			log.Printf("error stopping proxy: %v", err)
 		} else {
 			log.Println("proxy stopped successfully")
 		}

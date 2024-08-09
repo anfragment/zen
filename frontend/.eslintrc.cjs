@@ -27,7 +27,8 @@ module.exports = {
     "@typescript-eslint/no-shadow": 0,
     "react/no-unstable-nested-components": 0,
     "react/require-default-props": 0,
-    "import/no-relative-packages": 0
+    "import/no-relative-packages": 0,
+    "no-console": 0
   },
   parserOptions: {
     project: "./tsconfig.json",
