@@ -88,9 +88,8 @@ func (m *Manager) OnProxyStopped() {
 
 func (m *Manager) onReady(ctx context.Context) func() {
 	return func() {
-		SetIcon(m.logoBytes)
-		SetTitle(m.appName)
-		SetTooltip(m.appName)
+		setIcon(m.logoBytes)
+		setTooltip(m.appName)
 
 		openMenuItem := addMenuItem("Open", "Open the application window")
 		go func() {
@@ -124,7 +123,7 @@ func (m *Manager) onReady(ctx context.Context) func() {
 			}
 		}()
 
-		AddSeparator()
+		addSeparator()
 
 		quitMenuItem := addMenuItem("Quit", "Quit the application")
 		go func() {
