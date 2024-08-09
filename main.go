@@ -16,6 +16,10 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
+const (
+	appName = "Zen"
+)
+
 //go:embed all:frontend/dist
 var assets embed.FS
 
@@ -31,7 +35,7 @@ func main() {
 			startOnDomReady = true
 		}
 	}
-	app, err := app.NewApp(config, startOnDomReady)
+	app, err := app.NewApp(appName, config, startOnDomReady)
 	if err != nil {
 		log.Fatalf("failed to create app: %v", err)
 	}
@@ -39,7 +43,7 @@ func main() {
 	autostart := &autostart.Manager{}
 
 	err = wails.Run(&options.App{
-		Title:     "Zen",
+		Title:     appName,
 		MinWidth:  385,
 		MaxWidth:  385,
 		MinHeight: 650,
@@ -57,11 +61,11 @@ func main() {
 		},
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
-				Title:   "Zen",
+				Title:   appName,
 				Message: fmt.Sprintf("Your Comprehensive Ad-Blocker and Privacy Guard\nVersion: %s\n© 2024 Ansar Smagulov", cfg.Version),
 			},
 		},
-		HideWindowOnClose: runtime.GOOS == "darwin", // only macOS keeps closed windows in taskbar
+		HideWindowOnClose: runtime.GOOS == "darwin" || runtime.GOOS == "windows", // only macOS keeps closed windows in taskbar
 	})
 
 	if err != nil {

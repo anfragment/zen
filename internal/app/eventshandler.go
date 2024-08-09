@@ -39,8 +39,11 @@ type proxyState string
 const (
 	proxyChannel               = "proxy:action"
 	proxyStarting   proxyState = "starting"
-	proxyStarted    proxyState = "on"
+	proxyStarted    proxyState = "started"
 	proxyStartError proxyState = "startError"
+	proxyStopping   proxyState = "stopping"
+	proxyStopped    proxyState = "stopped"
+	proxyStopError  proxyState = "stopError"
 )
 
 type proxyAction struct {
@@ -94,6 +97,25 @@ func (e *eventsHandler) OnProxyStarted() {
 func (e *eventsHandler) OnProxyStartError(err error) {
 	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
 		Kind:  proxyStartError,
+		Error: err,
+	})
+}
+
+func (e *eventsHandler) OnProxyStopping() {
+	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
+		Kind: proxyStopping,
+	})
+}
+
+func (e *eventsHandler) OnProxyStopped() {
+	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
+		Kind: proxyStopped,
+	})
+}
+
+func (e *eventsHandler) OnProxyStopError(err error) {
+	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
+		Kind:  proxyStopError,
 		Error: err,
 	})
 }

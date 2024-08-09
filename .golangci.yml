@@ -3,7 +3,6 @@
 
 linters:
   enable:
-    - goimports
     - gosec
     - gosimple
     - govet
@@ -27,6 +26,7 @@ linters:
     - tparallel
   disable:
     - errcheck
+    - goimports # Gives false positives on Windows.
 
 run:
   modules-download-mode: readonly
@@ -41,3 +41,7 @@ linters-settings:
       # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
       # Default: "0600" 
       G306: "0644"
+
+issues:
+  exclude-files:
+    - internal/systray/systray_internal_windows.go
