@@ -100,7 +100,8 @@ func (m Manager) Enable() (err error) {
 	t := template.Must(template.New("plist").Parse(plistTemplate))
 
 	if err := t.Execute(f, plistTemplateParameters{
-		Program: execPath,
+		ReverseDNSAppName: reverseDNSAppName,
+		Program:           execPath,
 	}); err != nil {
 		return fmt.Errorf("execute template: %w", err)
 	}
