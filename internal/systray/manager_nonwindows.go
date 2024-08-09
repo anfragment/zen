@@ -14,7 +14,7 @@ func NewManager(string, func(), func()) (*Manager, error) {
 	return &Manager{}, nil
 }
 
-func (m *Manager) Init(ctx context.Context) error {
+func (m *Manager) Init(context.Context) error {
 	return nil
 }
 
