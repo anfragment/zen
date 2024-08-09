@@ -26,7 +26,7 @@ linters:
     - tparallel
   disable:
     - errcheck
-    - goimports
+    - goimports # Gives false positives on Windows.
 
 run:
   modules-download-mode: readonly
