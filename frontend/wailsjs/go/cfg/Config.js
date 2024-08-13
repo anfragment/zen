@@ -18,6 +18,10 @@ export function GetIgnoredHosts() {
   return window['go']['cfg']['Config']['GetIgnoredHosts']();
 }
 
+export function GetMyRules() {
+  return window['go']['cfg']['Config']['GetMyRules']();
+}
+
 export function GetPort() {
   return window['go']['cfg']['Config']['GetPort']();
 }
@@ -60,6 +64,10 @@ export function SetCAInstalled(arg1) {
 
 export function SetIgnoredHosts(arg1) {
   return window['go']['cfg']['Config']['SetIgnoredHosts'](arg1);
+}
+
+export function SetMyRules(arg1) {
+  return window['go']['cfg']['Config']['SetMyRules'](arg1);
 }
 
 export function SetPort(arg1) {

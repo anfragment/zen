@@ -11,6 +11,8 @@ export function GetFilterLists():Promise<Array<cfg.FilterList>>;
 
 export function GetIgnoredHosts():Promise<Array<string>>;
 
+export function GetMyRules():Promise<Array<string>>;
+
 export function GetPort():Promise<number>;
 
 export function GetVersion():Promise<string>;
@@ -32,6 +34,8 @@ export function Save():Promise<void>;
 export function SetCAInstalled(arg1:boolean):Promise<void>;
 
 export function SetIgnoredHosts(arg1:Array<string>):Promise<void>;
+
+export function SetMyRules(arg1:Array<string>):Promise<void>;
 
 export function SetPort(arg1:number):Promise<string>;
 
