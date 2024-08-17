@@ -162,10 +162,6 @@ func (a *App) StopProxy() (err error) {
 	a.proxyMu.Lock()
 	defer a.proxyMu.Unlock()
 
-	if !a.proxyOn {
-		return nil
-	}
-
 	log.Println("stopping proxy")
 
 	a.eventsHandler.OnProxyStopping()
@@ -176,6 +172,10 @@ func (a *App) StopProxy() (err error) {
 			a.eventsHandler.OnProxyStopped()
 		}
 	}()
+
+	if !a.proxyOn {
+		return nil
+	}
 
 	if err := a.proxy.Stop(); err != nil {
 		return fmt.Errorf("stop proxy: %w", err)
