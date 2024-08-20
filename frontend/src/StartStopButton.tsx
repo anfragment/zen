@@ -66,37 +66,9 @@ export function StartStopButton({ proxyState, setProxyState }: StartStopButtonPr
     return cancel;
   }, []);
 
-  const startProxy = async () => {
-    setProxyState('loading');
-    try {
-      await StartProxy();
-    } catch (err) {
-      AppToaster.show({
-        message: `Failed to start proxy: ${err}`,
-        intent: 'danger',
-      });
-      setProxyState('off');
-      return;
-    }
-    setProxyState('on');
-  };
-  const stopProxy = async () => {
-    setProxyState('loading');
-    try {
-      await StopProxy();
-    } catch (err) {
-      AppToaster.show({
-        message: `Failed to stop proxy: ${err}`,
-        intent: 'danger',
-      });
-    } finally {
-      setProxyState('off');
-    }
-  };
-
   return (
     <Button
-      onClick={proxyState === 'off' ? startProxy : stopProxy}
+      onClick={proxyState === 'off' ? StartProxy : StopProxy}
       fill
       intent="primary"
       className="footer"

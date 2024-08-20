@@ -30,8 +30,8 @@ During the first run, Zen will prompt you to install a root certificate. This is
 Unsure which version to download? Click on 'Start' and type 'View processor info'. The 'System type' field under 'Device specifications' will tell you which one you need.
 
 ### macOS
-- x64 (Intel): [💾 Installer](https://github.com/anfragment/zen/releases/latest/download/Zen-amd64.dmg) | [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_darwin_amd64.zip)
-- ARM64 (Apple Silicon): [💾 Installer](https://github.com/anfragment/zen/releases/latest/download/Zen-arm64.dmg) | [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_darwin_arm64.zip)
+- x64 (Intel): [💾 Installer](https://github.com/anfragment/zen/releases/latest/download/Zen-amd64.dmg) | [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_darwin_amd64.tar.gz)
+- ARM64 (Apple Silicon): [💾 Installer](https://github.com/anfragment/zen/releases/latest/download/Zen-arm64.dmg) | [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_darwin_arm64.tar.gz)
 
 Unsure which version to download? Learn at [Apple's website](https://support.apple.com/en-us/HT211814).
 

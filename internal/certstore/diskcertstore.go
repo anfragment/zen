@@ -124,12 +124,13 @@ func (cs *DiskCertStore) UninstallCA() error {
 		}
 	}
 
-	if err := os.RemoveAll(cs.folderPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("remove CA folder: %w", err)
-	}
 	if err := cs.uninstallCATrust(); err != nil {
 		return fmt.Errorf("uninstall CA from system trust store: %w", err)
 	}
+	if err := os.RemoveAll(cs.folderPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove CA folder: %w", err)
+	}
+
 	cs.config.SetCAInstalled(false)
 
 	return nil

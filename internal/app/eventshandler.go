@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/anfragment/zen/internal/rule"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -48,7 +49,7 @@ const (
 
 type proxyAction struct {
 	Kind  proxyState `json:"kind"`
-	Error error      `json:"error"`
+	Error string     `json:"error"`
 }
 
 func (e *eventsHandler) OnFilterBlock(method, url, referer string, rules []rule.Rule) {
@@ -97,7 +98,7 @@ func (e *eventsHandler) OnProxyStarted() {
 func (e *eventsHandler) OnProxyStartError(err error) {
 	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
 		Kind:  proxyStartError,
-		Error: err,
+		Error: fmt.Sprint(err),
 	})
 }
 
@@ -116,6 +117,6 @@ func (e *eventsHandler) OnProxyStopped() {
 func (e *eventsHandler) OnProxyStopError(err error) {
 	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
 		Kind:  proxyStopError,
-		Error: err,
+		Error: fmt.Sprint(err),
 	})
 }
