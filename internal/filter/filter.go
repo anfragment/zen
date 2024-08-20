@@ -26,7 +26,8 @@ type filterEventsEmitter interface {
 // ruleMatcher is an interface that can match requests against rules.
 type ruleMatcher interface {
 	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(req *http.Request) []rule.Rule
+	FindMatchingRulesReq(*http.Request) []rule.Rule
+	FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
 }
 
 // config is an interface that provides filter configuration.
@@ -180,11 +181,11 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 // As of April 2024, there are no response-only rules that can block or redirect responses.
 // For that reason, this method does not return a blocking or redirecting response itself.
 func (f *Filter) HandleResponse(req *http.Request, res *http.Response) {
-	if len(f.exceptionRuleMatcher.FindMatchingRulesReq(req)) > 0 {
+	if len(f.exceptionRuleMatcher.FindMatchingRulesRes(req, res)) > 0 {
 		return
 	}
 
-	matchingRules := f.ruleMatcher.FindMatchingRulesReq(req)
+	matchingRules := f.ruleMatcher.FindMatchingRulesRes(req, res)
 	if len(matchingRules) == 0 {
 		return
 	}
