@@ -1,1 +1,1 @@
-This `exclusions` subfolder exists for compatibility reasons (see files in the `internal/proxy` folder).
+This `exclusions` subfolder exists for compatibility reasons (see files in the `internal/proxy` folder). These lists ideally need to be moved to a separate location in the repo (exclusions folder in the root directory, perhaps?).
