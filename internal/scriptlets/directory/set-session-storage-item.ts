@@ -1,6 +1,6 @@
 import { removeFromStorage, validateUntrustedStorageValue } from "./helpers/storage";
 
-export function setLocalStorageItem(key: string, value: string) {
+export function setSessionStorageItem(key: string, value: string) {
   if (typeof key !== 'string') {
     throw new Error(`key should be string, is ${key}`);
   } else if (typeof value !== 'string') {
@@ -9,8 +9,8 @@ export function setLocalStorageItem(key: string, value: string) {
 
   const validatedValue = validateUntrustedStorageValue(value);
   if (validatedValue === '$remove$') {
-    removeFromStorage(localStorage, key);
+    removeFromStorage(sessionStorage, key);
   } else {
-    localStorage.setItem(key, validatedValue);
+    sessionStorage.setItem(key, validatedValue);
   }
 }
