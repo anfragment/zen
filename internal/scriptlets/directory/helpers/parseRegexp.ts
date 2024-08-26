@@ -1,4 +1,4 @@
-const regexpRegexp = /^\/(.+)\/([a-z]*)$/;
+const regexpRegexp = /^\/((?:[^\/\\\r\n]|\\.)+)\/([gimsuy]*)$/;
 
 /**
  * Parses a string into a RegExp.
