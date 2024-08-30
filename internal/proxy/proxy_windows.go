@@ -10,6 +10,7 @@ import (
 
 var exclusionListURLs = []string{
 	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
+	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/windows.txt",
 }
 
 var (
