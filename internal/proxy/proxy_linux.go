@@ -25,7 +25,7 @@ func (p *Proxy) setSystemProxy() error {
 			cmd := exec.Command(command[0], command[1:]...) // #nosec G204
 			out, err := cmd.CombinedOutput()
 			if err != nil {
-				return fmt.Errorf("failed to run system proxy command %s: %v\n%s", strings.Join(command, " "), err, out)
+				return fmt.Errorf("run system proxy command (%s): %w\n%s", strings.Join(command, " "), err, out)
 			}
 		}
 		return nil
