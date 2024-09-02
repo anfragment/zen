@@ -1,7 +1,8 @@
-import { parseRegexp } from "./parseRegexp";
+import { parseRegexp } from '../parseRegexp';
 
-type RequestProp = typeof REQUEST_PROPS[number];
-type ParsedPropsToMatch = Partial<Record<RequestProp, string | RegExp>>;
+
+export type RequestProp = typeof REQUEST_PROPS[number];
+export type ParsedPropsToMatch = Partial<Record<RequestProp, string | RegExp>>;
 
 const REQUEST_PROPS = [
   'url',
@@ -49,7 +50,7 @@ export function parsePropsToMatch(propsToMatch: string): ParsedPropsToMatch {
   return res;
 }
 
-export function matchRequest(props: ParsedPropsToMatch, requestArgs: Parameters<typeof window.fetch>): boolean {
+export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<typeof window.fetch>): boolean {
   let request: (Request | RequestInit) & { url: string };
   if (requestArgs[0] instanceof Request) {
     console.assert(requestArgs[1] === undefined);
@@ -64,8 +65,29 @@ export function matchRequest(props: ParsedPropsToMatch, requestArgs: Parameters<
     };
   }
 
-  
-  return Object.entries(props).every(([k, v]) => typeof request[k] === 'string' && matchProp(v, request[k]));
+  for (const prop of Object.keys(props)) {
+    if (typeof request[prop] !== 'string' || !matchProp(props[prop], request[prop])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function matchXhr(props: ParsedPropsToMatch, ...args: Parameters<typeof XMLHttpRequest.prototype.open>): boolean {
+  const request = {
+    method: args[0],
+    url: args[1],
+    // Other arguments are skipped intentionally.
+  }
+
+  for (const prop of Object.keys(props)) {
+    if (typeof request[prop] !== 'string' || !matchProp(props[prop], request[prop])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function matchProp(prop: string | RegExp, value: string): boolean {

@@ -1,4 +1,6 @@
-import { logger } from './helpers/logger';
+import { createLogger } from './helpers/logger';
+
+const logger = createLogger('nowebrtc');
 
 export function nowebrtc(): void {
   if (!window.RTCPeerConnection) {
