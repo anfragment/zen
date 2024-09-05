@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -33,6 +34,7 @@ type ruleMatcher interface {
 // config is an interface that provides filter configuration.
 type config interface {
 	GetFilterLists() []cfg.FilterList
+	GetMyRules() []string
 }
 
 // Filter is a filter for URLs that is capable of Adblock-style filter lists and hosts rules and matching URLs against them.
@@ -94,11 +96,17 @@ func (f *Filter) init() {
 				return
 			}
 			defer resp.Body.Close()
-			rules, exceptions := f.AddRules(resp.Body, &name)
+			rules, exceptions := f.ParseAndAddRules(resp.Body, &name)
 			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, url)
 		}(filterList.URL, filterList.Name)
 	}
 	wg.Wait()
+
+	myRules := f.config.GetMyRules()
+	filterName := "My rules"
+	for _, rule := range myRules {
+		f.AddRule(rule, &filterName)
+	}
 }
 
 var (
@@ -107,8 +115,8 @@ var (
 	reException  = regexp.MustCompile(`^@@`)
 )
 
-// AddRules parses the rules from the given reader and adds them to the filter.
-func (f *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exceptionCount int) {
+// ParseAndAddRules parses the rules from the given reader and adds them to the filter.
+func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCount, exceptionCount int) {
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
@@ -117,22 +125,30 @@ func (f *Filter) AddRules(reader io.Reader, filterName *string) (ruleCount, exce
 			continue
 		}
 
-		if reException.MatchString(line) {
-			if err := f.exceptionRuleMatcher.AddRule(line[2:], filterName); err != nil {
-				// log.Printf("error adding exception rule %q: %v", rule, err)
-				continue
-			}
+		if isException, err := f.AddRule(line, filterName); err != nil {
+			log.Printf("error adding rule: %v", err)
+		} else if isException {
 			exceptionCount++
 		} else {
-			if err := f.ruleMatcher.AddRule(line, filterName); err != nil {
-				// log.Printf("error adding rule %q: %v", rule, err)
-				continue
-			}
 			ruleCount++
 		}
 	}
 
 	return ruleCount, exceptionCount
+}
+
+// AddRule adds a new rule to the filter. It returns true if the rule is an exception, false otherwise.
+func (f *Filter) AddRule(rule string, filterName *string) (isException bool, err error) {
+	if reException.MatchString(rule) {
+		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterName); err != nil {
+			return true, fmt.Errorf("add exception: %w", err)
+		}
+		return true, nil
+	}
+	if err := f.ruleMatcher.AddRule(rule, filterName); err != nil {
+		return false, fmt.Errorf("add rule: %w", err)
+	}
+	return false, nil
 }
 
 // HandleRequest handles the given request by matching it against the filter rules.

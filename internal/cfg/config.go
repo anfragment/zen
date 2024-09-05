@@ -28,6 +28,7 @@ type Config struct {
 
 	Filter struct {
 		FilterLists []FilterList `json:"filterLists"`
+		MyRules     []string     `json:"myRules"`
 	} `json:"filter"`
 	Certmanager struct {
 		CAInstalled bool `json:"caInstalled"`
@@ -186,6 +187,26 @@ func (c *Config) ToggleFilterList(url string, enabled bool) string {
 		return err.Error()
 	}
 	return ""
+}
+
+func (c *Config) GetMyRules() []string {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.Filter.MyRules
+}
+
+func (c *Config) SetMyRules(rules []string) error {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Filter.MyRules = rules
+	if err := c.Save(); err != nil {
+		err = fmt.Errorf("failed to save config: %v", err)
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 // GetPort returns the port the proxy is set to listen on.

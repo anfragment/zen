@@ -28,8 +28,8 @@ export function FilterLists() {
   };
 
   useEffect(() => {
-    (async () => {
-      await fetchLists();
+    (() => {
+      fetchLists();
     })();
   }, []);
 

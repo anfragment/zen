@@ -1,0 +1,14 @@
+.my-rules {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 8px);
+}
+
+.my-rules__help-button {
+  margin-bottom: 8px;
+}
+
+.my-rules__textarea {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  font-size: .9em;
+}
