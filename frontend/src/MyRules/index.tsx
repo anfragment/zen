@@ -4,6 +4,9 @@ import { useDebouncedCallback } from 'use-debounce';
 
 import './index.css';
 import { GetMyRules, SetMyRules } from '../../wailsjs/go/cfg/Config';
+import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+
+const HELP_URL = 'https://github.com/anfragment/zen/blob/master/docs/external/how-to-rules.md';
 
 export function MyRules() {
   const [state, setState] = useState({
@@ -30,7 +33,7 @@ export function MyRules() {
   return (
     <div className="my-rules">
       <div>
-        <Button outlined icon="help" className="my-rules__help-button">
+        <Button outlined icon="help" className="my-rules__help-button" onClick={() => BrowserOpenURL(HELP_URL)}>
           Help
         </Button>
       </div>
