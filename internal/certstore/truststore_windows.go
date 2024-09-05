@@ -138,7 +138,7 @@ func (w windowsRootStore) deleteCertsWithSerial(serial *big.Int) (bool, error) {
 	for {
 		// Next enum
 		certPtr, _, err := procCertEnumCertificatesInStore.Call(uintptr(w), uintptr(unsafe.Pointer(cert)))
-		if cert = (*syscall.CertContext)(unsafe.Pointer(certPtr)); cert == nil {
+		if cert = (*syscall.CertContext)(unsafe.Pointer(certPtr)); /* #nosec G115 -- Copied from mkcert */ cert == nil {
 			if errno, ok := err.(syscall.Errno); ok && errno == 0x80092004 {
 				break
 			}
