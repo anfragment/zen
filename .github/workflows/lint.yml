@@ -38,7 +38,7 @@ jobs:
       - name: Run go linter
         uses: golangci/golangci-lint-action@v4
         with:
-          version: v1.56
+          version: v1.60
 
   lint-frontend:
     name: Lint Frontend
