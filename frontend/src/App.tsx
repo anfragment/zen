@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import './App.css';
 
 import { FilterLists } from './FilterLists';
+import { MyRules } from './MyRules';
 import { RequestLog } from './RequestLog';
 import { SettingsManager } from './SettingsManager';
 import { StartStopButton } from './StartStopButton';
@@ -15,7 +16,7 @@ function App() {
   }, []);
 
   const [proxyState, setProxyState] = useState<ProxyState>('off');
-  const [activeTab, setActiveTab] = useState<'home' | 'filterLists' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'filterLists' | 'myRules' | 'settings'>('home');
 
   return (
     <div id="App">
@@ -31,6 +32,9 @@ function App() {
         </Button>
         <Button icon="filter" active={activeTab === 'filterLists'} onClick={() => setActiveTab('filterLists')}>
           Filter lists
+        </Button>
+        <Button icon="code" active={activeTab === 'myRules'} onClick={() => setActiveTab('myRules')}>
+          My rules
         </Button>
         <Button icon="settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
           Settings
@@ -51,6 +55,7 @@ function App() {
           )}
         </div>
         {activeTab === 'filterLists' && <FilterLists />}
+        {activeTab === 'myRules' && <MyRules />}
         {activeTab === 'settings' && <SettingsManager proxyState={proxyState} />}
       </div>
 

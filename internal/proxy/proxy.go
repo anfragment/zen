@@ -97,6 +97,9 @@ func (p *Proxy) Start() error {
 	}()
 
 	if err := p.setSystemProxy(); err != nil {
+		if err := p.Stop(); err != nil {
+			log.Printf("error stopping proxy: %v", err)
+		}
 		return fmt.Errorf("set system proxy: %v", err)
 	}
 
@@ -141,6 +144,19 @@ func (p *Proxy) initExclusionList() {
 
 // Stop stops the proxy.
 func (p *Proxy) Stop() error {
+	if err := p.shutdownServer(); err != nil {
+		// Intentionally not returning error because we still want to unset the system proxy.
+		log.Printf("error shutting down server: %v", err)
+	}
+
+	if err := p.unsetSystemProxy(); err != nil {
+		return fmt.Errorf("unset system proxy: %v", err)
+	}
+
+	return nil
+}
+
+func (p *Proxy) shutdownServer() error {
 	if p.server == nil {
 		return nil
 	}
@@ -152,11 +168,7 @@ func (p *Proxy) Stop() error {
 		// As per documentation:
 		// Shutdown does not attempt to close nor wait for hijacked connections such as WebSockets. The caller of Shutdown should separately notify such long-lived connections of shutdown and wait for them to close, if desired. See RegisterOnShutdown for a way to register shutdown notification functions.
 		// TODO: implement websocket shutdown
-		log.Printf("shutdown failed: %v", err)
-	}
-
-	if err := p.unsetSystemProxy(); err != nil {
-		return fmt.Errorf("unset system proxy: %v", err)
+		return fmt.Errorf("server shutdown: %w", err)
 	}
 
 	return nil
