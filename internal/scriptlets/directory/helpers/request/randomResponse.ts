@@ -3,9 +3,9 @@ import { parseValidInt } from "../parseValidInt";
 const RANDOM_RESPONSE_PATTERN_REGEXP = /length:(\d+)-(\d+)/;
 const RANDOM_STR_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+=~';
 
-export function genRandomResponse(pattern: string): string | null {
+export function genRandomResponse(pattern: string): string {
   if (pattern === 'false') {
-    return null;
+    return '';
   }
 
   let minLength: number;
