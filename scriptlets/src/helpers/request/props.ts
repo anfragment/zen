@@ -68,7 +68,7 @@ export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<ty
     if (
       request[prop] === undefined ||
       (prop === 'url' && !matchURL(props[prop]!, request[prop])) ||
-      !matchProp(props[prop]!, request[prop])
+      (prop !== 'url' && !matchProp(props[prop]!, request[prop]))
     ) {
       return false;
     }
@@ -91,7 +91,7 @@ export function matchXhr(
     if (
       request[prop] === undefined ||
       (prop === 'url' && !matchURL(props[prop]!, request[prop])) ||
-      !matchProp(props[prop]!, request[prop])
+      (prop !== 'url' && !matchProp(props[prop]!, request[prop]))
     ) {
       return false;
     }

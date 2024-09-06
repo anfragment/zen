@@ -56,6 +56,16 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it('should prevent a request on matching domain name if url is fully qualified and contains port', () => {
+    preventXHR('example.org');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://example.org:443/test');
+    xhr.send();
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('should not prevent a request non-matching domain name', () => {
     preventXHR('example.org');
 
@@ -86,10 +96,23 @@ describe('preventXHR', () => {
     expect(send).toHaveBeenCalled();
   });
 
-  // it('should prevent a request on a matching domain name and method', () => {
-  //   preventXHR('example.org method:GET');
+  it('should prevent a request on a matching domain name and method', () => {
+    preventXHR('example.org method:GET');
 
-  //   const xhr = new XMLHttpRequest();
-  //   xhr.open("GET", "example.org/")
-  // })
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'example.org/');
+    xhr.send();
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('should not prevent a request if only url gets matched', () => {
+    preventXHR('example.org method:GET');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'example.org');
+    xhr.send();
+
+    expect(send).toHaveBeenCalled();
+  });
 });

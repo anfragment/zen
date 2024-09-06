@@ -28,6 +28,7 @@ module.exports = {
     "@typescript-eslint/no-shadow": 0,
     "import/no-relative-packages": 0,
     "no-undef": 0,
+    "no-console": 1,
   },
   parserOptions: {
     project: "./tsconfig.json",

@@ -30,7 +30,7 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
     thisArg: ExtendedXHR,
     args: Parameters<typeof XMLHttpRequest.prototype.open>,
   ) => {
-    if (!matchXhr(parsedProps, ...args) && !thisArg[prevent]) {
+    if (!thisArg[prevent] && !matchXhr(parsedProps, ...args)) {
       thisArg[prevent] = false;
       return Reflect.apply(target, thisArg, args);
     }

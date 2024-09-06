@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const PRODUCT_NAME = 'Zen';
 
 export function createLogger(scriptletName: string) {
