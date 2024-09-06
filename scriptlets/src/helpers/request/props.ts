@@ -44,7 +44,7 @@ export function parsePropsToMatch(propsToMatch: string): ParsedPropsToMatch {
       throw new Error(`Invalid segment key: "${key}"`);
     }
 
-    res[key] = parseRegexp(value) || value;
+    res[key as RequestProp] = parseRegexp(value) || value;
   }
 
   return res;
@@ -65,8 +65,8 @@ export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<ty
     };
   }
 
-  for (const prop of Object.keys(props)) {
-    if (typeof request[prop] !== 'string' || !matchProp(props[prop], request[prop])) {
+  for (const prop of Object.keys(props) as RequestProp[]) {
+    if (typeof request[prop] !== 'string' || !matchProp(props[prop]!, request[prop])) {
       return false;
     }
   }
@@ -75,14 +75,14 @@ export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<ty
 }
 
 export function matchXhr(props: ParsedPropsToMatch, ...args: Parameters<typeof XMLHttpRequest.prototype.open>): boolean {
-  const request = {
+  const request: Partial<Record<RequestProp, string>> = {
     method: args[0],
-    url: args[1],
+    url: args[1].toString(),
     // Other arguments are skipped intentionally.
   }
 
-  for (const prop of Object.keys(props)) {
-    if (typeof request[prop] !== 'string' || !matchProp(props[prop], request[prop])) {
+  for (const prop of Object.keys(props) as RequestProp[]) {
+    if (typeof request[prop] !== 'string' || !matchProp(props[prop]!, request[prop])) {
       return false;
     }
   }

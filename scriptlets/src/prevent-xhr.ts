@@ -1,5 +1,5 @@
 import { createLogger } from "./helpers/logger";
-import { genRandomResponse, matchXhr, ParsedPropsToMatch, parsePropsToMatch } from "./helpers/request";
+import { genRandomResponse, matchXhr, parsePropsToMatch } from "./helpers/request";
 
 const logger = createLogger('prevent-xhr');
 

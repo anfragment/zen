@@ -18,4 +18,4 @@ export function createLogger(scriptletName: string) {
       console.error(`${PRODUCT_NAME} (${scriptletName}): ${line}`, context);
     },
   }
-} 
+}
