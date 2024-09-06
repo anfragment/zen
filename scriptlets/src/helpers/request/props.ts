@@ -1,7 +1,6 @@
 import { parseRegexp } from '../parseRegexp';
 
-
-export type RequestProp = typeof REQUEST_PROPS[number];
+export type RequestProp = (typeof REQUEST_PROPS)[number];
 export type ParsedPropsToMatch = Partial<Record<RequestProp, string | RegExp>>;
 
 const REQUEST_PROPS = [
@@ -25,7 +24,7 @@ export function parsePropsToMatch(propsToMatch: string): ParsedPropsToMatch {
   if (wholeRegexp !== null) {
     return {
       url: wholeRegexp,
-    }
+    };
   }
 
   const res: ParsedPropsToMatch = {};
@@ -66,7 +65,11 @@ export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<ty
   }
 
   for (const prop of Object.keys(props) as RequestProp[]) {
-    if (typeof request[prop] !== 'string' || !matchProp(props[prop]!, request[prop])) {
+    if (
+      request[prop] === undefined ||
+      (prop === 'url' && !matchURL(props[prop]!, request[prop])) ||
+      !matchProp(props[prop]!, request[prop])
+    ) {
       return false;
     }
   }
@@ -74,15 +77,22 @@ export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<ty
   return true;
 }
 
-export function matchXhr(props: ParsedPropsToMatch, ...args: Parameters<typeof XMLHttpRequest.prototype.open>): boolean {
+export function matchXhr(
+  props: ParsedPropsToMatch,
+  ...args: Parameters<typeof XMLHttpRequest.prototype.open>
+): boolean {
   const request: Partial<Record<RequestProp, string>> = {
     method: args[0],
     url: args[1].toString(),
     // Other arguments are skipped intentionally.
-  }
+  };
 
   for (const prop of Object.keys(props) as RequestProp[]) {
-    if (typeof request[prop] !== 'string' || !matchProp(props[prop]!, request[prop])) {
+    if (
+      request[prop] === undefined ||
+      (prop === 'url' && !matchURL(props[prop]!, request[prop])) ||
+      !matchProp(props[prop]!, request[prop])
+    ) {
       return false;
     }
   }
@@ -90,6 +100,29 @@ export function matchXhr(props: ParsedPropsToMatch, ...args: Parameters<typeof X
   return true;
 }
 
+function matchURL(urlProp: string | RegExp, url: string): boolean {
+  if (urlProp instanceof RegExp) {
+    return urlProp.test(url);
+  }
+  return urlProp === url || urlProp === getHostnameFromUrl(url);
+}
+
 function matchProp(prop: string | RegExp, value: string): boolean {
-  return typeof prop === 'string' ? prop === value : prop.test(value);
+  if (typeof prop === 'string') {
+    return prop === value;
+  }
+  return prop.test(value);
+}
+
+function getHostnameFromUrl(input: string): string | null {
+  try {
+    if (!/^https?:\/\//i.test(input)) {
+      input = `http://${input}`;
+    }
+
+    const url = new URL(input);
+    return url.hostname;
+  } catch {
+    return null;
+  }
 }

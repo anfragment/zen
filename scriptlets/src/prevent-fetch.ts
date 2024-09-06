@@ -4,5 +4,4 @@ export function preventFetch(propsToMatch: string, responseBody: ResponseBody = 
   if (typeof fetch === 'undefined' || typeof Proxy === 'undefined' || typeof Response === 'undefined') {
     return;
   }
-
 }

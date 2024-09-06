@@ -1,4 +1,4 @@
-const PRODUCT_NAME = "Zen";
+const PRODUCT_NAME = 'Zen';
 
 export function createLogger(scriptletName: string) {
   return {
@@ -17,5 +17,5 @@ export function createLogger(scriptletName: string) {
     error(line: string, ...context: any[]) {
       console.error(`${PRODUCT_NAME} (${scriptletName}): ${line}`, context);
     },
-  }
+  };
 }

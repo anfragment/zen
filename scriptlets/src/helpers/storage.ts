@@ -1,6 +1,6 @@
-import { parseRegexp } from "./parseRegexp";
+import { parseRegexp } from './parseRegexp';
 
-const valueMap = {
+const valueMap: Record<string, string> = {
   undefined: 'undefined',
   false: 'false',
   true: 'true',
@@ -16,8 +16,8 @@ const valueMap = {
   emptyArr: '[]',
   emptyObj: '{}',
   '': '',
-  $remove$: '$remove$'
-}
+  $remove$: '$remove$',
+};
 
 /**
  * Checks whether the value can be used in untrusted set-local-storage-item and set-session-storage-item scriptlets
@@ -27,7 +27,7 @@ const valueMap = {
  * @throws An error if the value is invalid.
  */
 export function validateUntrustedStorageValue(value: string): string {
-  if (valueMap.hasOwnProperty(value)) {
+  if (valueMap[value] !== undefined) {
     return valueMap[value];
   }
 

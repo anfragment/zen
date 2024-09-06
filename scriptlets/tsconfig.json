@@ -4,7 +4,7 @@
   "display": "Node 20",
   "_version": "20.1.0",
   "compilerOptions": {
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM"],
     "module": "node16",
     "target": "ES2022",
     "strict": true,

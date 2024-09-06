@@ -1,5 +1,5 @@
-import { createLogger } from "./helpers/logger";
-import { genRandomResponse, matchXhr, parsePropsToMatch } from "./helpers/request";
+import { createLogger } from './helpers/logger';
+import { genRandomResponse, matchXhr, parsePropsToMatch } from './helpers/request';
 
 const logger = createLogger('prevent-xhr');
 
@@ -25,7 +25,11 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
 
   let parsedProps = parsePropsToMatch(propsToMatch);
 
-  const openOverride: ProxyHandler<typeof XMLHttpRequest.prototype.open>['apply'] = (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.open>) => {
+  const openOverride: ProxyHandler<typeof XMLHttpRequest.prototype.open>['apply'] = (
+    target,
+    thisArg: ExtendedXHR,
+    args: Parameters<typeof XMLHttpRequest.prototype.open>,
+  ) => {
     if (!matchXhr(parsedProps, ...args) && !thisArg[prevent]) {
       thisArg[prevent] = false;
       return Reflect.apply(target, thisArg, args);
@@ -35,9 +39,13 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
     thisArg[prevent] = true;
     thisArg[url] = args[1].toString();
     return Reflect.apply(target, thisArg, args);
-  }
+  };
 
-  const sendOverride: ProxyHandler<typeof XMLHttpRequest.prototype.send>['apply'] = (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.send>) => {
+  const sendOverride: ProxyHandler<typeof XMLHttpRequest.prototype.send>['apply'] = (
+    target,
+    thisArg: ExtendedXHR,
+    args: Parameters<typeof XMLHttpRequest.prototype.send>,
+  ) => {
     if (!thisArg[prevent]) {
       return Reflect.apply(target, thisArg, args);
     }
@@ -56,39 +64,39 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
         date: new Date().toUTCString(),
       };
       switch (thisArg.responseType) {
-      case 'arraybuffer':
-        props.response.value = new ArrayBuffer(0);
-        thisArg[responseHeaders]['content-type'] = 'application/octet-stream';
-        break;
-      case 'blob':
-        props.response.value = new Blob([]);
-        thisArg[responseHeaders]['content-type'] = 'application/octet-stream';
-        break;
-      case 'document':
-        const doc = new DOMParser().parseFromString('', 'text/html');
-        props.response.value = doc;
-        props.responseXML.value = doc;
-        thisArg[responseHeaders]['content-type'] = 'text/html';
-        break;
-      case 'json':
-        props.response.value = {};
-        props.responseText.value = '{}';
-        thisArg[responseHeaders]['content-type'] = 'application/json';
-        break;
-      default:
-        if (typeof randomizeResponseTextPattern !== 'string' || randomizeResponseTextPattern === '') {
+        case 'arraybuffer':
+          props.response.value = new ArrayBuffer(0);
+          thisArg[responseHeaders]['content-type'] = 'application/octet-stream';
+          break;
+        case 'blob':
+          props.response.value = new Blob([]);
+          thisArg[responseHeaders]['content-type'] = 'application/octet-stream';
+          break;
+        case 'document': {
+          const doc = new DOMParser().parseFromString('', 'text/html');
+          props.response.value = doc;
+          props.responseXML.value = doc;
+          thisArg[responseHeaders]['content-type'] = 'text/html';
           break;
         }
-        try {
-          const responseText = genRandomResponse(randomizeResponseTextPattern);
-          props.response.value = responseText;
-          props.responseText.value = responseText;
-        } catch (ex) {
-          logger.error('Generating random response text', ex);
-        } finally {
-          thisArg[responseHeaders]['content-type'] = 'text/plain';
+        case 'json':
+          props.response.value = {};
+          props.responseText.value = '{}';
+          thisArg[responseHeaders]['content-type'] = 'application/json';
           break;
-        }
+        default:
+          if (typeof randomizeResponseTextPattern !== 'string' || randomizeResponseTextPattern === '') {
+            break;
+          }
+          try {
+            const responseText = genRandomResponse(randomizeResponseTextPattern);
+            props.response.value = responseText;
+            props.responseText.value = responseText;
+          } catch (ex) {
+            logger.error('Generating random response text', ex);
+          } finally {
+            thisArg[responseHeaders]['content-type'] = 'text/plain';
+          }
       }
       thisArg[responseHeaders]['content-length'] = props.response.value.toString().length.toString();
       Object.defineProperties(thisArg, props);
@@ -97,9 +105,13 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
       thisArg.dispatchEvent(new Event('load'));
       thisArg.dispatchEvent(new Event('loadend'));
     }, 1);
-  }
+  };
 
-  const getResponseHeaderOverride: ProxyHandler<typeof XMLHttpRequest.prototype.getResponseHeader>['apply'] = (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.getResponseHeader>) => {
+  const getResponseHeaderOverride: ProxyHandler<typeof XMLHttpRequest.prototype.getResponseHeader>['apply'] = (
+    target,
+    thisArg: ExtendedXHR,
+    args: Parameters<typeof XMLHttpRequest.prototype.getResponseHeader>,
+  ) => {
     if (!thisArg[prevent]) {
       return Reflect.apply(target, thisArg, args);
     }
@@ -108,9 +120,13 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
       return null;
     }
     return thisArg[responseHeaders]![args[0].toLowerCase()] ?? null;
-  }
+  };
 
-  const getAllResponseHeadersOverride: ProxyHandler<typeof XMLHttpRequest.prototype.getAllResponseHeaders>['apply'] = (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.getAllResponseHeaders>) => {
+  const getAllResponseHeadersOverride: ProxyHandler<typeof XMLHttpRequest.prototype.getAllResponseHeaders>['apply'] = (
+    target,
+    thisArg: ExtendedXHR,
+    args: Parameters<typeof XMLHttpRequest.prototype.getAllResponseHeaders>,
+  ) => {
     if (!thisArg[prevent]) {
       return Reflect.apply(target, thisArg, args);
     }
@@ -124,18 +140,18 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
       result += `${name}: ${value}\r\n`;
     }
     return result;
-  }
+  };
 
   XMLHttpRequest.prototype.open = new Proxy(XMLHttpRequest.prototype.open, {
-    apply: openOverride
+    apply: openOverride,
   });
   XMLHttpRequest.prototype.send = new Proxy(XMLHttpRequest.prototype.send, {
-    apply: sendOverride
+    apply: sendOverride,
   });
   XMLHttpRequest.prototype.getResponseHeader = new Proxy(XMLHttpRequest.prototype.getResponseHeader, {
-    apply: getResponseHeaderOverride
+    apply: getResponseHeaderOverride,
   });
   XMLHttpRequest.prototype.getAllResponseHeaders = new Proxy(XMLHttpRequest.prototype.getAllResponseHeaders, {
-    apply: getAllResponseHeadersOverride
+    apply: getAllResponseHeadersOverride,
   });
 }

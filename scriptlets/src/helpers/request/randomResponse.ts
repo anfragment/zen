@@ -1,4 +1,4 @@
-import { parseValidInt } from "../parseValidInt";
+import { parseValidInt } from '../parseValidInt';
 
 const RANDOM_RESPONSE_PATTERN_REGEXP = /length:(\d+)-(\d+)/;
 const RANDOM_STR_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+=~';
@@ -44,4 +44,3 @@ function genRandomStrWithLength(length: number): string {
   }
   return result;
 }
-

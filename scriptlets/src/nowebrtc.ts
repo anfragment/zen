@@ -8,8 +8,8 @@ export function nowebrtc(): void {
   }
 
   const pc = (cfg: RTCConfiguration) => {
-    logger(`document tried to create an RTCPeerConnection with config: ${cfg}`);
-  }
+    logger.log(`document tried to create an RTCPeerConnection with config: ${cfg}`);
+  };
   const noop = () => {};
   pc.prototype = {
     close: noop,
@@ -22,9 +22,10 @@ export function nowebrtc(): void {
   const old = window.RTCPeerConnection;
   window.RTCPeerConnection = pc as unknown as typeof window.RTCPeerConnection;
   if (old.prototype) {
-    old.prototype.createDataChannel = () => ({
-      close: noop,
-      send: noop,
-    } as unknown as RTCDataChannel);
+    old.prototype.createDataChannel = () =>
+      ({
+        close: noop,
+        send: noop,
+      }) as unknown as RTCDataChannel;
   }
 }

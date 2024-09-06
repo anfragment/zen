@@ -1,4 +1,4 @@
-import { removeFromStorage, validateUntrustedStorageValue } from "./helpers/storage";
+import { removeFromStorage, validateUntrustedStorageValue } from './helpers/storage';
 
 export function setLocalStorageItem(key: string, value: string) {
   if (typeof key !== 'string') {
