@@ -97,6 +97,11 @@ func (p *Proxy) Start() error {
 	}()
 
 	if err := p.setSystemProxy(); err != nil {
+		// dont stop the proxy if setting the system proxy fails, as user can user can set it manually for each application
+		if errors.Is(err, ErrUnsupportedDesktopEnvironment) {
+			return err
+		}
+
 		if err := p.Stop(); err != nil {
 			log.Printf("error stopping proxy: %v", err)
 		}

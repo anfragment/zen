@@ -36,3 +36,9 @@
     left: 0;
     width: 100vw;
 }
+
+.inline_text_link {
+    display: inline;
+    cursor: pointer;
+    text-decoration: underline;
+}

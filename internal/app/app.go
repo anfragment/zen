@@ -139,7 +139,11 @@ func (a *App) StartProxy() (err error) {
 	}
 
 	if err := a.proxy.Start(); err != nil {
-		return fmt.Errorf("start proxy: %v", err)
+		if errors.Is(err, proxy.ErrUnsupportedDesktopEnvironment) {
+			a.eventsHandler.OnUnsupportedDE(err)
+		} else {
+			return fmt.Errorf("start proxy: %v", err)
+		}
 	}
 
 	a.proxyOn = true

@@ -11,6 +11,10 @@ var exclusionListURLs = []string{
 	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
 }
 
+var (
+	ErrUnsupportedDesktopEnvironment = errors.New("system proxy configuration is currently only supported on GNOME")
+)
+
 func (p *Proxy) setSystemProxy() error {
 	if binaryExists("gsettings") {
 		commands := [][]string{
@@ -32,7 +36,7 @@ func (p *Proxy) setSystemProxy() error {
 	}
 	// TODO: add support for other desktop environments
 
-	return errors.New("system proxy configuration is currently only supported on GNOME")
+	return ErrUnsupportedDesktopEnvironment
 }
 
 func (p *Proxy) unsetSystemProxy() error {

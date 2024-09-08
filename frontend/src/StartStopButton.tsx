@@ -1,8 +1,8 @@
-import { Button } from '@blueprintjs/core';
+import { Button, Text } from '@blueprintjs/core';
 import { useEffect } from 'react';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/app/App';
-import { EventsOn } from '../wailsjs/runtime/runtime';
+import { BrowserOpenURL, EventsOn } from '../wailsjs/runtime/runtime';
 
 import { AppToaster } from './common/toaster';
 import { ProxyState } from './types';
@@ -21,6 +21,7 @@ enum ProxyActionKind {
   Stopping = 'stopping',
   Stopped = 'stopped',
   StopError = 'stopError',
+  UnsupportedDE = 'unsupportedDE',
 }
 
 interface ProxyAction {
@@ -58,6 +59,27 @@ export function StartStopButton({ proxyState, setProxyState }: StartStopButtonPr
           });
           setProxyState('off');
           break;
+        case ProxyActionKind.UnsupportedDE:
+          AppToaster.show({
+            message: (
+              <div>
+                System proxy configuration is currently only supported on GNOME. <br />
+                Follow{' '}
+                <Text
+                  onClick={() =>
+                    BrowserOpenURL('https://github.com/anfragment/zen/blob/master/docs/external/linux-proxy-conf.md')
+                  }
+                  className="inline_text_link"
+                >
+                  this guide
+                </Text>{' '}
+                to set the proxy on a per-app basis.
+              </div>
+            ),
+            intent: 'danger',
+          });
+          break;
+
         default:
           console.log('unknown proxy action', action);
       }
