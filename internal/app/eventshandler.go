@@ -45,6 +45,7 @@ const (
 	proxyStopping   proxyState = "stopping"
 	proxyStopped    proxyState = "stopped"
 	proxyStopError  proxyState = "stopError"
+	unsupportedDE   proxyState = "unsupportedDE"
 )
 
 type proxyAction struct {
@@ -117,6 +118,13 @@ func (e *eventsHandler) OnProxyStopped() {
 func (e *eventsHandler) OnProxyStopError(err error) {
 	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
 		Kind:  proxyStopError,
+		Error: fmt.Sprint(err),
+	})
+}
+
+func (e *eventsHandler) OnUnsupportedDE(err error) {
+	runtime.EventsEmit(e.ctx, proxyChannel, proxyAction{
+		Kind:  unsupportedDE,
 		Error: fmt.Sprint(err),
 	})
 }

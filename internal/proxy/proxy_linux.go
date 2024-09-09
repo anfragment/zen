@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -32,7 +31,7 @@ func (p *Proxy) setSystemProxy() error {
 	}
 	// TODO: add support for other desktop environments
 
-	return errors.New("system proxy configuration is currently only supported on GNOME")
+	return ErrUnsupportedDesktopEnvironment
 }
 
 func (p *Proxy) unsetSystemProxy() error {
