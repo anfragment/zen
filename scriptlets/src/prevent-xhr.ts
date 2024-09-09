@@ -1,5 +1,5 @@
 import { createLogger } from './helpers/logger';
-import { genRandomResponse, matchXhr, parsePropsToMatch } from './helpers/request';
+import { genRandomResponse, matchXhr, ParsedPropsToMatch, parsePropsToMatch } from './helpers/request';
 
 const logger = createLogger('prevent-xhr');
 
@@ -23,7 +23,12 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
     return;
   }
 
-  let parsedProps = parsePropsToMatch(propsToMatch);
+  let parsedProps: ParsedPropsToMatch;
+  try {
+    parsedProps = parsePropsToMatch(propsToMatch);
+  } catch (ex) {
+    logger.warn('Error parsing props', ex);
+  }
 
   const openOverride: ProxyHandler<typeof XMLHttpRequest.prototype.open>['apply'] = (
     target,
