@@ -1,4 +1,4 @@
-import { parseRegexp } from '../parseRegexp';
+import { parseRegexpLiteral, parseRegexpFromString } from '../parseRegexp';
 
 export type RequestProp = (typeof REQUEST_PROPS)[number];
 export type ParsedPropsToMatch = Partial<Record<RequestProp, string | RegExp>>;
@@ -20,18 +20,11 @@ export function parsePropsToMatch(propsToMatch: string): ParsedPropsToMatch {
     return {};
   }
 
-  const wholeRegexp = parseRegexp(propsToMatch);
-  if (wholeRegexp !== null) {
-    return {
-      url: wholeRegexp,
-    };
-  }
-
   const res: ParsedPropsToMatch = {};
   const segments = propsToMatch.split(' ');
   for (const segment of segments) {
     if (!segment.includes(':')) {
-      res.url = parseRegexp(segment) || segment;
+      res.url = parseRegexpLiteral(segment) || parseRegexpFromString(segment) || segment;
       continue;
     }
 
@@ -43,7 +36,7 @@ export function parsePropsToMatch(propsToMatch: string): ParsedPropsToMatch {
       throw new Error(`Invalid segment key: "${key}"`);
     }
 
-    res[key as RequestProp] = parseRegexp(value) || value;
+    res[key as RequestProp] = parseRegexpLiteral(value) || value;
   }
 
   return res;
@@ -65,11 +58,7 @@ export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<ty
   }
 
   for (const prop of Object.keys(props) as RequestProp[]) {
-    if (
-      request[prop] === undefined ||
-      (prop === 'url' && !matchURL(props[prop]!, request[prop])) ||
-      (prop !== 'url' && !matchProp(props[prop]!, request[prop]))
-    ) {
+    if (request[prop] === undefined || !matchProp(props[prop]!, request[prop])) {
       return false;
     }
   }
@@ -88,11 +77,7 @@ export function matchXhr(
   };
 
   for (const prop of Object.keys(props) as RequestProp[]) {
-    if (
-      request[prop] === undefined ||
-      (prop === 'url' && !matchURL(props[prop]!, request[prop])) ||
-      (prop !== 'url' && !matchProp(props[prop]!, request[prop]))
-    ) {
+    if (request[prop] === undefined || !matchProp(props[prop]!, request[prop])) {
       return false;
     }
   }
@@ -100,29 +85,9 @@ export function matchXhr(
   return true;
 }
 
-function matchURL(urlProp: string | RegExp, url: string): boolean {
-  if (urlProp instanceof RegExp) {
-    return urlProp.test(url);
-  }
-  return urlProp === url || urlProp === getHostnameFromUrl(url);
-}
-
 function matchProp(prop: string | RegExp, value: string): boolean {
   if (typeof prop === 'string') {
     return prop === value;
   }
   return prop.test(value);
-}
-
-function getHostnameFromUrl(input: string): string | null {
-  try {
-    if (!/^https?:\/\//i.test(input)) {
-      input = `http://${input}`;
-    }
-
-    const url = new URL(input);
-    return url.hostname;
-  } catch {
-    return null;
-  }
 }

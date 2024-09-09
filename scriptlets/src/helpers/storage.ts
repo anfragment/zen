@@ -1,4 +1,4 @@
-import { parseRegexp } from './parseRegexp';
+import { parseRegexpLiteral } from './parseRegexp';
 
 const valueMap: Record<string, string> = {
   undefined: 'undefined',
@@ -40,7 +40,7 @@ export function validateUntrustedStorageValue(value: string): string {
 }
 
 export function removeFromStorage(storage: Storage, key: string): void {
-  const regexp = parseRegexp(key);
+  const regexp = parseRegexpLiteral(key);
   if (regexp !== null) {
     const storageKeys = Object.keys(storage);
     for (const storageKey of storageKeys) {

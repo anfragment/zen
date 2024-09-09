@@ -111,6 +111,16 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  test('prevents a request on a matching url segment', () => {
+    preventXHR('adsbygoogle.js');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=test');
+    xhr.send();
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
   test('prevents a request if only url gets matched', () => {
     preventXHR('example.org method:GET');
 
