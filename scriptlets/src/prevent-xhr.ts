@@ -62,6 +62,7 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
       };
       thisArg[responseHeaders] = {
         date: new Date().toUTCString(),
+        'content-length': '0',
       };
       switch (thisArg.responseType) {
         case 'arraybuffer':
@@ -77,14 +78,17 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
           props.response.value = doc;
           props.responseXML.value = doc;
           thisArg[responseHeaders]['content-type'] = 'text/html';
+          thisArg[responseHeaders]['content-length'] = doc.documentElement.outerHTML.length.toString();
           break;
         }
         case 'json':
           props.response.value = {};
           props.responseText.value = '{}';
           thisArg[responseHeaders]['content-type'] = 'application/json';
+          thisArg[responseHeaders]['content-length'] = '2';
           break;
         default:
+          thisArg[responseHeaders]['content-type'] = 'text/plain';
           if (typeof randomizeResponseTextPattern !== 'string' || randomizeResponseTextPattern === '') {
             break;
           }
@@ -92,13 +96,11 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
             const responseText = genRandomResponse(randomizeResponseTextPattern);
             props.response.value = responseText;
             props.responseText.value = responseText;
+            thisArg[responseHeaders]['content-length'] = responseText.length.toString();
           } catch (ex) {
             logger.error('Generating random response text', ex);
-          } finally {
-            thisArg[responseHeaders]['content-type'] = 'text/plain';
           }
       }
-      thisArg[responseHeaders]['content-length'] = props.response.value.toString().length.toString();
       Object.defineProperties(thisArg, props);
 
       thisArg.dispatchEvent(new Event('readystatechange'));

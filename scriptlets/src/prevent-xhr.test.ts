@@ -1,6 +1,11 @@
-import { expect, jest, it, describe, beforeEach, afterEach } from '@jest/globals';
+import { expect, jest, test, describe, beforeEach, afterEach } from '@jest/globals';
 
+import { genRandomResponse } from './helpers/request/randomResponse';
 import { preventXHR } from './prevent-xhr';
+
+jest.mock('./helpers/request/randomResponse', () => ({
+  genRandomResponse: jest.fn(),
+}));
 
 describe('preventXHR', () => {
   let originalOpen: typeof XMLHttpRequest.prototype.open;
@@ -26,7 +31,7 @@ describe('preventXHR', () => {
     jest.clearAllMocks();
   });
 
-  it("should prevent a request if called with '*'", () => {
+  test("prevents a request if called with '*'", () => {
     preventXHR('*');
 
     const xhr = new XMLHttpRequest();
@@ -36,7 +41,7 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("should prevent a request if called with ''", () => {
+  test("prevents a request if called with ''", () => {
     preventXHR('');
 
     const xhr = new XMLHttpRequest();
@@ -46,7 +51,7 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('should prevent a request on matching domain name', () => {
+  test('prevents a request on matching a domain name', () => {
     preventXHR('example.org');
 
     const xhr = new XMLHttpRequest();
@@ -56,7 +61,7 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('should prevent a request on matching domain name if url is fully qualified and contains port', () => {
+  test('prevents a request on a matching domain name if the url is fully qualified and contains a port', () => {
     preventXHR('example.org');
 
     const xhr = new XMLHttpRequest();
@@ -66,7 +71,7 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('should not prevent a request non-matching domain name', () => {
+  test("doesn't prevent a request with a non-matching domain name", () => {
     preventXHR('example.org');
 
     const xhr = new XMLHttpRequest();
@@ -76,7 +81,7 @@ describe('preventXHR', () => {
     expect(send).toHaveBeenCalled();
   });
 
-  it('should prevent a request on a matching method', () => {
+  test('prevents a request on a matching method', () => {
     preventXHR('method:GET');
 
     const xhr1 = new XMLHttpRequest();
@@ -86,7 +91,7 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('should not prevent a request on a non-matching method', () => {
+  test("doesn't prevent a request on a non-matching method", () => {
     preventXHR('method:GET');
 
     const xhr = new XMLHttpRequest();
@@ -96,7 +101,7 @@ describe('preventXHR', () => {
     expect(send).toHaveBeenCalled();
   });
 
-  it('should prevent a request on a matching domain name and method', () => {
+  test('prevents a request on a matching domain name and method', () => {
     preventXHR('example.org method:GET');
 
     const xhr = new XMLHttpRequest();
@@ -106,7 +111,7 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('should not prevent a request if only url gets matched', () => {
+  test('prevents a request if only url gets matched', () => {
     preventXHR('example.org method:GET');
 
     const xhr = new XMLHttpRequest();
@@ -114,5 +119,62 @@ describe('preventXHR', () => {
     xhr.send();
 
     expect(send).toHaveBeenCalled();
+  });
+
+  test('generates empty json response if responseType is set to json', (done) => {
+    preventXHR('*');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'example.org');
+    xhr.responseType = 'json';
+    xhr.onload = () => {
+      try {
+        expect(xhr.readyState).toBe(4);
+        expect(xhr.response).toEqual({});
+        expect(xhr.responseText).toBe('{}');
+        expect(xhr.getResponseHeader('Content-Type')).toBe('application/json');
+        done();
+      } catch (ex) {
+        done(ex as Error);
+      }
+    };
+    xhr.send();
+  });
+
+  test('generates proper fake response headers', (done) => {
+    preventXHR('*');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'example.org');
+    xhr.onload = () => {
+      try {
+        expect(xhr.getResponseHeader('Content-Type')).toBe('text/plain');
+        expect(xhr.getResponseHeader('Content-Length')).toBe('0');
+        done();
+      } catch (ex) {
+        done(ex as Error);
+      }
+    };
+    xhr.send();
+  });
+
+  test('generates random response', (done) => {
+    (genRandomResponse as jest.Mock).mockReturnValue('wow-much-random');
+
+    preventXHR('*', 'length:100-100');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'example.org');
+    xhr.onload = () => {
+      try {
+        expect(genRandomResponse).toHaveBeenCalled();
+        expect(xhr.response).toBe('wow-much-random');
+        expect(xhr.getResponseHeader('Content-Length')).toBe('wow-much-random'.length.toString());
+        done();
+      } catch (ex) {
+        done(ex as Error);
+      }
+    };
+    xhr.send();
   });
 });
