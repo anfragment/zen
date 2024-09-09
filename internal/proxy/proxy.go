@@ -39,6 +39,10 @@ type Proxy struct {
 	ignoredHostsMu   sync.RWMutex
 }
 
+var (
+	ErrUnsupportedDesktopEnvironment = errors.New("system proxy configuration is currently only supported on GNOME")
+)
+
 func NewProxy(filter filter, certGenerator certGenerator, port int, ignoredHosts []string) (*Proxy, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")

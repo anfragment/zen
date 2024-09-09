@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -10,10 +9,6 @@ import (
 var exclusionListURLs = []string{
 	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
 }
-
-var (
-	ErrUnsupportedDesktopEnvironment = errors.New("system proxy configuration is currently only supported on GNOME")
-)
 
 func (p *Proxy) setSystemProxy() error {
 	if binaryExists("gsettings") {
