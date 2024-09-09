@@ -29,6 +29,7 @@ module.exports = {
     "import/no-relative-packages": 0,
     "no-undef": 0,
     "no-console": 1,
+    "no-global-assign": 0,
   },
   parserOptions: {
     project: "./tsconfig.json",
