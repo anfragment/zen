@@ -1,13 +1,13 @@
 import { Button, ButtonGroup, Icon, IconSize, FocusStyleManager, NonIdealState } from '@blueprintjs/core';
 import { useState, useEffect } from 'react';
 
-import { StartProxy, StopProxy } from '../wailsjs/go/app/App';
-
 import './App.css';
-import { AppToaster } from './common/toaster';
+
 import { FilterLists } from './FilterLists';
+import { MyRules } from './MyRules';
 import { RequestLog } from './RequestLog';
 import { SettingsManager } from './SettingsManager';
+import { StartStopButton } from './StartStopButton';
 import { ProxyState } from './types';
 
 function App() {
@@ -16,35 +16,7 @@ function App() {
   }, []);
 
   const [proxyState, setProxyState] = useState<ProxyState>('off');
-  const [activeTab, setActiveTab] = useState<'home' | 'filterLists' | 'settings'>('home');
-
-  const startProxy = async () => {
-    setProxyState('loading');
-    try {
-      await StartProxy();
-    } catch (err) {
-      AppToaster.show({
-        message: `Failed to start proxy: ${err}`,
-        intent: 'danger',
-      });
-      setProxyState('off');
-      return;
-    }
-    setProxyState('on');
-  };
-  const stopProxy = async () => {
-    setProxyState('loading');
-    try {
-      await StopProxy();
-    } catch (err) {
-      AppToaster.show({
-        message: `Failed to stop proxy: ${err}`,
-        intent: 'danger',
-      });
-    } finally {
-      setProxyState('off');
-    }
-  };
+  const [activeTab, setActiveTab] = useState<'home' | 'filterLists' | 'myRules' | 'settings'>('home');
 
   return (
     <div id="App">
@@ -60,6 +32,9 @@ function App() {
         </Button>
         <Button icon="filter" active={activeTab === 'filterLists'} onClick={() => setActiveTab('filterLists')}>
           Filter lists
+        </Button>
+        <Button icon="code" active={activeTab === 'myRules'} onClick={() => setActiveTab('myRules')}>
+          My rules
         </Button>
         <Button icon="settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
           Settings
@@ -80,19 +55,11 @@ function App() {
           )}
         </div>
         {activeTab === 'filterLists' && <FilterLists />}
+        {activeTab === 'myRules' && <MyRules />}
         {activeTab === 'settings' && <SettingsManager proxyState={proxyState} />}
       </div>
 
-      <Button
-        onClick={proxyState === 'off' ? startProxy : stopProxy}
-        fill
-        intent="primary"
-        className="footer"
-        large
-        loading={proxyState === 'loading'}
-      >
-        {proxyState === 'off' ? 'Start' : 'Stop'}
-      </Button>
+      <StartStopButton proxyState={proxyState} setProxyState={setProxyState} />
     </div>
   );
 }

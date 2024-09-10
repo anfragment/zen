@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -25,14 +24,14 @@ func (p *Proxy) setSystemProxy() error {
 			cmd := exec.Command(command[0], command[1:]...) // #nosec G204
 			out, err := cmd.CombinedOutput()
 			if err != nil {
-				return fmt.Errorf("failed to run system proxy command %s: %v\n%s", strings.Join(command, " "), err, out)
+				return fmt.Errorf("run system proxy command (%s): %w\n%s", strings.Join(command, " "), err, out)
 			}
 		}
 		return nil
 	}
 	// TODO: add support for other desktop environments
 
-	return errors.New("system proxy configuration is currently only supported on GNOME")
+	return ErrUnsupportedDesktopEnvironment
 }
 
 func (p *Proxy) unsetSystemProxy() error {
