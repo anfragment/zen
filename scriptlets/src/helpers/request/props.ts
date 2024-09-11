@@ -47,12 +47,13 @@ export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<ty
   if (requestArgs[0] instanceof Request) {
     console.assert(requestArgs[1] === undefined);
     request = requestArgs[0];
-  } else {
-    if (requestArgs[1] === undefined) {
-      throw new Error('Malformed requestArgs, missing element at index 1');
-    }
+  } else if (requestArgs[1] !== undefined) {
     request = {
       ...requestArgs[1],
+      url: requestArgs[0].toString(),
+    };
+  } else {
+    request = {
       url: requestArgs[0].toString(),
     };
   }

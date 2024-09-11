@@ -1,14 +1,14 @@
 import { createLogger } from './helpers/logger';
 import { matchFetch, ParsedPropsToMatch, parsePropsToMatch } from './helpers/request';
 
-type ResponseBody = 'emptyObj' | 'emptyArr' | 'emptyStr' | '';
+type ResponseBodyType = 'emptyObj' | 'emptyArr' | 'emptyStr' | '';
 type ResponseType = 'basic' | 'cors' | 'opaque';
 
 const logger = createLogger('prevent-fetch');
 
 export function preventFetch(
   propsToMatch: string,
-  responseBody: ResponseBody = 'emptyObj',
+  responseBodyType: ResponseBodyType = 'emptyObj',
   responseType?: ResponseType,
 ) {
   if (typeof fetch === 'undefined' || typeof Proxy === 'undefined' || typeof Response === 'undefined') {
@@ -16,20 +16,20 @@ export function preventFetch(
     return;
   }
 
-  let response;
-  switch (responseBody) {
+  let responseBody;
+  switch (responseBodyType) {
     case '':
     case 'emptyObj':
-      response = '{}';
+      responseBody = '{}';
       break;
     case 'emptyArr':
-      response = '[]';
+      responseBody = '[]';
       break;
     case 'emptyStr':
-      response = '';
+      responseBody = '';
       break;
     default:
-      logger.warn(`Invalid responseBody: ${responseBody}`);
+      logger.warn(`Invalid responseBody: ${responseBodyType}`);
       return;
   }
 
@@ -49,10 +49,48 @@ export function preventFetch(
 
   // @ts-ignore
   fetch = new Proxy(fetch, {
-    apply: (target, thisArg, args: Parameters<typeof fetch>) => {
+    apply: async (target, thisArg, args: Parameters<typeof fetch>) => {
       if (!matchFetch(parsedProps, args)) {
         return Reflect.apply(target, thisArg, args);
       }
+
+      const response = new Response(responseBody, {
+        status: 200,
+        statusText: 'OK',
+        headers: new Headers({
+          'Content-Length': responseBody.length.toString(),
+          'Content-Type': 'application/json',
+          Date: new Date().toUTCString(),
+        }),
+      });
+
+      if (responseType === 'opaque') {
+        // https://fetch.spec.whatwg.org/#concept-filtered-response-opaque
+        Object.defineProperties(response, {
+          url: { value: '' },
+          status: { value: 0 },
+          statusText: { value: '' },
+          body: { value: null },
+          type: { value: 'opaque' },
+          headers: { value: new Headers() },
+        });
+      } else {
+        let url: string;
+        if (args[0] instanceof URL) {
+          url = args[0].toString();
+        } else if (args[0] instanceof Request) {
+          url = args[0].url;
+        } else {
+          url = args[0];
+        }
+
+        Object.defineProperties(response, {
+          url: { value: url },
+          type: { value: responseType || 'basic' },
+        });
+      }
+
+      return response;
     },
   });
 }
