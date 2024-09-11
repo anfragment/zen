@@ -121,7 +121,7 @@ describe('preventXHR', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  test('prevents a request if only url gets matched', () => {
+  test("doesn't prevent a request if only url gets matched", () => {
     preventXHR('example.org method:GET');
 
     const xhr = new XMLHttpRequest();
