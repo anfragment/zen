@@ -6,3 +6,4 @@ frontend/dist
 *.app
 .env.local
 **/coverage/*
+**/dist/*

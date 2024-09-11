@@ -5,13 +5,12 @@
   "_version": "20.1.0",
   "compilerOptions": {
     "lib": ["ES2023", "DOM"],
-    "module": "node16",
     "target": "ES2022",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node16",
+    "moduleResolution": "Bundler",
     "outDir": "./build",
     "rootDir": "./src"
   },
