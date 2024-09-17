@@ -11,6 +11,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Bundler",
+    "module": "Preserve",
     "outDir": "./build",
     "rootDir": "./src"
   },
