@@ -45,7 +45,6 @@ export function parsePropsToMatch(propsToMatch: string): ParsedPropsToMatch {
 export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<typeof window.fetch>): boolean {
   let request: (Request | RequestInit) & { url: string };
   if (requestArgs[0] instanceof Request) {
-    console.assert(requestArgs[1] === undefined);
     request = requestArgs[0];
   } else if (requestArgs[1] !== undefined) {
     request = {
