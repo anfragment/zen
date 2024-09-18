@@ -23,7 +23,7 @@ type certGenerator interface {
 // filter is an interface capable of filtering HTTP requests.
 type filter interface {
 	HandleRequest(*http.Request) *http.Response
-	HandleResponse(*http.Request, *http.Response)
+	HandleResponse(*http.Request, *http.Response) error
 }
 
 // Proxy is a forward HTTP/HTTPS proxy that can filter requests.
@@ -211,7 +211,11 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 	removeConnectionHeaders(resp.Header)
 	removeHopHeaders(resp.Header)
 
-	p.filter.HandleResponse(r, resp)
+	if err := p.filter.HandleResponse(r, resp); err != nil {
+		log.Printf("error handling response by filter: %v", err)
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
 
 	for k, vv := range resp.Header {
 		for _, v := range vv {
@@ -225,7 +229,7 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 
 // proxyConnect proxies the initial CONNECT and subsequent data between the
 // client and the remote server.
-func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
+func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Fatal("http server does not support hijacking")
@@ -233,40 +237,40 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 
 	clientConn, _, err := hj.Hijack()
 	if err != nil {
-		log.Printf("hijacking connection(%s): %v", r.Host, err)
+		log.Printf("hijacking connection(%s): %v", connReq.Host, err)
 		return
 	}
 	defer clientConn.Close()
 
-	removeHopHeaders(r.Header)
-	removeConnectionHeaders(r.Header)
+	removeHopHeaders(connReq.Header)
+	removeConnectionHeaders(connReq.Header)
 
-	if filterResp := p.filter.HandleRequest(r); filterResp != nil {
+	if filterResp := p.filter.HandleRequest(connReq); filterResp != nil {
 		filterResp.Write(clientConn)
 		return
 	}
 
-	host, _, err := net.SplitHostPort(r.Host)
+	host, _, err := net.SplitHostPort(connReq.Host)
 	if err != nil {
-		log.Printf("splitting host and port(%s): %v", r.Host, err)
+		log.Printf("splitting host and port(%s): %v", connReq.Host, err)
 		return
 	}
 
 	if !p.shouldMITM(host) || net.ParseIP(host) != nil {
 		// TODO: implement upstream certificate sniffing
 		// https://docs.mitmproxy.org/stable/concepts-howmitmproxyworks/#complication-1-whats-the-remote-hostname
-		p.tunnel(clientConn, r)
+		p.tunnel(clientConn, connReq)
 		return
 	}
 
 	tlsCert, err := p.certGenerator.GetCertificate(host)
 	if err != nil {
-		log.Printf("getting certificate(%s): %v", r.Host, err)
+		log.Printf("getting certificate(%s): %v", connReq.Host, err)
 		return
 	}
 
 	if _, err := clientConn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n")); err != nil {
-		log.Printf("writing 200 OK to client(%s): %v", r.Host, err)
+		log.Printf("writing 200 OK to client(%s): %v", connReq.Host, err)
 		return
 	}
 
@@ -290,12 +294,12 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 					p.ignoredHostsMu.Unlock()
 				}
 
-				log.Printf("reading request(%s): %v", r.Host, err)
+				log.Printf("reading request(%s): %v", connReq.Host, err)
 			}
 			break
 		}
 
-		req.URL.Host = r.Host
+		req.URL.Host = connReq.Host
 
 		if isWS(req) {
 			p.proxyWebsocketTLS(req, tlsConfig, tlsConn)
@@ -318,17 +322,22 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, r *http.Request) {
 				p.ignoredHostsMu.Unlock()
 			}
 
-			log.Printf("roundtrip(%s): %v", r.Host, err)
+			log.Printf("roundtrip(%s): %v", connReq.Host, err)
 			// TODO: better error presentation
 			response := fmt.Sprintf("HTTP/1.1 502 Bad Gateway\r\n\r\n%s", err.Error())
 			tlsConn.Write([]byte(response))
 			break
 		}
 
-		p.filter.HandleResponse(req, resp)
+		if err := p.filter.HandleResponse(req, resp); err != nil {
+			log.Printf("error handling response by filter for %s, %v", req.URL, err)
+			response := fmt.Sprintf("HTTP/1.1 502 Bad Gateway\r\n\r\n%s", err.Error())
+			tlsConn.Write([]byte(response))
+			break
+		}
 
 		if err := resp.Write(tlsConn); err != nil {
-			log.Printf("writing response(%s): %v", r.Host, err)
+			log.Printf("writing response(%s): %v", connReq.Host, err)
 			resp.Body.Close()
 			break
 		}

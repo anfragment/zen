@@ -17,38 +17,44 @@ import (
 	"github.com/anfragment/zen/internal/rule"
 )
 
-// filterEventsEmitter is an interface that can emit filter events.
+// filterEventsEmitter emits filter events.
 type filterEventsEmitter interface {
 	OnFilterBlock(method, url, referer string, rules []rule.Rule)
 	OnFilterRedirect(method, url, to, referer string, rules []rule.Rule)
 	OnFilterModify(method, url, referer string, rules []rule.Rule)
 }
 
-// ruleMatcher is an interface that can match requests against rules.
+// ruleMatcher matches requests against rules.
 type ruleMatcher interface {
 	AddRule(rule string, filterName *string) error
 	FindMatchingRulesReq(*http.Request) []rule.Rule
 	FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
 }
 
-// config is an interface that provides filter configuration.
+// config provides filter configuration.
 type config interface {
 	GetFilterLists() []cfg.FilterList
 	GetMyRules() []string
 }
 
-// Filter is a filter for URLs that is capable of Adblock-style filter lists and hosts rules and matching URLs against them.
+// scriptletsInjector injects scriptlets into HTML responses.
+type scriptletsInjector interface {
+	Inject(*http.Request, *http.Response) error
+}
+
+// Filter is capable of parsing Adblock-style filter lists and hosts rules and matching URLs against them.
 //
-// The filter is safe for concurrent use.
+// Safe for concurrent use.
 type Filter struct {
 	config               config
 	ruleMatcher          ruleMatcher
 	exceptionRuleMatcher ruleMatcher
+	scriptletsInjector   scriptletsInjector
 	eventsEmitter        filterEventsEmitter
 }
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -58,6 +64,9 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 	if ruleMatcher == nil {
 		return nil, errors.New("ruleMatcher is nil")
 	}
+	if scriptletsInjector == nil {
+		return nil, errors.New("scriptletsInjector is nil")
+	}
 	if exceptionRuleMatcher == nil {
 		return nil, errors.New("exceptionRuleMatcher is nil")
 	}
@@ -66,6 +75,7 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 		config:               config,
 		ruleMatcher:          ruleMatcher,
 		exceptionRuleMatcher: exceptionRuleMatcher,
+		scriptletsInjector:   scriptletsInjector,
 		eventsEmitter:        eventsEmitter,
 	}
 	f.init()
@@ -196,14 +206,22 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 //
 // As of April 2024, there are no response-only rules that can block or redirect responses.
 // For that reason, this method does not return a blocking or redirecting response itself.
-func (f *Filter) HandleResponse(req *http.Request, res *http.Response) {
+func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
+	log.Println(req.Header.Get("Sec-Fetch-Mode"), req.Header.Get("Sec-Fetch-Dest"), res.Header.Get("Content-Type"))
+	if req.Header.Get("Sec-Fetch-Mode") == "navigate" && req.Header.Get("Sec-Fetch-Dest") == "document" && strings.HasPrefix(res.Header.Get("Content-Type"), "text/html") {
+		if err := f.scriptletsInjector.Inject(req, res); err != nil {
+			return fmt.Errorf("inject scriptlets: %w", err)
+		}
+		log.Println("injected")
+	}
+
 	if len(f.exceptionRuleMatcher.FindMatchingRulesRes(req, res)) > 0 {
-		return
+		return nil
 	}
 
 	matchingRules := f.ruleMatcher.FindMatchingRulesRes(req, res)
 	if len(matchingRules) == 0 {
-		return
+		return nil
 	}
 
 	var appliedRules []rule.Rule
@@ -217,4 +235,6 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) {
 	if len(appliedRules) > 0 {
 		f.eventsEmitter.OnFilterModify(req.Method, req.URL.String(), req.Header.Get("Referer"), appliedRules)
 	}
+
+	return nil
 }
