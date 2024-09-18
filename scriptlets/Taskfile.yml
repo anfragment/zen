@@ -1,0 +1,33 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Builds the bundle and copies it to the internal/scriptlets directory.
+    dir: scriptlets
+    cmds:
+      - npm run build
+      - cp dist/bundle.js ../internal/scriptlets
+
+  lint:
+    desc: Lints the code.
+    dir: scriptlets
+    cmds:
+      - npm run lint
+
+  test:
+    desc: Tests the code.
+    dir: scriptlets
+    cmds:
+      - npm run test
+  
+  install:
+    desc: Installs the complete set of dependencies.
+    dir: scriptlets
+    cmds:
+      - npm ci
+  
+  install-prod:
+    desc: Installs the dependencies required to build the bundle.
+    dir: scriptlets
+    cmds:
+      - npm ci --only=prod
