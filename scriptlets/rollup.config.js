@@ -14,7 +14,9 @@ export default {
   plugins: [
     resolve(),
     commonjs(),
-    typescript(),
+    typescript({
+      exclude: ['**/test/*.ts', '**/*.test.ts']
+    }),
     babel({
       babelHelpers: 'bundled',
       presets: [
