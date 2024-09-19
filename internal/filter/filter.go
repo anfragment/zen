@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"regexp"
 	"strings"
@@ -207,12 +208,11 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 // As of April 2024, there are no response-only rules that can block or redirect responses.
 // For that reason, this method does not return a blocking or redirecting response itself.
 func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
-	log.Println(req.Header.Get("Sec-Fetch-Mode"), req.Header.Get("Sec-Fetch-Dest"), res.Header.Get("Content-Type"))
-	if req.Header.Get("Sec-Fetch-Mode") == "navigate" && req.Header.Get("Sec-Fetch-Dest") == "document" && strings.HasPrefix(res.Header.Get("Content-Type"), "text/html") {
+	if isDocumentNavigation(req, res) {
 		if err := f.scriptletsInjector.Inject(req, res); err != nil {
-			return fmt.Errorf("inject scriptlets: %w", err)
+			// The error is recoverable, so we log it and continue processing the response.
+			log.Println("error injecting scriptlets for %q: %v", req.URL, err)
 		}
-		log.Println("injected")
 	}
 
 	if len(f.exceptionRuleMatcher.FindMatchingRulesRes(req, res)) > 0 {
@@ -237,4 +237,24 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 	}
 
 	return nil
+}
+
+func isDocumentNavigation(req *http.Request, res *http.Response) bool {
+	// Sec-Fetch-Dest: document indicates that the destination is a document (HTML or XML),
+	// and the request is the result of a user-initiated top-level navigation (e.g. resulting from a user clicking a link).
+	// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-Fetch-Dest#document
+	if req.Header.Get("Sec-Fetch-Dest") != "document" {
+		return false
+	}
+
+	contentType := res.Header.Get("Content-Type")
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	if mediaType != "text/html" {
+		return false
+	}
+
+	return true
 }
