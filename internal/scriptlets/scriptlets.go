@@ -29,6 +29,7 @@ var reBody = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
 type Injector struct {
 	// scriptletsElement contains the <script> element for the scriptlets bundle, which will be inserted into HTML documents.
 	scriptletsElement []byte
+	store             *Store
 }
 
 // NewInjector creates a new Injector with the embedded scriptlets.
@@ -39,7 +40,7 @@ func NewInjector() (*Injector, error) {
 	}
 
 	openingTag := []byte("\n<script>")
-	closingTag := []byte("</script>")
+	closingTag := []byte("</script>\n")
 
 	scriptletsElement := make([]byte, len(openingTag)+len(bundleData)+len(closingTag))
 	copy(scriptletsElement, openingTag)
@@ -48,7 +49,12 @@ func NewInjector() (*Injector, error) {
 
 	return &Injector{
 		scriptletsElement: scriptletsElement,
+		store:             NewStore(),
 	}, nil
+}
+
+func (m *Injector) AddRule(rule string) error {
+	return m.store.AddRule(rule)
 }
 
 // Inject injects scriptlets into given HTTP HTML response.
@@ -63,7 +69,9 @@ func (m *Injector) Inject(req *http.Request, res *http.Response) error {
 	var modified bool
 	modifiedBody := reBody.ReplaceAllFunc(rawBodyBytes, func(match []byte) []byte {
 		modified = true
-		return append(match, m.scriptletsElement...)
+		match = append(match, m.scriptletsElement...)
+		match = append(match, m.store.CreateInjection(req.URL.Hostname())...)
+		return match
 	})
 
 	if !modified {

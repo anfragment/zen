@@ -41,6 +41,7 @@ type config interface {
 // scriptletsInjector injects scriptlets into HTML responses.
 type scriptletsInjector interface {
 	Inject(*http.Request, *http.Response) error
+	AddRule(string) error
 }
 
 // Filter is capable of parsing Adblock-style filter lists and hosts rules and matching URLs against them.
@@ -124,6 +125,7 @@ var (
 	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
 	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)|(##|#\?#|#\$#|#@#)`)
 	reException  = regexp.MustCompile(`^@@`)
+	reScriptlet  = regexp.MustCompile(`#%#\/\/scriptlet`)
 )
 
 // ParseAndAddRules parses the rules from the given reader and adds them to the filter.
@@ -136,8 +138,15 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCou
 			continue
 		}
 
+		if reScriptlet.MatchString(line) {
+			if err := f.scriptletsInjector.AddRule(line); err != nil {
+				// log.Printf("error adding scriptlet rule: %v", err)
+			}
+			continue
+		}
+
 		if isException, err := f.AddRule(line, filterName); err != nil {
-			log.Printf("error adding rule: %v", err)
+			// log.Printf("error adding rule: %v", err)
 		} else if isException {
 			exceptionCount++
 		} else {
