@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/ruletree"
+	"github.com/anfragment/zen/internal/selfupdate"
 	"github.com/anfragment/zen/internal/systray"
 )
 
@@ -76,7 +78,16 @@ func (a *App) DomReady(ctx context.Context) {
 
 	a.config.RunMigrations()
 	a.systrayMgr.Init(ctx)
-	cfg.SelfUpdate(ctx)
+	// cfg.SelfUpdate(ctx)
+
+	su, err := selfupdate.NewSelfUpdater(&http.Client{})
+	if err != nil {
+		log.Printf("failed to create self updater: %v", err)
+		return
+	}
+
+	su.Update()
+
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
 		// StartProxy requires an active event listener on the frontend to show the user the correct proxy state.

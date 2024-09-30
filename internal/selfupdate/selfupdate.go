@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"runtime"
@@ -48,6 +49,7 @@ func NewSelfUpdater(httpClient HTTPClient) (*SelfUpdater, error) {
 	u := SelfUpdater{
 		version:      Version,
 		releaseTrack: releaseTrack,
+		httpClient:   httpClient,
 	}
 	switch noSelfUpdate {
 	case "true":
@@ -92,7 +94,7 @@ func (su *SelfUpdater) checkForUpdates() (*Release, error) {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	return nil, nil
+	return &rel, nil
 }
 
 // isNewer compares the current version with the version passed as an argument and returns true if the argument is newer.
@@ -118,4 +120,47 @@ func (su *SelfUpdater) isNewer(version string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (su *SelfUpdater) downloadFromURL(url string) (io.ReadCloser, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	res, err := su.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+	}
+
+	return res.Body, nil
+}
+
+func (su *SelfUpdater) Update() error {
+	rel, err := su.checkForUpdates()
+	if err != nil {
+		return err
+	}
+
+	isNewer, err := su.isNewer(rel.Version)
+	if err != nil {
+		return err
+	}
+
+	if !isNewer {
+		return nil
+	}
+
+	_, err = su.downloadFromURL(rel.AssetURL)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Downloaded")
+
+	return nil
 }
