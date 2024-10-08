@@ -25,7 +25,7 @@ const PLATFORM_ASSETS = {
         amd64: 'Zen_windows_amd64.zip',
     },
     linux: {
-        am64: 'Zen_linux_amd64.tar.gz',
+        amd64: 'Zen_linux_amd64.tar.gz',
     },
 };
 const MANIFESTS_BASE_URL = 'https://zenprivacy.net/update-manifests/stable';
