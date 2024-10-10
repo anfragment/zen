@@ -29,7 +29,10 @@ var reBody = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
 type Injector struct {
 	// scriptletsElement contains the <script> element for the scriptlets bundle, which will be inserted into HTML documents.
 	scriptletsElement []byte
-	store             *Store
+	// universalScriptlets apply to all hostnames.
+	universalScriptlets []scriptlet
+	// scriptletMap maps hostnames to hostname-specific scriptlets.
+	scriptletMap map[string][]*scriptlet
 }
 
 // NewInjector creates a new Injector with the embedded scriptlets.
@@ -39,8 +42,8 @@ func NewInjector() (*Injector, error) {
 		return nil, fmt.Errorf("read bundle from embed: %w", err)
 	}
 
-	openingTag := []byte("\n<script>")
-	closingTag := []byte("</script>\n")
+	openingTag := []byte("<script>")
+	closingTag := []byte("</script>")
 
 	scriptletsElement := make([]byte, len(openingTag)+len(bundleData)+len(closingTag))
 	copy(scriptletsElement, openingTag)
@@ -49,18 +52,14 @@ func NewInjector() (*Injector, error) {
 
 	return &Injector{
 		scriptletsElement: scriptletsElement,
-		store:             NewStore(),
+		scriptletMap:      make(map[string][]*scriptlet),
 	}, nil
-}
-
-func (m *Injector) AddRule(rule string) error {
-	return m.store.AddRule(rule)
 }
 
 // Inject injects scriptlets into given HTTP HTML response.
 //
 // In case of error, the response body is unchanged and the caller may proceed as if the function had not been called.
-func (m *Injector) Inject(req *http.Request, res *http.Response) error {
+func (i *Injector) Inject(req *http.Request, res *http.Response) error {
 	rawBodyBytes, err := readRawBody(res)
 	if err != nil {
 		return fmt.Errorf("read raw body: %w", err)
@@ -69,8 +68,8 @@ func (m *Injector) Inject(req *http.Request, res *http.Response) error {
 	var modified bool
 	modifiedBody := reBody.ReplaceAllFunc(rawBodyBytes, func(match []byte) []byte {
 		modified = true
-		match = append(match, m.scriptletsElement...)
-		match = append(match, m.store.CreateInjection(req.URL.Hostname())...)
+		match = append(match, i.scriptletsElement...)
+		match = append(match, i.CreateInjection(req.URL.Hostname())...)
 		return match
 	})
 
