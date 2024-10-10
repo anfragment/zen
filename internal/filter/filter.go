@@ -123,7 +123,7 @@ func (f *Filter) init() {
 
 var (
 	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)|(##|#\?#|#\$#|#@#)`)
+	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)`)
 	reException  = regexp.MustCompile(`^@@`)
 	reScriptlet  = regexp.MustCompile(`#%#\/\/scriptlet`)
 )
