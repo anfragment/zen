@@ -65,7 +65,7 @@ func parseAdguardScriptlet(scriptletBody string) (scriptlet, error) {
 
 func extractQuotedString(quoted string) (string, error) {
 	quoted = strings.TrimSpace(quoted)
-	if len(quoted) < 3 {
+	if len(quoted) < 2 {
 		return "", errNotQuotedString
 	}
 	if (quoted[0] == '\'' && quoted[len(quoted)-1] == '\'') || (quoted[0] == '"' && quoted[len(quoted)-1] == '"') {
