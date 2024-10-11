@@ -1,7 +1,7 @@
 package scriptlets
 
 import (
-	"bytes"
+	"io"
 	"text/template"
 )
 
@@ -17,11 +17,6 @@ var injectionTemplate = template.Must(template.New("scriptletInjection").Parse(`
 }
 `))
 
-func (r *scriptlet) GenerateInjection() []byte {
-	var buf bytes.Buffer
-	if err := injectionTemplate.Execute(&buf, r); err != nil {
-		panic(err)
-	}
-
-	return buf.Bytes()
+func (r *scriptlet) GenerateInjection(w io.Writer) error {
+	return injectionTemplate.Execute(w, r)
 }
