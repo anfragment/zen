@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,18 +26,25 @@ var scriptletsBundleFS embed.FS
 // reBody captures contents of the body tag in an HTML document.
 var reBody = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
 
+type store interface {
+	Store(hostnames []string, scriptlet scriptlet)
+	Get(hostname string)
+}
+
 // Injector injects scriptlets into HTML HTTP responses.
 type Injector struct {
-	// scriptletsElement contains the <script> element for the scriptlets bundle, which will be inserted into HTML documents.
-	scriptletsElement []byte
-	// universalScriptlets apply to all hostnames.
-	universalScriptlets []scriptlet
-	// scriptletMap maps hostnames to hostname-specific scriptlets.
-	scriptletMap map[string][]*scriptlet
+	// bundle contains the <script> element for the scriptlets bundle, which is to be inserted into HTML documents.
+	bundle []byte
+	// store stores and retrieve scriptlets by hostname.
+	store store
 }
 
 // NewInjector creates a new Injector with the embedded scriptlets.
-func NewInjector() (*Injector, error) {
+func NewInjector(store store) (*Injector, error) {
+	if store == nil {
+		return nil, errors.New("store is nil")
+	}
+
 	bundleData, err := scriptletsBundleFS.ReadFile("bundle.js")
 	if err != nil {
 		return nil, fmt.Errorf("read bundle from embed: %w", err)
@@ -51,8 +59,8 @@ func NewInjector() (*Injector, error) {
 	copy(scriptletsElement[len(openingTag)+len(bundleData):], closingTag)
 
 	return &Injector{
-		scriptletsElement: scriptletsElement,
-		scriptletMap:      make(map[string][]*scriptlet),
+		bundle: scriptletsElement,
+		store:  store,
 	}, nil
 }
 
@@ -68,7 +76,7 @@ func (i *Injector) Inject(req *http.Request, res *http.Response) error {
 	var modified bool
 	modifiedBody := reBody.ReplaceAllFunc(rawBodyBytes, func(match []byte) []byte {
 		modified = true
-		match = append(match, i.scriptletsElement...)
+		match = append(match, i.bundle...)
 		match = append(match, i.CreateInjection(req.URL.Hostname())...)
 		return match
 	})
