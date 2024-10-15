@@ -1,4 +1,4 @@
-package scriptlets
+package scriptlet
 
 import (
 	"io"

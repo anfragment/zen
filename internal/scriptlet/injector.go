@@ -1,4 +1,4 @@
-package scriptlets
+package scriptlet
 
 import (
 	"bytes"
@@ -77,7 +77,7 @@ func (i *Injector) Inject(req *http.Request, res *http.Response) error {
 	modifiedBody := reBody.ReplaceAllFunc(rawBodyBytes, func(match []byte) []byte {
 		modified = true
 		match = append(match, i.bundle...)
-		match = append(match, i.CreateInjection(req.URL.Hostname())...)
+		// match = append(match, i.Inject(req.URL.Hostname())...) FIXME
 		return match
 	})
 

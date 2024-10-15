@@ -1,4 +1,4 @@
-package scriptlets
+package scriptlet
 
 import (
 	"errors"
@@ -18,20 +18,11 @@ func (i *Injector) AddRule(rule string) error {
 		return errors.New("unsupported syntax")
 	}
 
-	scriptlet, err := parseAdguardScriptlet(match[2])
+	_, err := parseAdguardScriptlet(match[2])
 	if err != nil {
 		return fmt.Errorf("parse adguard scriptlet: %w", err)
 	}
 
-	if len(match[1]) == 0 {
-		i.universalScriptlets = append(i.universalScriptlets, scriptlet)
-		return nil
-	}
-
-	hostnames := strings.Split(match[1], ",")
-	for _, hostname := range hostnames {
-		i.scriptletMap[hostname] = append(i.scriptletMap[hostname], &scriptlet)
-	}
 	return nil
 }
 

@@ -14,7 +14,7 @@ import (
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/ruletree"
-	"github.com/anfragment/zen/internal/scriptlets"
+	"github.com/anfragment/zen/internal/scriptlet"
 	"github.com/anfragment/zen/internal/systray"
 )
 
@@ -120,12 +120,12 @@ func (a *App) StartProxy() (err error) {
 	ruleMatcher := ruletree.NewRuleTree()
 	exceptionRuleMatcher := ruletree.NewRuleTree()
 
-	scriptletsInjector, err := scriptlets.NewInjector()
+	scriptletInjector, err := scriptlet.NewInjector()
 	if err != nil {
 		return fmt.Errorf("create scriptlets injector: %v", err)
 	}
 
-	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, scriptletsInjector, a.eventsHandler)
+	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, scriptletInjector, a.eventsHandler)
 	if err != nil {
 		return fmt.Errorf("create filter: %v", err)
 	}

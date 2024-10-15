@@ -220,7 +220,7 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 	if isDocumentNavigation(req, res) {
 		if err := f.scriptletsInjector.Inject(req, res); err != nil {
 			// The error is recoverable, so we log it and continue processing the response.
-			log.Println("error injecting scriptlets for %q: %v", req.URL, err)
+			log.Printf("error injecting scriptlets for %q: %v", req.URL, err)
 		}
 	}
 
