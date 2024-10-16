@@ -20,11 +20,14 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
-//go:embed bundle.js
-var scriptletsBundleFS embed.FS
-
-// reBody captures contents of the body tag in an HTML document.
-var reBody = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
+var (
+	//go:embed bundle.js
+	scriptletsBundleFS embed.FS
+	// reBody captures contents of the body tag in an HTML document.
+	reBody           = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
+	scriptOpeningTag = []byte("<script>")
+	scriptClosingTag = []byte("</script>")
+)
 
 type Store interface {
 	Add(hostnames []string, scriptlet Scriptlet)
@@ -35,7 +38,7 @@ type Store interface {
 type Injector struct {
 	// bundle contains the <script> element for the scriptlets bundle, which is to be inserted into HTML documents.
 	bundle []byte
-	// store stores and retrieve scriptlets by hostname.
+	// store stores and retrieves scriptlets by hostname.
 	store Store
 }
 
@@ -50,13 +53,10 @@ func NewInjector(store Store) (*Injector, error) {
 		return nil, fmt.Errorf("read bundle from embed: %w", err)
 	}
 
-	openingTag := []byte("<script>")
-	closingTag := []byte("</script>")
-
-	scriptletsElement := make([]byte, len(openingTag)+len(bundleData)+len(closingTag))
-	copy(scriptletsElement, openingTag)
-	copy(scriptletsElement[len(openingTag):], bundleData)
-	copy(scriptletsElement[len(openingTag)+len(bundleData):], closingTag)
+	scriptletsElement := make([]byte, len(scriptOpeningTag)+len(bundleData)+len(scriptClosingTag))
+	copy(scriptletsElement, scriptOpeningTag)
+	copy(scriptletsElement[len(scriptOpeningTag):], bundleData)
+	copy(scriptletsElement[len(scriptOpeningTag)+len(bundleData):], scriptClosingTag)
 
 	return &Injector{
 		bundle: scriptletsElement,
@@ -66,8 +66,25 @@ func NewInjector(store Store) (*Injector, error) {
 
 // Inject injects scriptlets into given HTTP HTML response.
 //
-// In case of error, the response body is unchanged and the caller may proceed as if the function had not been called.
+// In case of an error, the response body is unchanged and the caller may proceed as if the function had not been called.
 func (i *Injector) Inject(req *http.Request, res *http.Response) error {
+	scriptlets := i.store.Get(req.URL.Hostname())
+	log.Printf("got %d scriptlets for %q", len(scriptlets), req.URL.Hostname())
+	if len(scriptlets) == 0 {
+		return nil
+	}
+	var ruleInjection bytes.Buffer
+	ruleInjection.Write(scriptOpeningTag)
+	ruleInjection.WriteByte('\n')
+	var err error
+	for _, scriptlet := range scriptlets {
+		if err = scriptlet.GenerateInjection(&ruleInjection); err != nil {
+			return fmt.Errorf("generate injection for scriptlet %q: %w", scriptlet.Name, err)
+		}
+		ruleInjection.WriteByte('\n')
+	}
+	ruleInjection.Write(scriptClosingTag)
+
 	rawBodyBytes, err := readRawBody(res)
 	if err != nil {
 		return fmt.Errorf("read raw body: %w", err)
@@ -77,12 +94,13 @@ func (i *Injector) Inject(req *http.Request, res *http.Response) error {
 	modifiedBody := reBody.ReplaceAllFunc(rawBodyBytes, func(match []byte) []byte {
 		modified = true
 		match = append(match, i.bundle...)
-		// match = append(match, i.Inject(req.URL.Hostname())...) FIXME
+		match = append(match, '\n')
+		match = append(match, ruleInjection.Bytes()...)
 		return match
 	})
 
 	if !modified {
-		log.Printf("no body tag found in response from %q", req.URL)
+		return nil
 	}
 
 	res.Body = io.NopCloser(bytes.NewReader(modifiedBody))

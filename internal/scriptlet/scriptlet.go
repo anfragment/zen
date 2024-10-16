@@ -14,8 +14,7 @@ var injectionTemplate = template.Must(template.New("scriptletInjection").Parse(`
   scriptlets.{{.Name}}({{range $index, $arg := .Args}}{{if $index}}, {{end}}{{printf "%q" $arg}}{{end}});
 } catch (ex) {
   console.error(ex);
-}
-`))
+}`))
 
 func (r *Scriptlet) GenerateInjection(w io.Writer) error {
 	return injectionTemplate.Execute(w, r)

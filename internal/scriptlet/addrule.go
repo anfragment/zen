@@ -18,10 +18,21 @@ func (i *Injector) AddRule(rule string) error {
 		return errors.New("unsupported syntax")
 	}
 
-	_, err := parseAdguardScriptlet(match[2])
+	scriptlet, err := parseAdguardScriptlet(match[2])
 	if err != nil {
 		return fmt.Errorf("parse adguard scriptlet: %w", err)
 	}
+
+	hostnames := strings.Split(match[1], ",")
+	for i, hostname := range hostnames {
+		if len(hostname) == 0 {
+			return errors.New("empty hostnames not allowed")
+		}
+		if !strings.HasPrefix(hostname, "*.") {
+			hostnames[i] = "*." + hostname
+		}
+	}
+	i.store.Add(hostnames, scriptlet)
 
 	return nil
 }
