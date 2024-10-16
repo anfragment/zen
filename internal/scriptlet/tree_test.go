@@ -67,12 +67,12 @@ func TestTree(t *testing.T) {
 
 		retrieved := store.Get("example.co.uk")
 		if len(retrieved) != 1 || retrieved[0].Name != "test1" {
-			t.Error("expected test1")
+			t.Errorf("expected test1 for example.co.uk, got %#v", retrieved)
 		}
 
 		retrieved = store.Get("mail.example.co.uk")
 		if len(retrieved) != 2 || retrieved[0].Name == retrieved[1].Name {
-			t.Error("expected 2 results")
+			t.Errorf("expected 2 distinct scriptlets for mail.example.co.uk, got %#v", retrieved)
 		}
 	})
 }
