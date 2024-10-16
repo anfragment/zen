@@ -5,7 +5,7 @@ import (
 	"text/template"
 )
 
-type scriptlet struct {
+type Scriptlet struct {
 	Name string
 	Args []string
 }
@@ -17,6 +17,6 @@ var injectionTemplate = template.Must(template.New("scriptletInjection").Parse(`
 }
 `))
 
-func (r *scriptlet) GenerateInjection(w io.Writer) error {
+func (r *Scriptlet) GenerateInjection(w io.Writer) error {
 	return injectionTemplate.Execute(w, r)
 }

@@ -1,13 +1,17 @@
-package scriptlet
+package triestore
 
-import "testing"
+import (
+	"testing"
 
-func TestTree(t *testing.T) {
+	"github.com/anfragment/zen/internal/scriptlet"
+)
+
+func TestTrie(t *testing.T) {
 	t.Parallel()
 
 	t.Run("matches single hostname", func(t *testing.T) {
-		store := NewTreeStore()
-		store.Add([]string{"example.org"}, scriptlet{})
+		store := NewTrieStore()
+		store.Add([]string{"example.org"}, scriptlet.Scriptlet{})
 
 		retrieved := store.Get("example.org")
 		if len(retrieved) == 0 {
@@ -21,8 +25,8 @@ func TestTree(t *testing.T) {
 	})
 
 	t.Run("matches wildcard hostname (wildcard at the beginning)", func(t *testing.T) {
-		store := NewTreeStore()
-		store.Add([]string{"*.example.org"}, scriptlet{})
+		store := NewTrieStore()
+		store.Add([]string{"*.example.org"}, scriptlet.Scriptlet{})
 
 		retrieved := store.Get("mail.example.org")
 		if len(retrieved) == 0 {
@@ -41,8 +45,8 @@ func TestTree(t *testing.T) {
 	})
 
 	t.Run("matches wildcard hostname (wildcard at the end)", func(t *testing.T) {
-		store := NewTreeStore()
-		store.Add([]string{"example.*"}, scriptlet{})
+		store := NewTrieStore()
+		store.Add([]string{"example.*"}, scriptlet.Scriptlet{})
 
 		retrieved := store.Get("example.org")
 		if len(retrieved) == 0 {
@@ -61,9 +65,9 @@ func TestTree(t *testing.T) {
 	})
 
 	t.Run("handles multiple rules and deduplication", func(t *testing.T) {
-		store := NewTreeStore()
-		store.Add([]string{"example.*", "*.co.uk"}, scriptlet{Name: "test1"})
-		store.Add([]string{"mail.example.co.uk"}, scriptlet{Name: "test2"})
+		store := NewTrieStore()
+		store.Add([]string{"example.*", "*.co.uk"}, scriptlet.Scriptlet{Name: "test1"})
+		store.Add([]string{"mail.example.co.uk"}, scriptlet.Scriptlet{Name: "test2"})
 
 		retrieved := store.Get("example.co.uk")
 		if len(retrieved) != 1 || retrieved[0].Name != "test1" {

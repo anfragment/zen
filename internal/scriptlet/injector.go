@@ -26,9 +26,9 @@ var scriptletsBundleFS embed.FS
 // reBody captures contents of the body tag in an HTML document.
 var reBody = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
 
-type store interface {
-	Store(hostnames []string, scriptlet scriptlet)
-	Get(hostname string)
+type Store interface {
+	Add(hostnames []string, scriptlet Scriptlet)
+	Get(hostname string) []*Scriptlet
 }
 
 // Injector injects scriptlets into HTML HTTP responses.
@@ -36,11 +36,11 @@ type Injector struct {
 	// bundle contains the <script> element for the scriptlets bundle, which is to be inserted into HTML documents.
 	bundle []byte
 	// store stores and retrieve scriptlets by hostname.
-	store store
+	store Store
 }
 
 // NewInjector creates a new Injector with the embedded scriptlets.
-func NewInjector(store store) (*Injector, error) {
+func NewInjector(store Store) (*Injector, error) {
 	if store == nil {
 		return nil, errors.New("store is nil")
 	}

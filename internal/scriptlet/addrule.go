@@ -26,18 +26,18 @@ func (i *Injector) AddRule(rule string) error {
 	return nil
 }
 
-func parseAdguardScriptlet(scriptletBody string) (scriptlet, error) {
+func parseAdguardScriptlet(scriptletBody string) (Scriptlet, error) {
 	if len(scriptletBody) == 0 {
-		return scriptlet{}, errors.New("scriptletBody is empty")
+		return Scriptlet{}, errors.New("scriptletBody is empty")
 	}
 
 	bodyParams := strings.Split(scriptletBody, ",")
 
-	s := scriptlet{}
+	s := Scriptlet{}
 	var err error
 	s.Name, err = extractQuotedString(bodyParams[0])
 	if err != nil {
-		return scriptlet{}, fmt.Errorf("extract quoted string from %q: %w", bodyParams[0], err)
+		return Scriptlet{}, fmt.Errorf("extract quoted string from %q: %w", bodyParams[0], err)
 	}
 	s.Name = snakeToCamel(s.Name)
 
@@ -46,7 +46,7 @@ func parseAdguardScriptlet(scriptletBody string) (scriptlet, error) {
 		for i := range s.Args {
 			s.Args[i], err = extractQuotedString(s.Args[i])
 			if err != nil {
-				return scriptlet{}, fmt.Errorf("extract quoted string from %q: %w", s.Args[i], err)
+				return Scriptlet{}, fmt.Errorf("extract quoted string from %q: %w", s.Args[i], err)
 			}
 		}
 	}

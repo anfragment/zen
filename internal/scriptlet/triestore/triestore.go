@@ -1,13 +1,15 @@
-package scriptlet
+package triestore
 
 import (
 	"strings"
 	"sync"
+
+	"github.com/anfragment/zen/internal/scriptlet"
 )
 
 type node struct {
 	children   map[string]*node
-	scriptlets []*scriptlet
+	scriptlets []*scriptlet.Scriptlet
 }
 
 func newNode() *node {
@@ -27,7 +29,7 @@ func (n *node) findOrAddChild(segment string) *node {
 	return child
 }
 
-func (n *node) getMatchingScriptlets(segments []string, canTerminate bool, isWildcard bool) []*scriptlet {
+func (n *node) getMatchingScriptlets(segments []string, canTerminate bool, isWildcard bool) []*scriptlet.Scriptlet {
 	if len(segments) == 0 {
 		if canTerminate {
 			return n.scriptlets
@@ -35,7 +37,7 @@ func (n *node) getMatchingScriptlets(segments []string, canTerminate bool, isWil
 		return nil
 	}
 
-	resSet := make(map[*scriptlet]struct{})
+	resSet := make(map[*scriptlet.Scriptlet]struct{})
 	wildcardChild := n.children["*"]
 	if wildcardChild != nil {
 		for _, scriptlet := range wildcardChild.getMatchingScriptlets(segments[1:], canTerminate, true) {
@@ -54,26 +56,29 @@ func (n *node) getMatchingScriptlets(segments []string, canTerminate bool, isWil
 		}
 	}
 
-	var res []*scriptlet
+	var res []*scriptlet.Scriptlet
 	for s := range resSet {
 		res = append(res, s)
 	}
 	return res
 }
 
-type TreeStore struct {
+type TrieStore struct {
 	mu                  sync.RWMutex
-	universalScriptlets []scriptlet
+	universalScriptlets []scriptlet.Scriptlet
 	root                *node
 }
 
-func NewTreeStore() *TreeStore {
-	return &TreeStore{
+// assert TrieStore implements scriptlet.Store
+var _ scriptlet.Store = (*TrieStore)(nil)
+
+func NewTrieStore() *TrieStore {
+	return &TrieStore{
 		root: newNode(),
 	}
 }
 
-func (ts *TreeStore) Add(hostnames []string, scriptlet scriptlet) {
+func (ts *TrieStore) Add(hostnames []string, scriptlet scriptlet.Scriptlet) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	if len(hostnames) == 0 {
@@ -92,7 +97,7 @@ func (ts *TreeStore) Add(hostnames []string, scriptlet scriptlet) {
 	}
 }
 
-func (ts *TreeStore) Get(hostname string) []*scriptlet {
+func (ts *TrieStore) Get(hostname string) []*scriptlet.Scriptlet {
 	ts.mu.RLock()
 	defer ts.mu.RUnlock()
 
