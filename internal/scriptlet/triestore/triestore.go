@@ -29,43 +29,32 @@ func (n *node) findOrAddChild(segment string) *node {
 	return child
 }
 
-func (n *node) getMatchingScriptlets(segments []string, canTerminate bool, isWildcard bool) []*scriptlet.Scriptlet {
+// getMatchingScriptlets traverses the trie and returns matching scriptlets.
+func (n *node) getMatchingScriptlets(segments []string, isWildcard bool) []*scriptlet.Scriptlet {
 	if len(segments) == 0 {
-		if canTerminate {
-			return n.scriptlets
-		}
-		return nil
+		return n.scriptlets
 	}
 
-	resSet := make(map[*scriptlet.Scriptlet]struct{})
+	var scriptlets []*scriptlet.Scriptlet
+	if isWildcard {
+		// Wildcards can consume as many segments as possible.
+		scriptlets = append(scriptlets, n.getMatchingScriptlets(segments[1:], true)...)
+	}
 	wildcardChild := n.children["*"]
 	if wildcardChild != nil {
-		for _, scriptlet := range wildcardChild.getMatchingScriptlets(segments[1:], canTerminate, true) {
-			resSet[scriptlet] = struct{}{}
-		}
-	}
-	if isWildcard {
-		for _, scriptlet := range n.getMatchingScriptlets(segments[1:], canTerminate, true) {
-			resSet[scriptlet] = struct{}{}
-		}
+		scriptlets = append(scriptlets, wildcardChild.getMatchingScriptlets(segments[1:], true)...)
 	}
 	exactChild := n.children[segments[0]]
 	if exactChild != nil {
-		for _, scriptlet := range exactChild.getMatchingScriptlets(segments[1:], true, false) {
-			resSet[scriptlet] = struct{}{}
-		}
+		scriptlets = append(scriptlets, exactChild.getMatchingScriptlets(segments[1:], false)...)
 	}
 
-	var res []*scriptlet.Scriptlet
-	for s := range resSet {
-		res = append(res, s)
-	}
-	return res
+	return scriptlets
 }
 
 type TrieStore struct {
 	mu                  sync.RWMutex
-	universalScriptlets []scriptlet.Scriptlet
+	universalScriptlets []*scriptlet.Scriptlet
 	root                *node
 }
 
@@ -78,9 +67,10 @@ func NewTrieStore() *TrieStore {
 	}
 }
 
-func (ts *TrieStore) Add(hostnames []string, scriptlet scriptlet.Scriptlet) {
+func (ts *TrieStore) Add(hostnames []string, scriptlet *scriptlet.Scriptlet) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
+
 	if len(hostnames) == 0 {
 		ts.universalScriptlets = append(ts.universalScriptlets, scriptlet)
 		return
@@ -93,7 +83,7 @@ func (ts *TrieStore) Add(hostnames []string, scriptlet scriptlet.Scriptlet) {
 		for _, segment := range segments {
 			node = node.findOrAddChild(segment)
 		}
-		node.scriptlets = append(node.scriptlets, &scriptlet)
+		node.scriptlets = append(node.scriptlets, scriptlet)
 	}
 }
 
@@ -102,5 +92,7 @@ func (ts *TrieStore) Get(hostname string) []*scriptlet.Scriptlet {
 	defer ts.mu.RUnlock()
 
 	segments := strings.Split(hostname, ".")
-	return ts.root.getMatchingScriptlets(segments, false, false)
+	scriptlets := ts.root.getMatchingScriptlets(segments, false)
+	scriptlets = append(scriptlets, ts.universalScriptlets...)
+	return scriptlets
 }

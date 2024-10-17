@@ -30,7 +30,7 @@ var (
 )
 
 type Store interface {
-	Add(hostnames []string, scriptlet Scriptlet)
+	Add(hostnames []string, scriptlet *Scriptlet)
 	Get(hostname string) []*Scriptlet
 }
 
@@ -64,7 +64,7 @@ func NewInjector(store Store) (*Injector, error) {
 	}, nil
 }
 
-// Inject injects scriptlets into given HTTP HTML response.
+// Inject injects scriptlets into a given HTTP HTML response.
 //
 // In case of an error, the response body is unchanged and the caller may proceed as if the function had not been called.
 func (i *Injector) Inject(req *http.Request, res *http.Response) error {

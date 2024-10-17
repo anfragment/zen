@@ -23,12 +23,18 @@ func (i *Injector) AddRule(rule string) error {
 		return fmt.Errorf("parse adguard scriptlet: %w", err)
 	}
 
+	if len(match[1]) == 0 {
+		i.store.Add(nil, scriptlet)
+		return nil
+	}
+
 	hostnames := strings.Split(match[1], ",")
 	for i, hostname := range hostnames {
 		if len(hostname) == 0 {
-			return errors.New("empty hostnames not allowed")
+			return errors.New("empty hostnames are not allowed")
 		}
 		if !strings.HasPrefix(hostname, "*.") {
+			// Match subdomains as well. Not sure whether this is the correct behavior. FIXME
 			hostnames[i] = "*." + hostname
 		}
 	}
@@ -37,32 +43,32 @@ func (i *Injector) AddRule(rule string) error {
 	return nil
 }
 
-func parseAdguardScriptlet(scriptletBody string) (Scriptlet, error) {
+func parseAdguardScriptlet(scriptletBody string) (*Scriptlet, error) {
 	if len(scriptletBody) == 0 {
-		return Scriptlet{}, errors.New("scriptletBody is empty")
+		return nil, errors.New("scriptletBody is empty")
 	}
 
 	bodyParams := strings.Split(scriptletBody, ",")
 
-	s := Scriptlet{}
+	scriptlet := Scriptlet{}
 	var err error
-	s.Name, err = extractQuotedString(bodyParams[0])
+	scriptlet.Name, err = extractQuotedString(bodyParams[0])
 	if err != nil {
-		return Scriptlet{}, fmt.Errorf("extract quoted string from %q: %w", bodyParams[0], err)
+		return nil, fmt.Errorf("extract quoted string from %q: %w", bodyParams[0], err)
 	}
-	s.Name = snakeToCamel(s.Name)
+	scriptlet.Name = snakeToCamel(scriptlet.Name)
 
 	if len(bodyParams) > 1 {
-		s.Args = bodyParams[1:]
-		for i := range s.Args {
-			s.Args[i], err = extractQuotedString(s.Args[i])
+		scriptlet.Args = bodyParams[1:]
+		for i := range scriptlet.Args {
+			scriptlet.Args[i], err = extractQuotedString(scriptlet.Args[i])
 			if err != nil {
-				return Scriptlet{}, fmt.Errorf("extract quoted string from %q: %w", s.Args[i], err)
+				return nil, fmt.Errorf("extract quoted string from %q: %w", scriptlet.Args[i], err)
 			}
 		}
 	}
 
-	return s, nil
+	return &scriptlet, nil
 }
 
 func extractQuotedString(quoted string) (string, error) {

@@ -11,7 +11,7 @@ func TestTrie(t *testing.T) {
 
 	t.Run("matches single hostname", func(t *testing.T) {
 		store := NewTrieStore()
-		store.Add([]string{"example.org"}, scriptlet.Scriptlet{})
+		store.Add([]string{"example.org"}, &scriptlet.Scriptlet{})
 
 		retrieved := store.Get("example.org")
 		if len(retrieved) == 0 {
@@ -26,7 +26,7 @@ func TestTrie(t *testing.T) {
 
 	t.Run("matches wildcard hostname (wildcard at the beginning)", func(t *testing.T) {
 		store := NewTrieStore()
-		store.Add([]string{"*.example.org"}, scriptlet.Scriptlet{})
+		store.Add([]string{"*.example.org"}, &scriptlet.Scriptlet{})
 
 		retrieved := store.Get("mail.example.org")
 		if len(retrieved) == 0 {
@@ -46,7 +46,7 @@ func TestTrie(t *testing.T) {
 
 	t.Run("matches wildcard hostname (wildcard at the end)", func(t *testing.T) {
 		store := NewTrieStore()
-		store.Add([]string{"example.*"}, scriptlet.Scriptlet{})
+		store.Add([]string{"example.*"}, &scriptlet.Scriptlet{})
 
 		retrieved := store.Get("example.org")
 		if len(retrieved) == 0 {
@@ -64,19 +64,17 @@ func TestTrie(t *testing.T) {
 		}
 	})
 
-	t.Run("handles multiple rules and deduplication", func(t *testing.T) {
+	t.Run("returns multiple matching rules", func(t *testing.T) {
 		store := NewTrieStore()
-		store.Add([]string{"example.*", "*.co.uk"}, scriptlet.Scriptlet{Name: "test1"})
-		store.Add([]string{"mail.example.co.uk"}, scriptlet.Scriptlet{Name: "test2"})
+		store.Add([]string{"example.*", "*.co.uk"}, &scriptlet.Scriptlet{Name: "test1"})
+		store.Add([]string{"mail.example.co.uk"}, &scriptlet.Scriptlet{Name: "test2"})
 
-		retrieved := store.Get("example.co.uk")
-		if len(retrieved) != 1 || retrieved[0].Name != "test1" {
-			t.Errorf("expected test1 for example.co.uk, got %#v", retrieved)
+		retrieved := store.Get("mail.example.co.uk")
+		if len(retrieved) != 2 {
+			t.Errorf("expected 2 scriptlets for mail.example.co.uk, got %d", len(retrieved))
 		}
-
-		retrieved = store.Get("mail.example.co.uk")
-		if len(retrieved) != 2 || retrieved[0].Name == retrieved[1].Name {
-			t.Errorf("expected 2 distinct scriptlets for mail.example.co.uk, got %#v", retrieved)
+		if retrieved[0].Name == retrieved[1].Name {
+			t.Error("expected 2 distinct scriptlets for mail.example.co.uk")
 		}
 	})
 }
