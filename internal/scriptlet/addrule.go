@@ -3,7 +3,6 @@ package scriptlet
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"regexp"
 	"strings"
@@ -50,9 +49,6 @@ func (i *Injector) AddRule(rule string) error {
 	} else if match := reUblockScriptlet.FindStringSubmatch(rule); match != nil {
 		rawHostnames = match[1]
 		scriptlet, err = parseUblockScriptlet(match[2])
-		if rule == "news.ycombinator.com##+js(set-constant, test.test1, true)" {
-			log.Println("%#v %#v", scriptlet, err)
-		}
 		if err != nil {
 			return fmt.Errorf("parse ublock origin scriptlet: %w", err)
 		}
