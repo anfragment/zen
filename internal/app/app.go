@@ -15,6 +15,7 @@ import (
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/ruletree"
 	"github.com/anfragment/zen/internal/systray"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type App struct {
@@ -56,10 +57,24 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 // Startup is called when the app starts.
 func (a *App) Startup(context.Context) {}
 
-func (a *App) Shutdown(context.Context) {
+func (a *App) BeforeClose(ctx context.Context) bool {
 	log.Println("shutting down")
-	a.StopProxy()
+	if err := a.StopProxy(); err != nil {
+		dialog, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+			Type:          runtime.QuestionDialog,
+			Title:         "Quit error",
+			Message:       fmt.Sprintf("We've encountered an error while shutting down the proxy: %v. Do you want to quit anyway?", err),
+			Buttons:       []string{"Yes", "No"},
+			DefaultButton: "Yes",
+			CancelButton:  "No",
+		})
+		if err != nil {
+			return false
+		}
+		return dialog != "Yes"
+	}
 	a.systrayMgr.Quit()
+	return false
 }
 
 func (a *App) DomReady(ctx context.Context) {
