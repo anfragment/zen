@@ -75,7 +75,7 @@ func (i *Injector) Inject(req *http.Request, res *http.Response) error {
 	}
 	var ruleInjection bytes.Buffer
 	ruleInjection.Write(scriptOpeningTag)
-	ruleInjection.WriteByte('\n')
+	ruleInjection.WriteString("\n(function() {\n")
 	var err error
 	for _, scriptlet := range scriptlets {
 		if err = scriptlet.GenerateInjection(&ruleInjection); err != nil {
@@ -83,6 +83,7 @@ func (i *Injector) Inject(req *http.Request, res *http.Response) error {
 		}
 		ruleInjection.WriteByte('\n')
 	}
+	ruleInjection.WriteString("})();\n")
 	ruleInjection.Write(scriptClosingTag)
 
 	rawBodyBytes, err := readRawBody(res)
