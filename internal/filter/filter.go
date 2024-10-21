@@ -125,7 +125,7 @@ var (
 	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
 	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)`)
 	reException  = regexp.MustCompile(`^@@`)
-	reScriptlet  = regexp.MustCompile(`#%#\/\/scriptlet`)
+	reScriptlet  = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
 )
 
 // ParseAndAddRules parses the rules from the given reader and adds them to the filter.
@@ -135,13 +135,6 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCou
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || reIgnoreLine.MatchString(line) {
-			continue
-		}
-
-		if reScriptlet.MatchString(line) {
-			if err := f.scriptletsInjector.AddRule(line); err != nil {
-				// log.Printf("error adding scriptlet rule: %v", err)
-			}
 			continue
 		}
 
@@ -159,6 +152,12 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCou
 
 // AddRule adds a new rule to the filter. It returns true if the rule is an exception, false otherwise.
 func (f *Filter) AddRule(rule string, filterName *string) (isException bool, err error) {
+	if reScriptlet.MatchString(rule) {
+		if err := f.scriptletsInjector.AddRule(rule); err != nil {
+			return false, fmt.Errorf("add scriptlet: %w", err)
+		}
+		return false, nil
+	}
 	if reException.MatchString(rule) {
 		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterName); err != nil {
 			return true, fmt.Errorf("add exception: %w", err)
