@@ -20,11 +20,16 @@ tasks:
     cmds:
       - wails build
 
+  test-go:
+    desc: Run Go tests.
+    cmds:
+      - go test -cover ./...
+
   test:
     desc: Run Go and scriptlets tests.
     cmds:
       - task: scriptlets:test
-      - go test -cover ./...
+      - task: test-go
       - cmd: echo "Tests passed"
         silent: true
 
