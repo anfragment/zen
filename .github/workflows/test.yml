@@ -25,6 +25,14 @@ jobs:
           go-version-file: ./go.mod
       - name: Run go version
         run: go version
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --version
+      - name: Install scriptlets npm packages
+        run: npm ci
+        working-directory: scriptlets
       - name: Set up Task
         uses: arduino/setup-task@v1
         with:

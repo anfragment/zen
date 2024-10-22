@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"regexp"
 	"strings"
@@ -17,38 +18,45 @@ import (
 	"github.com/anfragment/zen/internal/rule"
 )
 
-// filterEventsEmitter is an interface that can emit filter events.
+// filterEventsEmitter emits filter events.
 type filterEventsEmitter interface {
 	OnFilterBlock(method, url, referer string, rules []rule.Rule)
 	OnFilterRedirect(method, url, to, referer string, rules []rule.Rule)
 	OnFilterModify(method, url, referer string, rules []rule.Rule)
 }
 
-// ruleMatcher is an interface that can match requests against rules.
+// ruleMatcher matches requests against rules.
 type ruleMatcher interface {
 	AddRule(rule string, filterName *string) error
 	FindMatchingRulesReq(*http.Request) []rule.Rule
 	FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
 }
 
-// config is an interface that provides filter configuration.
+// config provides filter configuration.
 type config interface {
 	GetFilterLists() []cfg.FilterList
 	GetMyRules() []string
 }
 
-// Filter is a filter for URLs that is capable of Adblock-style filter lists and hosts rules and matching URLs against them.
+// scriptletsInjector injects scriptlets into HTML responses.
+type scriptletsInjector interface {
+	Inject(*http.Request, *http.Response) error
+	AddRule(string) error
+}
+
+// Filter is capable of parsing Adblock-style filter lists and hosts rules and matching URLs against them.
 //
-// The filter is safe for concurrent use.
+// Safe for concurrent use.
 type Filter struct {
 	config               config
 	ruleMatcher          ruleMatcher
 	exceptionRuleMatcher ruleMatcher
+	scriptletsInjector   scriptletsInjector
 	eventsEmitter        filterEventsEmitter
 }
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -58,6 +66,9 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 	if ruleMatcher == nil {
 		return nil, errors.New("ruleMatcher is nil")
 	}
+	if scriptletsInjector == nil {
+		return nil, errors.New("scriptletsInjector is nil")
+	}
 	if exceptionRuleMatcher == nil {
 		return nil, errors.New("exceptionRuleMatcher is nil")
 	}
@@ -66,6 +77,7 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 		config:               config,
 		ruleMatcher:          ruleMatcher,
 		exceptionRuleMatcher: exceptionRuleMatcher,
+		scriptletsInjector:   scriptletsInjector,
 		eventsEmitter:        eventsEmitter,
 	}
 	f.init()
@@ -111,8 +123,9 @@ func (f *Filter) init() {
 
 var (
 	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)|(##|#\?#|#\$#|#@#)`)
+	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)`)
 	reException  = regexp.MustCompile(`^@@`)
+	reScriptlet  = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
 )
 
 // ParseAndAddRules parses the rules from the given reader and adds them to the filter.
@@ -139,6 +152,12 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCou
 
 // AddRule adds a new rule to the filter. It returns true if the rule is an exception, false otherwise.
 func (f *Filter) AddRule(rule string, filterName *string) (isException bool, err error) {
+	if reScriptlet.MatchString(rule) {
+		if err := f.scriptletsInjector.AddRule(rule); err != nil {
+			return false, fmt.Errorf("add scriptlet: %w", err)
+		}
+		return false, nil
+	}
 	if reException.MatchString(rule) {
 		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterName); err != nil {
 			return true, fmt.Errorf("add exception: %w", err)
@@ -196,14 +215,21 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 //
 // As of April 2024, there are no response-only rules that can block or redirect responses.
 // For that reason, this method does not return a blocking or redirecting response itself.
-func (f *Filter) HandleResponse(req *http.Request, res *http.Response) {
+func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
+	if isDocumentNavigation(req, res) {
+		if err := f.scriptletsInjector.Inject(req, res); err != nil {
+			// The error is recoverable, so we log it and continue processing the response.
+			log.Printf("error injecting scriptlets for %q: %v", req.URL, err)
+		}
+	}
+
 	if len(f.exceptionRuleMatcher.FindMatchingRulesRes(req, res)) > 0 {
-		return
+		return nil
 	}
 
 	matchingRules := f.ruleMatcher.FindMatchingRulesRes(req, res)
 	if len(matchingRules) == 0 {
-		return
+		return nil
 	}
 
 	var appliedRules []rule.Rule
@@ -217,4 +243,26 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) {
 	if len(appliedRules) > 0 {
 		f.eventsEmitter.OnFilterModify(req.Method, req.URL.String(), req.Header.Get("Referer"), appliedRules)
 	}
+
+	return nil
+}
+
+func isDocumentNavigation(req *http.Request, res *http.Response) bool {
+	// Sec-Fetch-Dest: document indicates that the destination is a document (HTML or XML),
+	// and the request is the result of a user-initiated top-level navigation (e.g. resulting from a user clicking a link).
+	// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-Fetch-Dest#document
+	if req.Header.Get("Sec-Fetch-Dest") != "document" {
+		return false
+	}
+
+	contentType := res.Header.Get("Content-Type")
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	if mediaType != "text/html" {
+		return false
+	}
+
+	return true
 }

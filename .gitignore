@@ -5,3 +5,6 @@ frontend/dist
 *.dmg
 *.app
 .env.local
+**/coverage/*
+**/dist/*
+.idea

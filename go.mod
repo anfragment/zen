@@ -3,11 +3,14 @@ module github.com/anfragment/zen
 go 1.22.4
 
 require (
+	github.com/andybalholm/brotli v1.1.0
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/getlantern/elevate v0.0.0-20220903142053-479ab992b264
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
+	github.com/klauspost/compress v1.17.9
 	github.com/rhysd/go-github-selfupdate v1.2.3
 	github.com/wailsapp/wails/v2 v2.9.1
+	golang.org/x/net v0.25.0
 	golang.org/x/sys v0.20.0
 	howett.net/plist v1.0.0
 )
@@ -59,7 +62,6 @@ require (
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20181106182150-f42d05182288 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/appengine v1.3.0 // indirect

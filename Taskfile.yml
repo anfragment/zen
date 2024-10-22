@@ -2,6 +2,7 @@ version: '3'
 
 includes:
   build: tasks/build/Taskfile-{{OS}}.yml
+  scriptlets: scriptlets/Taskfile.yml
 
 tasks:
   default:
@@ -19,15 +20,24 @@ tasks:
     cmds:
       - wails build
 
-  test:
-    desc: Runs the tests.
+  test-go:
+    desc: Run Go tests.
     cmds:
       - go test -cover ./...
 
+  test:
+    desc: Run Go and scriptlets tests.
+    cmds:
+      - task: scriptlets:test
+      - task: test-go
+      - cmd: echo "Tests passed"
+        silent: true
+
   lint:
-    desc: Runs the frontend (eslint) and go (golangci-lint) linters.
+    desc: Run frontend, scriptlets, and Go linters.
     cmds:
       - task: lint-frontend
+      - task: scriptlets:lint
       - task: lint-go
       - cmd: echo "Checks passed"
         silent: true
