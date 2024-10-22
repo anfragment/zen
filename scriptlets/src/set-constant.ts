@@ -150,19 +150,33 @@ export function setConstant(
 
   const rootChain = property.split('.');
   const rootProp = rootChain.shift() as any;
-  window[localKey] = window[rootProp];
+  const odesc = Object.getOwnPropertyDescriptor(window, rootProp);
+  if (typeof odesc?.get === 'function') {
+    window[localKey] = odesc?.get as any;
+  } else {
+    window[localKey] = window[rootProp];
+  }
+
   Object.defineProperty(window, rootProp, {
     configurable: true,
     get: () => {
-      if (typeof window[localKey] !== 'object' || (stackRe !== null && !matchStack(stackRe))) {
-        return window[localKey];
+      let capturedValue: any = window[localKey];
+      if (typeof capturedValue === 'function') {
+        capturedValue = capturedValue();
       }
-      return new Proxy(window[localKey], {
+
+      if (typeof capturedValue !== 'object' || (stackRe !== null && !matchStack(stackRe))) {
+        return capturedValue;
+      }
+      return new Proxy(capturedValue, {
         get: get(rootChain),
       });
     },
-    set: (v) => {
-      window[localKey] = v;
-    },
+    set:
+      typeof odesc?.set === 'function'
+        ? odesc?.set
+        : (v) => {
+            window[localKey] = v;
+          },
   });
 }

@@ -51,6 +51,35 @@ describe('set-constant', () => {
     expect((window as any).test.prop3.prop5).toBe('5');
   });
 
+  test('nested properties survive a root property overwrite (root property is initially defined)', () => {
+    (window as any).test = {};
+    setConstant('test.prop1', '123');
+    setConstant('test.prop2', '321');
+    setConstant('test.prop3.prop4', '516');
+
+    (window as any).test = {};
+
+    expect((window as any).test).toBeDefined();
+    expect((window as any).test.prop1).toBe('123');
+    expect((window as any).test.prop2).toBe('321');
+    expect((window as any).test.prop3.prop4).toBe('516');
+  });
+
+  test('nested properties survive a root property overwrite (root property is initially undefined)', () => {
+    setConstant('test.prop1', '123');
+    setConstant('test.prop2', '321');
+    setConstant('test.prop3.prop4', '516');
+
+    expect((window as any).test).toBeUndefined();
+
+    (window as any).test = {};
+
+    expect((window as any).test).toBeDefined();
+    expect((window as any).test.prop1).toBe('123');
+    expect((window as any).test.prop2).toBe('321');
+    expect((window as any).test.prop3.prop4).toBe('516');
+  });
+
   test("doesn't modify the value if the stack doesn't match", () => {
     setConstant('PROPERTY', 'no', 'definitely-doesnt-match');
 
