@@ -9,6 +9,8 @@ func TestInjectorInternal(t *testing.T) {
 	t.Parallel()
 
 	t.Run("parses Adguard-style rule", func(t *testing.T) {
+		t.Parallel()
+
 		spyStore := &spyScriptletStore{}
 		injector, err := NewInjector(spyStore)
 		if err != nil {
@@ -48,6 +50,8 @@ func TestInjectorInternal(t *testing.T) {
 	})
 
 	t.Run("parses uBlock Origin-style rule", func(t *testing.T) {
+		t.Parallel()
+
 		spyStore := &spyScriptletStore{}
 		injector, err := NewInjector(spyStore)
 		if err != nil {
@@ -100,6 +104,6 @@ func (s *spyScriptletStore) Add(hostnames []string, scriptlet *Scriptlet) {
 	})
 }
 
-func (s *spyScriptletStore) Get(hostname string) []*Scriptlet {
+func (s *spyScriptletStore) Get(string) []*Scriptlet {
 	return nil
 }

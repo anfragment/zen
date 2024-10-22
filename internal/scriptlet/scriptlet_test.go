@@ -15,6 +15,8 @@ func TestInjectorPublic(t *testing.T) {
 	t.Parallel()
 
 	t.Run("makes an HTML-standards compliant injection with a generic scriptlet", func(t *testing.T) {
+		t.Parallel()
+
 		i := newInjectorWithTrieStore(t)
 		err := i.AddRule(`#%#//scriptlet('prevent-xhr', 'example.com')`)
 		if err != nil {
@@ -25,7 +27,7 @@ func TestInjectorPublic(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
-		res := newBlankHttpResponse(t)
+		res := newBlankHTTPResponse(t)
 
 		if err := i.Inject(req, res); err != nil {
 			t.Errorf("failed to inject: %v", err)
@@ -37,6 +39,8 @@ func TestInjectorPublic(t *testing.T) {
 	})
 
 	t.Run("makes an HTML-standards compliant injection with a hostname-specific scriptlet", func(t *testing.T) {
+		t.Parallel()
+
 		i := newInjectorWithTrieStore(t)
 		err := i.AddRule(`news.example.com#%#//scriptlet('prevent-xhr', 'example.com')`)
 		if err != nil {
@@ -47,7 +51,7 @@ func TestInjectorPublic(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
-		res := newBlankHttpResponse(t)
+		res := newBlankHTTPResponse(t)
 
 		if err := i.Inject(req, res); err != nil {
 			t.Errorf("failed to inject: %v", err)
@@ -59,6 +63,8 @@ func TestInjectorPublic(t *testing.T) {
 	})
 
 	t.Run("doesn't inject scriptlets into a response without a matching rule", func(t *testing.T) {
+		t.Parallel()
+
 		i := newInjectorWithTrieStore(t)
 		err := i.AddRule(`example.com#%#//scriptlet('prevent-xhr', 'example.com')`)
 		if err != nil {
@@ -69,7 +75,7 @@ func TestInjectorPublic(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
-		res := newBlankHttpResponse(t)
+		res := newBlankHTTPResponse(t)
 
 		if err := i.Inject(req, res); err != nil {
 			t.Errorf("failed to inject: %v", err)
@@ -106,7 +112,7 @@ func hasScriptTag(t *testing.T, body io.ReadCloser) bool {
 	return metScriptTag
 }
 
-func newBlankHttpResponse(t *testing.T) *http.Response {
+func newBlankHTTPResponse(t *testing.T) *http.Response {
 	t.Helper()
 	body := io.NopCloser(strings.NewReader(`<html><body></body></html>`))
 	header := http.Header{

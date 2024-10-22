@@ -10,6 +10,8 @@ func TestTrie(t *testing.T) {
 	t.Parallel()
 
 	t.Run("matches single hostname", func(t *testing.T) {
+		t.Parallel()
+
 		store := NewTrieStore()
 		store.Add([]string{"example.org"}, &scriptlet.Scriptlet{})
 
@@ -25,6 +27,8 @@ func TestTrie(t *testing.T) {
 	})
 
 	t.Run("matches wildcard hostname (wildcard at the beginning)", func(t *testing.T) {
+		t.Parallel()
+
 		store := NewTrieStore()
 		store.Add([]string{"*.example.org"}, &scriptlet.Scriptlet{})
 
@@ -45,6 +49,8 @@ func TestTrie(t *testing.T) {
 	})
 
 	t.Run("matches wildcard hostname (wildcard at the end)", func(t *testing.T) {
+		t.Parallel()
+
 		store := NewTrieStore()
 		store.Add([]string{"example.*"}, &scriptlet.Scriptlet{})
 
@@ -65,6 +71,8 @@ func TestTrie(t *testing.T) {
 	})
 
 	t.Run("returns multiple matching rules", func(t *testing.T) {
+		t.Parallel()
+
 		store := NewTrieStore()
 		store.Add([]string{"example.*", "*.co.uk"}, &scriptlet.Scriptlet{Name: "test1"})
 		store.Add([]string{"mail.example.co.uk"}, &scriptlet.Scriptlet{Name: "test2"})

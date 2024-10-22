@@ -58,7 +58,7 @@ type TrieStore struct {
 	root                *node
 }
 
-// assert TrieStore implements scriptlet.Store
+// assert TrieStore implements scriptlet.Store.
 var _ scriptlet.Store = (*TrieStore)(nil)
 
 func NewTrieStore() *TrieStore {
