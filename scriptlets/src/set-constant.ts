@@ -151,18 +151,19 @@ export function setConstant(
   const rootChain = property.split('.');
   const rootProp = rootChain.shift() as any;
   const odesc = Object.getOwnPropertyDescriptor(window, rootProp);
-  if (typeof odesc?.get === 'function') {
-    window[localKey] = odesc?.get as any;
-  } else {
-    window[localKey] = window[rootProp];
-  }
+  // Establish a chain of getters to ensure multiple set-constant rules cooperate
+  // and always return a correct value when getting the root property of the chain.
+  const prevGetter = odesc?.get;
+  window[localKey] = window[rootProp];
 
   Object.defineProperty(window, rootProp, {
     configurable: true,
     get: () => {
-      let capturedValue: any = window[localKey];
-      if (typeof capturedValue === 'function') {
-        capturedValue = capturedValue();
+      let capturedValue;
+      if (typeof prevGetter === 'function') {
+        capturedValue = prevGetter();
+      } else {
+        capturedValue = window[localKey];
       }
 
       if (typeof capturedValue !== 'object' || (stackRe !== null && !matchStack(stackRe))) {

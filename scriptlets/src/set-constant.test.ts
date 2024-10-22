@@ -80,6 +80,13 @@ describe('set-constant', () => {
     expect((window as any).test.prop3.prop4).toBe('516');
   });
 
+  test("doesn't overwrite functions", () => {
+    (window as any).test = () => 'meow';
+    setConstant('test.prototype.prop', '123');
+
+    expect((window as any).test()).toBe('meow');
+  });
+
   test("doesn't modify the value if the stack doesn't match", () => {
     setConstant('PROPERTY', 'no', 'definitely-doesnt-match');
 
