@@ -86,7 +86,7 @@ func (a *App) DomReady(ctx context.Context) {
 		return
 	}
 
-	su.Update()
+	su.ApplyUpdate()
 
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
