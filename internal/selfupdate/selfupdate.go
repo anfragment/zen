@@ -154,13 +154,13 @@ func unarchiveTar(gz io.Reader, dest string) error {
 		}
 
 		targetPath := filepath.Join(dest, header.Name)
-		absTargetPath, err := filepath.Abs(targetPath)
+		realTargetPath, err := filepath.EvalSymlinks(targetPath)
 		if err != nil {
 			return fmt.Errorf("error resolving file path: %w", err)
 		}
 
 		// Check if the target path is within the destination directory
-		if !strings.HasPrefix(absTargetPath, dest) {
+		if !strings.HasPrefix(realTargetPath, dest) {
 			return fmt.Errorf("illegal file path: %s", header.Name)
 		}
 
@@ -184,6 +184,14 @@ func unarchiveTar(gz io.Reader, dest string) error {
 				return fmt.Errorf("failed to set file permissions: %w", err)
 			}
 		case tar.TypeSymlink:
+			linkTarget, err := filepath.EvalSymlinks(filepath.Join(dest, header.Linkname))
+			if err != nil {
+				return fmt.Errorf("error evaluating symlinks for link target: %w", err)
+			}
+			if !strings.HasPrefix(linkTarget, dest) {
+				return fmt.Errorf("illegal symlink target: %s", header.Linkname)
+			}
+
 			if err := os.Symlink(header.Linkname, targetPath); err != nil {
 				return fmt.Errorf("failed to create symlink: %w", err)
 			}
@@ -207,7 +215,7 @@ func unarchiveTarGz(src io.Reader, dest string) error {
 
 func extractAndWriteFile(f *zip.File, dest, rootFolder string) error {
 	relativePath := strings.TrimPrefix(f.Name, rootFolder+"/")
-	if relativePath == "" {
+	if relativePath == "" || strings.Contains(relativePath, "..") {
 		return nil
 	}
 
@@ -256,7 +264,18 @@ func uncompressTo(src io.Reader, url, dest string) error {
 
 		// wont work in windows/linux, todo fix
 		// Extract all files and directories in the zip archive
+
 		for _, file := range z.File {
+			targetPath := filepath.Join(dest, file.Name)
+			absTargetPath, err := filepath.Abs(targetPath)
+			if err != nil {
+				return fmt.Errorf("error resolving file path: %w", err)
+			}
+
+			if !strings.HasPrefix(absTargetPath, filepath.Clean(dest)+string(os.PathSeparator)) {
+				return fmt.Errorf("illegal file path: %s", file.Name)
+			}
+
 			err = extractAndWriteFile(file, dest, "Zen.app")
 			if err != nil {
 				return err
