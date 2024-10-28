@@ -62,4 +62,4 @@ jobs:
         run: npm ci
         working-directory: frontend
       - name: Run frontend linter
-        run: task lint-frontend
+        run: task frontend:lint
