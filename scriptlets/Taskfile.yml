@@ -19,13 +19,13 @@ tasks:
     dir: scriptlets
     cmds:
       - npm run test
-  
+
   install:
     desc: Installs the complete set of dependencies.
     dir: scriptlets
     cmds:
       - npm ci
-  
+
   install-prod:
     desc: Installs the dependencies required to build the bundle.
     dir: scriptlets
