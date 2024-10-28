@@ -55,6 +55,15 @@ type Filter struct {
 	eventsEmitter        filterEventsEmitter
 }
 
+var (
+	// ignoreLineRegex matches comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
+	ignoreLineRegex = regexp.MustCompile(`^(?:!|#|\[)`)
+	// exceptionRegex matches exception rules.
+	exceptionRegex = regexp.MustCompile(`^@@`)
+	// scriptletRegex matches scriptlet rules.
+	scriptletRegex = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
+)
+
 // NewFilter creates and initializes a new filter.
 func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
@@ -121,20 +130,13 @@ func (f *Filter) init() {
 	}
 }
 
-var (
-	// Ignore comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	reIgnoreLine = regexp.MustCompile(`^(?:!|#|\[)`)
-	reException  = regexp.MustCompile(`^@@`)
-	reScriptlet  = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
-)
-
 // ParseAndAddRules parses the rules from the given reader and adds them to the filter.
 func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCount, exceptionCount int) {
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || reIgnoreLine.MatchString(line) {
+		if line == "" || ignoreLineRegex.MatchString(line) {
 			continue
 		}
 
@@ -152,13 +154,13 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCou
 
 // AddRule adds a new rule to the filter. It returns true if the rule is an exception, false otherwise.
 func (f *Filter) AddRule(rule string, filterName *string) (isException bool, err error) {
-	if reScriptlet.MatchString(rule) {
+	if scriptletRegex.MatchString(rule) {
 		if err := f.scriptletsInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add scriptlet: %w", err)
 		}
 		return false, nil
 	}
-	if reException.MatchString(rule) {
+	if exceptionRegex.MatchString(rule) {
 		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterName); err != nil {
 			return true, fmt.Errorf("add exception: %w", err)
 		}
