@@ -139,6 +139,11 @@ func (su *SelfUpdater) isNewer(version string) (bool, error) {
 func unarchiveTar(gz io.Reader, dest string) error {
 	tarReader := tar.NewReader(gz)
 
+	dest, err := filepath.Abs(dest)
+	if err != nil {
+		return fmt.Errorf("invalid destination path: %w", err)
+	}
+
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -148,15 +153,24 @@ func unarchiveTar(gz io.Reader, dest string) error {
 			return fmt.Errorf("error reading tar archive: %w", err)
 		}
 
-		target := filepath.Join(dest, header.Name)
+		targetPath := filepath.Join(dest, header.Name)
+		absTargetPath, err := filepath.Abs(targetPath)
+		if err != nil {
+			return fmt.Errorf("error resolving file path: %w", err)
+		}
+
+		// Check if the target path is within the destination directory
+		if !strings.HasPrefix(absTargetPath, dest) {
+			return fmt.Errorf("illegal file path: %s", header.Name)
+		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
+			if err := os.MkdirAll(targetPath, os.FileMode(header.Mode)); err != nil {
 				return fmt.Errorf("failed to create directory: %w", err)
 			}
 		case tar.TypeReg:
-			outFile, err := os.Create(target)
+			outFile, err := os.Create(targetPath)
 			if err != nil {
 				return fmt.Errorf("failed to create file: %w", err)
 			}
@@ -166,11 +180,11 @@ func unarchiveTar(gz io.Reader, dest string) error {
 				return fmt.Errorf("failed to write file data: %w", err)
 			}
 
-			if err := os.Chmod(target, os.FileMode(header.Mode)); err != nil {
+			if err := os.Chmod(targetPath, os.FileMode(header.Mode)); err != nil {
 				return fmt.Errorf("failed to set file permissions: %w", err)
 			}
 		case tar.TypeSymlink:
-			if err := os.Symlink(header.Linkname, target); err != nil {
+			if err := os.Symlink(header.Linkname, targetPath); err != nil {
 				return fmt.Errorf("failed to create symlink: %w", err)
 			}
 		default:
