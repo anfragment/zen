@@ -20,19 +20,21 @@ export function jsonPrune(propsToRemove: string, requiredProps?: string, stack?:
   stackRe ??= null;
 
   const prune = (obj: any) => {
-    if (stackRe && !matchStack(stackRe)) {
+    if (stackRe !== null && !matchStack(stackRe)) {
       return;
     }
 
-    let matched = false;
-    for (const propToMatch of parsedRequiredProps) {
-      if (matchesPath(obj, propToMatch)) {
-        matched = true;
-        break;
+    if (parsedRequiredProps.length > 0) {
+      let matched = false;
+      for (const propToMatch of parsedRequiredProps) {
+        if (matchesPath(obj, propToMatch)) {
+          matched = true;
+          break;
+        }
       }
-    }
-    if (!matched) {
-      return;
+      if (!matched) {
+        return;
+      }
     }
 
     for (const propToRemove of parsedPropsToRemove) {
