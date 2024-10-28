@@ -36,7 +36,7 @@ var (
 	errEmptyScriptletBody = errors.New("scriptlet body is empty")
 )
 
-func (i *Injector) AddRule(rule string) error {
+func (inj *Injector) AddRule(rule string) error {
 	var rawHostnames string
 	var scriptlet *Scriptlet
 	var err error
@@ -57,7 +57,7 @@ func (i *Injector) AddRule(rule string) error {
 	}
 
 	if len(rawHostnames) == 0 {
-		i.store.Add(nil, scriptlet)
+		inj.store.Add(nil, scriptlet)
 		return nil
 	}
 
@@ -72,8 +72,8 @@ func (i *Injector) AddRule(rule string) error {
 			subdomainHostnames = append(subdomainHostnames, "*."+hostname)
 		}
 	}
-	i.store.Add(hostnames, scriptlet)
-	i.store.Add(subdomainHostnames, scriptlet)
+	inj.store.Add(hostnames, scriptlet)
+	inj.store.Add(subdomainHostnames, scriptlet)
 
 	return nil
 }

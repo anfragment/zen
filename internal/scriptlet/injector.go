@@ -67,8 +67,8 @@ func NewInjector(store Store) (*Injector, error) {
 // Inject injects scriptlets into a given HTTP HTML response.
 //
 // In case of an error, the response body is unchanged and the caller may proceed as if the function had not been called.
-func (i *Injector) Inject(req *http.Request, res *http.Response) error {
-	scriptlets := i.store.Get(req.URL.Hostname())
+func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
+	scriptlets := inj.store.Get(req.URL.Hostname())
 	log.Printf("got %d scriptlets for %q", len(scriptlets), req.URL.Hostname())
 	if len(scriptlets) == 0 {
 		return nil
@@ -94,7 +94,7 @@ func (i *Injector) Inject(req *http.Request, res *http.Response) error {
 	var modified bool
 	modifiedBody := reBody.ReplaceAllFunc(rawBodyBytes, func(match []byte) []byte {
 		modified = true
-		match = append(match, i.bundle...)
+		match = append(match, inj.bundle...)
 		match = append(match, '\n')
 		match = append(match, ruleInjection.Bytes()...)
 		return match
