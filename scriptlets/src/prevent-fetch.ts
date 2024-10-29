@@ -1,5 +1,5 @@
 import { createLogger } from './helpers/logger';
-import { matchFetch, ParsedPropsToMatch, parsePropsToMatch } from './helpers/request';
+import { matchFetchArgs, ParsedPropsToMatch, parsePropsToMatch } from './helpers/request';
 
 type ResponseBodyType = 'emptyObj' | 'emptyArr' | 'emptyStr' | '';
 type ResponseType = 'basic' | 'cors' | 'opaque';
@@ -50,7 +50,7 @@ export function preventFetch(
   // @ts-ignore
   fetch = new Proxy(fetch, {
     apply: async (target, thisArg, args: Parameters<typeof fetch>) => {
-      if (!matchFetch(parsedProps, args)) {
+      if (!matchFetchArgs(parsedProps, args)) {
         return Reflect.apply(target, thisArg, args);
       }
 
