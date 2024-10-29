@@ -1,6 +1,48 @@
+import { matchStack } from './matchStack';
+import { parseRegexpFromString, parseRegexpLiteral } from './parseRegexp';
+
 type PropPath = string[];
 
-export function prunePath(obj: any, path: PropPath) {
+/**
+ * createPrune creates a JSON/object pruner for use in json-prune and related scriptlets.
+ * @param propsToRemove - Space-separated list of property paths to remove from the object.
+ * @param requiredProps - Space-separated list of property paths that must be present in the object for pruning to occur.
+ * @param stack - Regular expression/substring to match against the stack trace.
+ * @returns Function that prunes the provided object in place.
+ */
+export function createPrune(propsToRemove: string, requiredProps?: string, stack?: string) {
+  const parsedPropsToRemove = parsePropPaths(propsToRemove);
+  const parsedRequiredProps = parsePropPaths(requiredProps);
+  let stackRe: RegExp | null = null;
+  if (typeof stack === 'string') {
+    stackRe = parseRegexpLiteral(stack) || parseRegexpFromString(stack);
+  }
+
+  return function prune(obj: any) {
+    if (stackRe !== null && !matchStack(stackRe)) {
+      return;
+    }
+
+    if (parsedRequiredProps.length > 0) {
+      let matched = false;
+      for (const propToMatch of parsedRequiredProps) {
+        if (matchesPath(obj, propToMatch)) {
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        return;
+      }
+    }
+
+    for (const propToRemove of parsedPropsToRemove) {
+      prunePath(obj, propToRemove);
+    }
+  };
+}
+
+function prunePath(obj: any, path: PropPath) {
   if (path.length === 0) {
     return;
   }
@@ -36,7 +78,7 @@ export function prunePath(obj: any, path: PropPath) {
   }
 }
 
-export function matchesPath(obj: any, path: PropPath): boolean {
+function matchesPath(obj: any, path: PropPath): boolean {
   if (path.length === 0) {
     return true;
   }
@@ -70,7 +112,7 @@ export function matchesPath(obj: any, path: PropPath): boolean {
   return false;
 }
 
-export function parsePropPaths(propPaths?: string): PropPath[] {
+function parsePropPaths(propPaths?: string): PropPath[] {
   if (typeof propPaths !== 'string') {
     return [];
   }
