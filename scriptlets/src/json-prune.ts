@@ -6,6 +6,11 @@ import { parseRegexpFromString, parseRegexpLiteral } from './helpers/parseRegexp
 const logger = createLogger('json-prune');
 
 export function jsonPrune(propsToRemove: string, requiredProps?: string, stack?: string): void {
+  if (typeof Proxy === 'undefined') {
+    logger.warn('Proxy not available in this environment');
+    return;
+  }
+
   if (typeof propsToRemove !== 'string' || propsToRemove.length === 0) {
     logger.warn('propsToRemove should be a non-empty string');
     return;
@@ -13,11 +18,10 @@ export function jsonPrune(propsToRemove: string, requiredProps?: string, stack?:
 
   const parsedPropsToRemove = parsePropPaths(propsToRemove);
   const parsedRequiredProps = parsePropPaths(requiredProps);
-  let stackRe: RegExp | null;
-  if (stack !== undefined && stack !== '') {
+  let stackRe: RegExp | null = null;
+  if (typeof stack === 'string') {
     stackRe = parseRegexpLiteral(stack) || parseRegexpFromString(stack);
   }
-  stackRe ??= null;
 
   const prune = (obj: any) => {
     if (stackRe !== null && !matchStack(stackRe)) {
