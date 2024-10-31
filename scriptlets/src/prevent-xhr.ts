@@ -15,11 +15,11 @@ interface ExtendedXHR extends XMLHttpRequest {
 
 export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: string): void {
   if (typeof Proxy === 'undefined') {
-    logger.warn('Proxy is undefined');
+    logger.warn('Proxy is not supported in this environment');
     return;
   }
   if (typeof propsToMatch !== 'string') {
-    logger.warn('propsToMatch is undefined');
+    logger.warn('propsToMatch is required');
     return;
   }
 
@@ -27,7 +27,8 @@ export function preventXHR(propsToMatch: string, randomizeResponseTextPattern?: 
   try {
     parsedProps = parsePropsToMatch(propsToMatch);
   } catch (ex) {
-    logger.warn('Error parsing props', ex);
+    logger.warn('error parsing props', ex);
+    return;
   }
 
   const openOverride: ProxyHandler<typeof XMLHttpRequest.prototype.open>['apply'] = (
