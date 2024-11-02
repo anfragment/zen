@@ -6,6 +6,10 @@ export function AddFilterList(arg1) {
   return window['go']['cfg']['Config']['AddFilterList'](arg1);
 }
 
+export function ExportFilterListToFile(arg1) {
+  return window['go']['cfg']['Config']['ExportFilterListToFile'](arg1);
+}
+
 export function GetCAInstalled() {
   return window['go']['cfg']['Config']['GetCAInstalled']();
 }
@@ -28,6 +32,10 @@ export function GetPort() {
 
 export function GetVersion() {
   return window['go']['cfg']['Config']['GetVersion']();
+}
+
+export function ImportFilterList(arg1) {
+  return window['go']['cfg']['Config']['ImportFilterList'](arg1);
 }
 
 export function Lock() {

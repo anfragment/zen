@@ -5,6 +5,8 @@ import {sync} from '../models';
 
 export function AddFilterList(arg1:cfg.FilterList):Promise<string>;
 
+export function ExportFilterListToFile(arg1:string):Promise<void>;
+
 export function GetCAInstalled():Promise<boolean>;
 
 export function GetFilterLists():Promise<Array<cfg.FilterList>>;
@@ -16,6 +18,8 @@ export function GetMyRules():Promise<Array<string>>;
 export function GetPort():Promise<number>;
 
 export function GetVersion():Promise<string>;
+
+export function ImportFilterList(arg1:string):Promise<void>;
 
 export function Lock():Promise<void>;
 

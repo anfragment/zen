@@ -1,4 +1,4 @@
-import { Spinner, SpinnerSize, Switch, Button, MenuItem } from '@blueprintjs/core';
+import { Spinner, SpinnerSize, Switch, Button, MenuItem, Popover, Menu } from '@blueprintjs/core';
 import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
 
@@ -11,6 +11,8 @@ import './index.css';
 import { AppToaster } from '../common/toaster';
 
 import { CreateFilterList } from './CreateFilterList';
+import { ExportFilterList } from './ExportFilterList';
+import { ImportFilterList } from './ImportFilterList';
 import { FilterListType } from './types';
 
 export function FilterLists() {
@@ -37,6 +39,7 @@ export function FilterLists() {
 
   return (
     <>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
       <Select
         items={Object.values(FilterListType)}
         itemRenderer={(item) => (
@@ -65,6 +68,23 @@ export function FilterLists() {
       >
         <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />
       </Select>
+
+        {type === FilterListType.CUSTOM && (
+          <Popover
+            content={
+              <Menu>
+                <ExportFilterList />
+                <ImportFilterList onAdd={fetchLists} />
+              </Menu>
+            }>
+            <Button 
+              icon="more"
+              intent="primary"
+              text="More Options"
+            />
+          </Popover>
+        )}
+      </div>
 
       {state.loading && <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />}
 

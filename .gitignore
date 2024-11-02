@@ -5,3 +5,4 @@ frontend/dist
 *.dmg
 *.app
 .env.local
+.vscode

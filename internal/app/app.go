@@ -11,6 +11,7 @@ import (
 	"github.com/anfragment/zen/internal/certgen"
 	"github.com/anfragment/zen/internal/certstore"
 	"github.com/anfragment/zen/internal/cfg"
+	"github.com/anfragment/zen/internal/files"
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/ruletree"
@@ -24,6 +25,8 @@ type App struct {
 	config          *cfg.Config
 	eventsHandler   *eventsHandler
 	proxy           *proxy.Proxy
+	fileExport      *files.FileExport
+	fileImport      *files.FileImport
 	proxyOn         bool
 	// proxyMu ensures that proxy is only started or stopped once at a time.
 	proxyMu    sync.Mutex
@@ -32,7 +35,7 @@ type App struct {
 }
 
 // NewApp initializes the app.
-func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error) {
+func NewApp(name string, config *cfg.Config, fileExport *files.FileExport, fileImport *files.FileImport, startOnDomReady bool) (*App, error) {
 	if name == "" {
 		return nil, errors.New("name is empty")
 	}
@@ -48,6 +51,8 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 	return &App{
 		name:            name,
 		config:          config,
+		fileExport:      fileExport,
+		fileImport:      fileImport,
 		certStore:       certStore,
 		startOnDomReady: startOnDomReady,
 	}, nil
@@ -77,6 +82,8 @@ func (a *App) DomReady(ctx context.Context) {
 	a.config.RunMigrations()
 	a.systrayMgr.Init(ctx)
 	cfg.SelfUpdate(ctx)
+	a.fileExport.Init(ctx, a.config)
+	a.fileImport.Init(ctx, a.config)
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
 		// StartProxy requires an active event listener on the frontend to show the user the correct proxy state.

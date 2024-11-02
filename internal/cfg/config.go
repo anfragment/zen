@@ -189,6 +189,72 @@ func (c *Config) ToggleFilterList(url string, enabled bool) string {
 	return ""
 }
 
+// ExportFilterListToFile exports the custom filter lists to a file.
+func (c *Config) ExportFilterListToFile(filePath string) error {
+	c.RLock()
+	customFilterLists := []FilterList{}
+
+	for _, filterList := range c.Filter.FilterLists {
+		if filterList.Type == "custom" {
+			customFilterLists = append(customFilterLists, filterList)
+		}
+	}
+
+	if len(customFilterLists) == 0 {
+		return fmt.Errorf("no custom filter lists to export")
+	}
+
+	// prevent IO too long case dead lock
+	c.RUnlock()
+
+	data, err := json.MarshalIndent(customFilterLists, "", "  ")
+	if err != nil {
+		log.Printf("failed to marshal filter lists: %v", err)
+		return err
+	}
+
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		log.Printf("failed to write filter lists to file: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// ImportFilterList imports the custom filter lists from a file.
+func (c *Config) ImportFilterList(filePath string) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read filter lists file: %v", err)
+	}
+
+	c.Lock()
+	defer c.Unlock()
+
+	if !json.Valid(data) {
+		return fmt.Errorf("invalid JSON data")
+	}
+
+	var filterLists []FilterList
+	if err := json.Unmarshal(data, &filterLists); err != nil {
+		return fmt.Errorf("failed to unmarshal filter lists: %v", err)
+	}
+
+	// only import custom filter lists
+	for _, filterList := range filterLists {
+		if filterList.Type == "custom" {
+			c.Filter.FilterLists = append(c.Filter.FilterLists, filterList)
+		}
+	}
+
+	if err := c.Save(); err != nil {
+		log.Printf("failed to save config: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 func (c *Config) GetMyRules() []string {
 	c.RLock()
 	defer c.RUnlock()
