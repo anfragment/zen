@@ -30,8 +30,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	fileExport := files.NewFileExport()
-	fileImport := files.NewFileImport()
+	files := files.NewFiles()
 
 	var startOnDomReady bool
 	for _, arg := range os.Args[1:] {
@@ -39,7 +38,7 @@ func main() {
 			startOnDomReady = true
 		}
 	}
-	app, err := app.NewApp(appName, config, fileExport, fileImport, startOnDomReady)
+	app, err := app.NewApp(appName, config, files, startOnDomReady)
 	if err != nil {
 		log.Fatalf("failed to create app: %v", err)
 	}
@@ -62,8 +61,7 @@ func main() {
 			app,
 			config,
 			autostart,
-			fileExport,
-			fileImport,
+			files,
 		},
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{

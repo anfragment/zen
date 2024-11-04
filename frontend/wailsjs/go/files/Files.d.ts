@@ -5,4 +5,6 @@ import {cfg} from '../models';
 
 export function ExportFilterList():Promise<void>;
 
+export function ImportFilterList():Promise<void>;
+
 export function Init(arg1:context.Context,arg2:cfg.Config):Promise<void>;

@@ -2,7 +2,7 @@
 import { Intent, MenuItem } from '@blueprintjs/core';
 import { useState } from 'react';
 
-import { ImportFilterList as ImportFilterListBackend } from '../../wailsjs/go/files/FileImport';
+import { ImportFilterList as ImportFilterListBackend } from '../../wailsjs/go/files/Files';
 import { AppToaster } from '../common/toaster';
 
 
@@ -39,7 +39,7 @@ export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
 
   return <MenuItem 
     icon="upload" 
-    text="Import Custom Filter Lists" 
+    text="Import" 
     onClick={handleImport}
     disabled={loading}
   />;

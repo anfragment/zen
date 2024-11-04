@@ -1,7 +1,7 @@
 import { Intent, MenuItem } from '@blueprintjs/core';
 import { useState } from 'react';
 
-import { ExportFilterList as ExportFilterListBackend } from '../../wailsjs/go/files/FileExport';
+import { ExportFilterList as ExportFilterListBackend } from '../../wailsjs/go/files/Files';
 import { AppToaster } from '../common/toaster';
 
 
@@ -35,7 +35,7 @@ export function ExportFilterList() {
 
   return <MenuItem 
     icon="download"
-    text="Export Custom Filter Lists"
+    text="Export"
     onClick={handleExport}
     disabled={loading}
   />;

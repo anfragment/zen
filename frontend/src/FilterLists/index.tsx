@@ -79,8 +79,7 @@ export function FilterLists() {
             }>
             <Button 
               icon="more"
-              intent="primary"
-              text="More Options"
+              text="More"
             />
           </Popover>
         )}

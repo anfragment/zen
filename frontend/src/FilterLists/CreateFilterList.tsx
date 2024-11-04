@@ -27,6 +27,7 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
         fill
         onClick={async () => {
           if (!urlRef.current?.checkValidity()) {
+            console.log('invalid url');
             urlRef.current?.focus();
             return;
           }
