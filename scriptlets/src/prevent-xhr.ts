@@ -3,6 +3,7 @@ import { genRandomResponse, matchXhrArgs, ParsedPropsToMatch, parsePropsToMatch 
 
 const logger = createLogger('prevent-xhr');
 
+// Use Symbols to avoid interference with any other scriptlets or libraries.
 const prevent = Symbol('prevent');
 const url = Symbol('url');
 const responseHeaders = Symbol('responseHeaders');
