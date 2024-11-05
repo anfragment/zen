@@ -6,3 +6,6 @@ frontend/dist
 *.app
 .env.local
 .vscode
+**/coverage/*
+**/dist/*
+.idea

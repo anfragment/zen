@@ -8,3 +8,6 @@ discord.gg
 discord.media
 
 chat.openai.com
+
+# https://github.com/anfragment/zen/issues/132
+reddit.com
