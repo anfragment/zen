@@ -8,6 +8,7 @@ import { BrowserOpenURL } from '../../wailsjs/runtime';
 import { ProxyState } from '../types';
 
 import { AutostartSwitch } from './AutostartSwitch';
+import { ExportLogsButton } from './ExportLogsButton';
 import { IgnoredHostsInput } from './IgnoredHostsInput';
 import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
@@ -36,6 +37,10 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
         <div className="settings-manager__section-body">
           <AutostartSwitch />
+        </div>
+
+        <div className="settings-manager__section-body">
+          <ExportLogsButton />
         </div>
       </div>
 

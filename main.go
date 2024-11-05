@@ -40,6 +40,11 @@ func main() {
 		log.Fatalf("failed to create app: %v", err)
 	}
 
+	err = app.SetupLogger()
+	if err != nil {
+		log.Fatalf("failed to setup logger: %v", err)
+	}
+
 	autostart := &autostart.Manager{}
 
 	err = wails.Run(&options.App{
