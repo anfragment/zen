@@ -226,9 +226,11 @@ func (a *App) UninstallCA() error {
 	return nil
 }
 
-func (a *App) OpenLogsDirectory() {
-	err := logger.OpenLogsDirectory()
-	if err != nil {
+func (a *App) OpenLogsDirectory() error {
+	if err := logger.OpenLogsDirectory(); err != nil {
 		log.Printf("failed to open logs directory: %v", err)
+		return err
 	}
+
+	return nil
 }

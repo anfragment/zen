@@ -19,7 +19,7 @@ const (
 func SetupLogger() error {
 	logsDir, err := getLogsDir(appName)
 	if err != nil {
-		return fmt.Errorf("failed to get logs directory: %w", err)
+		return fmt.Errorf("get logs directory: %w", err)
 	}
 
 	fileLogger := &lumberjack.Logger{
@@ -38,7 +38,7 @@ func SetupLogger() error {
 func OpenLogsDirectory() error {
 	logsDir, err := getLogsDir(appName)
 	if err != nil {
-		return fmt.Errorf("failed to get logs directory: %w", err)
+		return fmt.Errorf("get logs directory: %w", err)
 	}
 
 	switch runtime.GOOS {
@@ -57,7 +57,7 @@ func getLogsDir(appName string) (string, error) {
 	var path string
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get user home directory: %w", err)
+		return "", fmt.Errorf("get user home directory: %w", err)
 	}
 
 	switch runtime.GOOS {
@@ -70,7 +70,7 @@ func getLogsDir(appName string) (string, error) {
 	}
 
 	if err := os.MkdirAll(path, 0755); err != nil {
-		log.Fatalf("Failed to create log directory: %v", err)
+		return "", fmt.Errorf("create log directory: %v", err)
 	}
 
 	return path, nil
