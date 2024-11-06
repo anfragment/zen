@@ -1,7 +1,8 @@
-package app
+package logger
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -11,25 +12,31 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-func (a *App) SetupLogger() error {
-	logsDir, err := getLogsDir(a.name)
+const (
+	appName = "Zen"
+)
+
+func SetupLogger() error {
+	logsDir, err := getLogsDir(appName)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get logs directory: %w", err)
 	}
 
-	log.SetOutput(&lumberjack.Logger{
+	fileLogger := &lumberjack.Logger{
 		Filename:   filepath.Join(logsDir, "application.log"),
 		MaxSize:    5,
 		MaxBackups: 5,
 		MaxAge:     1,
 		Compress:   true,
-	})
+	}
+
+	log.SetOutput(io.MultiWriter(os.Stdout, fileLogger))
 
 	return nil
 }
 
-func (a *App) OpenLogsFolder() error {
-	logsDir, err := getLogsDir(a.name)
+func OpenLogsDirectory() error {
+	logsDir, err := getLogsDir(appName)
 	if err != nil {
 		return fmt.Errorf("failed to get logs directory: %w", err)
 	}
@@ -42,7 +49,7 @@ func (a *App) OpenLogsFolder() error {
 	case "linux":
 		return exec.Command("xdg-open", logsDir).Start()
 	default:
-		return fmt.Errorf("unsupported platform")
+		panic("unsupported platform")
 	}
 }
 
@@ -50,7 +57,7 @@ func getLogsDir(appName string) (string, error) {
 	var path string
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
 	}
 
 	switch runtime.GOOS {
@@ -62,7 +69,7 @@ func getLogsDir(appName string) (string, error) {
 		path = filepath.Join(homeDir, ".local", "share", appName, "logs")
 	}
 
-	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+	if err := os.MkdirAll(path, 0755); err != nil {
 		log.Fatalf("Failed to create log directory: %v", err)
 	}
 
