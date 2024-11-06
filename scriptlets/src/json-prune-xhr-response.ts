@@ -7,15 +7,16 @@ const logger = createLogger('json-prune-xhr-response');
 // Use Symbols to avoid interference with any other scriptlets or libraries.
 const requestHeaders = Symbol('requestHeaders');
 const shouldPrune = Symbol('shouldPrune');
+const openArgs = Symbol('openArgs');
 
 interface Uninitialized extends XMLHttpRequest {
   [shouldPrune]?: boolean;
-  [requestHeaders]?: [string, string][];
 }
 
 interface ToPrune extends XMLHttpRequest {
   [shouldPrune]: true;
   [requestHeaders]: [string, string][];
+  [openArgs]: Parameters<typeof XMLHttpRequest.prototype.open>;
 }
 
 type ExtendedXHR = Uninitialized & ToPrune;
@@ -57,6 +58,7 @@ export function jsonPruneXHRResponse(
 
       thisArg[shouldPrune] = true;
       thisArg[requestHeaders] = [];
+      thisArg[openArgs] = args;
 
       return Reflect.apply(target, thisArg, args);
     },
@@ -73,38 +75,90 @@ export function jsonPruneXHRResponse(
     },
   });
 
-  XMLHttpRequest.prototype.open = new Proxy(XMLHttpRequest.prototype.open, {
-    apply: (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.open>) => {
+  XMLHttpRequest.prototype.send = new Proxy(XMLHttpRequest.prototype.send, {
+    apply: (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.send>) => {
       if (!thisArg[shouldPrune]) {
         return Reflect.apply(target, thisArg, args);
       }
 
-      const req = new XMLHttpRequest();
-      req.addEventListener('readystatechange', async () => {
-        if (req.readyState !== XMLHttpRequest.DONE) {
+      // Create a substitute request to capture the response.
+      const subsReq = new XMLHttpRequest();
+      subsReq.addEventListener('readystatechange', async () => {
+        if (subsReq.readyState !== XMLHttpRequest.DONE) {
           return;
         }
 
-        let modifiedResponse;
+        const newProps: PropertyDescriptorMap & ThisType<typeof thisArg> = {
+          readyState: { value: subsReq.readyState, writable: false },
+          responseURL: { value: subsReq.responseURL, writable: false },
+          status: { value: subsReq.status, writable: false },
+          statusText: { value: subsReq.statusText, writable: false },
+          response: { value: subsReq.response, writable: false },
+        };
         try {
-          let response = req.responseText || req.response;
-          if (response instanceof ArrayBuffer) {
-            const decoder = new TextDecoder(); // assume utf-8
-            response = decoder.decode(response);
-          } else if (response instanceof Blob) {
-            response = await response.text(); // assume utf-8
-          } else if (response instanceof Document) {
-            throw new Error('Unable to prune Document-typed response');
-          }
-
-          const obj = typeof response === 'object' ? response : JSON.parse(response);
-          const pruned = prune(obj);
-          
-        } catch () {
-
+          // responseXML might throw when accessed:
+          // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseXML#exceptions
+          newProps.responseXML = { value: subsReq.responseXML, writable: false };
+        } catch {
+          /* intentionally left empty */
         }
-        
+        try {
+          // responseText might throw when accessed:
+          // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseText#exceptions
+          newProps.responseText = { value: subsReq.responseText, writable: false };
+        } catch {
+          /* intentionally left empty */
+        }
+
+        try {
+          if (subsReq.responseType === '' || subsReq.responseType === 'text') {
+            const parsed = JSON.parse(subsReq.responseText);
+            const pruned = prune(parsed);
+            const stringified = JSON.stringify(pruned);
+            newProps.response = { value: stringified, writable: false };
+            newProps.responseText = { value: stringified, writable: false };
+          } else if (subsReq.responseType === 'arraybuffer') {
+            // Assume UTF-8. JSON.parse will throw an error if our assumption is incorrect.
+            const decoded = new TextDecoder().decode(subsReq.response);
+            const parsed = JSON.parse(decoded);
+            const pruned = prune(parsed);
+
+            newProps.response = { value: new TextEncoder().encode(JSON.stringify(pruned)), writable: false };
+          } else if (subsReq.responseType === 'blob') {
+            // Assume UTF-8.
+            const decoded = await subsReq.response();
+            const parsed = JSON.parse(decoded);
+            const pruned = prune(parsed);
+
+            newProps.response = { value: new Blob([JSON.stringify(pruned)]), writable: false };
+          } else if (subsReq.responseType === 'json') {
+            newProps.response = { value: prune(subsReq.response), writable: false };
+          } else {
+            throw new Error(`Unsupported type: ${subsReq.responseType}`);
+          }
+        } catch (ex) {
+          logger.error('Error parsing/pruning response', ex);
+        }
+
+        Object.defineProperties(thisArg, newProps);
+
+        thisArg.dispatchEvent(new Event('readystatechange'));
+        thisArg.dispatchEvent(new Event('load'));
+        thisArg.dispatchEvent(new Event('loadend'));
       });
+
+      nativeOpen.apply(subsReq, thisArg[openArgs]);
+
+      for (const [name, value] of thisArg[requestHeaders]) {
+        subsReq.setRequestHeader(name, value);
+      }
+
+      try {
+        nativeSend.apply(subsReq, args);
+      } catch (ex) {
+        logger.error('Error sending substitute request', ex);
+        return Reflect.apply(target, thisArg, args);
+      }
     },
   });
 }
