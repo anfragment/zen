@@ -8,6 +8,7 @@ const logger = createLogger('json-prune-xhr-response');
 const requestHeaders = Symbol('requestHeaders');
 const shouldPrune = Symbol('shouldPrune');
 const openArgs = Symbol('openArgs');
+const responseHeaders = Symbol('responseHeaders');
 
 interface Uninitialized extends XMLHttpRequest {
   [shouldPrune]?: boolean;
@@ -17,6 +18,9 @@ interface ToPrune extends XMLHttpRequest {
   [shouldPrune]: true;
   [requestHeaders]: [string, string][];
   [openArgs]: Parameters<typeof XMLHttpRequest.prototype.open>;
+  // The reason for using an array instead of a map here is that response headers get rarely accessed,
+  // so it's better to prioritize lower memory footprint and initialization cost over access speed.
+  [responseHeaders]: [string, string][];
 }
 
 type ExtendedXHR = Uninitialized & ToPrune;
@@ -52,13 +56,14 @@ export function jsonPruneXHRResponse(
 
   XMLHttpRequest.prototype.open = new Proxy(XMLHttpRequest.prototype.open, {
     apply: (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.open>) => {
-      if (!matchXhrArgs(parsedProps, ...args)) {
+      if (parsedProps !== undefined && !matchXhrArgs(parsedProps, ...args)) {
         return Reflect.apply(target, thisArg, args);
       }
 
       thisArg[shouldPrune] = true;
       thisArg[requestHeaders] = [];
       thisArg[openArgs] = args;
+      thisArg[responseHeaders] = [];
 
       return Reflect.apply(target, thisArg, args);
     },
@@ -112,27 +117,31 @@ export function jsonPruneXHRResponse(
 
         try {
           if (subsReq.responseType === '' || subsReq.responseType === 'text') {
-            const parsed = JSON.parse(subsReq.responseText);
-            const pruned = prune(parsed);
-            const stringified = JSON.stringify(pruned);
+            const obj = JSON.parse(subsReq.responseText);
+            prune(obj);
+            const stringified = JSON.stringify(obj);
+
             newProps.response = { value: stringified, writable: false };
             newProps.responseText = { value: stringified, writable: false };
           } else if (subsReq.responseType === 'arraybuffer') {
             // Assume UTF-8. JSON.parse will throw an error if our assumption is incorrect.
             const decoded = new TextDecoder().decode(subsReq.response);
-            const parsed = JSON.parse(decoded);
-            const pruned = prune(parsed);
+            const obj = JSON.parse(decoded);
+            prune(obj);
+            const reencoded = new TextEncoder().encode(JSON.stringify(obj));
 
-            newProps.response = { value: new TextEncoder().encode(JSON.stringify(pruned)), writable: false };
+            newProps.response = { value: reencoded, writable: false };
           } else if (subsReq.responseType === 'blob') {
             // Assume UTF-8.
             const decoded = await subsReq.response();
-            const parsed = JSON.parse(decoded);
-            const pruned = prune(parsed);
+            const obj = JSON.parse(decoded);
+            prune(obj);
+            const reencoded = new Blob([JSON.stringify(obj)]);
 
-            newProps.response = { value: new Blob([JSON.stringify(pruned)]), writable: false };
+            newProps.response = { value: reencoded, writable: false };
           } else if (subsReq.responseType === 'json') {
-            newProps.response = { value: prune(subsReq.response), writable: false };
+            prune(subsReq.response);
+            newProps.response = { value: subsReq.response, writable: false };
           } else {
             throw new Error(`Unsupported type: ${subsReq.responseType}`);
           }
@@ -141,6 +150,12 @@ export function jsonPruneXHRResponse(
         }
 
         Object.defineProperties(thisArg, newProps);
+
+        const headers = subsReq.getAllResponseHeaders();
+        for (const header of headers.trim().split(/[\r\n]+/)) {
+          const [name, value] = header.split(': ');
+          thisArg[responseHeaders].push([name, value]);
+        }
 
         thisArg.dispatchEvent(new Event('readystatechange'));
         thisArg.dispatchEvent(new Event('load'));
@@ -159,6 +174,33 @@ export function jsonPruneXHRResponse(
         logger.error('Error sending substitute request', ex);
         return Reflect.apply(target, thisArg, args);
       }
+    },
+  });
+
+  XMLHttpRequest.prototype.getResponseHeader = new Proxy(XMLHttpRequest.prototype.getResponseHeader, {
+    apply: (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.getResponseHeader>) => {
+      if (!thisArg[shouldPrune]) {
+        return Reflect.apply(target, thisArg, args);
+      }
+
+      let res = null;
+      for (const [name, value] of thisArg[responseHeaders]) {
+        if (name === args[0]) {
+          res = value;
+          break;
+        }
+      }
+      return res;
+    },
+  });
+
+  XMLHttpRequest.prototype.getAllResponseHeaders = new Proxy(XMLHttpRequest.prototype.getAllResponseHeaders, {
+    apply: (target, thisArg: ExtendedXHR, args: Parameters<typeof XMLHttpRequest.prototype.getAllResponseHeaders>) => {
+      if (!thisArg[shouldPrune]) {
+        return Reflect.apply(target, thisArg, args);
+      }
+
+      return thisArg[responseHeaders].map(([name, value]) => `${name}: ${value}`).join('\r\n');
     },
   });
 }
