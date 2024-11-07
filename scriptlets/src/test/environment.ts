@@ -2,6 +2,7 @@
  * This file is used to add fetch globals to the JSDOM environment in Jest.
  * https://github.com/jsdom/jsdom/issues/1724#issuecomment-1446858041
  */
+import { Blob } from 'node:buffer';
 import { TextEncoder, TextDecoder } from 'node:util';
 
 import JSDOMEnvironment from 'jest-environment-jsdom';
@@ -17,5 +18,6 @@ export default class FixJSDOMEnvironment extends JSDOMEnvironment {
     this.global.Response = Response;
     this.global.TextEncoder = TextEncoder;
     this.global.TextDecoder = TextDecoder as any;
+    this.global.Blob = Blob as any;
   }
 }
