@@ -10,6 +10,7 @@ import (
 	"github.com/anfragment/zen/internal/app"
 	"github.com/anfragment/zen/internal/autostart"
 	"github.com/anfragment/zen/internal/cfg"
+	"github.com/anfragment/zen/internal/logger"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -24,6 +25,11 @@ const (
 var assets embed.FS
 
 func main() {
+	err := logger.SetupLogger()
+	if err != nil {
+		log.Printf("failed to setup logger: %v", err)
+	}
+
 	config, err := cfg.NewConfig()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)

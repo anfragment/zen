@@ -12,6 +12,7 @@ import (
 	"github.com/anfragment/zen/internal/certstore"
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/filter"
+	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/ruletree"
 	"github.com/anfragment/zen/internal/scriptlet"
@@ -219,6 +220,15 @@ func (a *App) StopProxy() (err error) {
 func (a *App) UninstallCA() error {
 	if err := a.certStore.UninstallCA(); err != nil {
 		log.Printf("failed to uninstall CA: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (a *App) OpenLogsDirectory() error {
+	if err := logger.OpenLogsDirectory(); err != nil {
+		log.Printf("failed to open logs directory: %v", err)
 		return err
 	}
 
