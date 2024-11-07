@@ -133,7 +133,7 @@ export function jsonPruneXHRResponse(
             newProps.response = { value: reencoded, writable: false };
           } else if (subsReq.responseType === 'blob') {
             // Assume UTF-8.
-            const decoded = await subsReq.response();
+            const decoded = await subsReq.response.text();
             const obj = JSON.parse(decoded);
             prune(obj);
             const reencoded = new Blob([JSON.stringify(obj)]);
