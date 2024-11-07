@@ -18,7 +18,11 @@ export function createPrune(propsToRemove: string, requiredProps?: string, stack
     stackRe = parseRegexpLiteral(stack) || parseRegexpFromString(stack);
   }
 
-  return function prune(obj: any) {
+  return function prune(obj: any): void {
+    if (typeof obj !== 'object') {
+      return;
+    }
+
     if (stackRe !== null && !matchStack(stackRe)) {
       return;
     }
