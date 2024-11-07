@@ -157,9 +157,12 @@ export function jsonPruneXHRResponse(
           thisArg[responseHeaders].push([name, value]);
         }
 
-        thisArg.dispatchEvent(new Event('readystatechange'));
-        thisArg.dispatchEvent(new Event('load'));
-        thisArg.dispatchEvent(new Event('loadend'));
+        setTimeout(() => {
+          // Executing this from within setTimeout to accommodate clients that set event handlers after calling send.
+          thisArg.dispatchEvent(new Event('readystatechange'));
+          thisArg.dispatchEvent(new Event('load'));
+          thisArg.dispatchEvent(new Event('loadend'));
+        }, 1);
       });
 
       nativeOpen.apply(subsReq, thisArg[openArgs]);
