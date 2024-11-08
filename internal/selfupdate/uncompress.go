@@ -103,6 +103,11 @@ func untarGz(src, dest string) error {
 
 		path := filepath.Join(dest, header.Name)
 
+		// check for ZipSlip (Directory traversal).
+		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", path)
+		}
+
 		switch header.Typeflag {
 		case tar.TypeDir:
 			os.MkdirAll(path, 0755)
