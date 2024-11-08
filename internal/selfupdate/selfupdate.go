@@ -1,10 +1,7 @@
 package selfupdate
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"bytes"
-	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -15,13 +12,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
-	"time"
 
-	"github.com/inconshreveable/go-update"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // Version is the current version of the application. Set at compile time for production builds using ldflags (see tasks in the /tasks/build directory).
@@ -136,292 +132,161 @@ func (su *SelfUpdater) isNewer(version string) (bool, error) {
 	return false, nil
 }
 
-func unarchiveTar(gz io.Reader, dest string) error {
-	tarReader := tar.NewReader(gz)
-
-	dest, err := filepath.Abs(dest)
-	if err != nil {
-		return fmt.Errorf("invalid destination path: %w", err)
-	}
-
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break // End of archive
-		}
-		if err != nil {
-			return fmt.Errorf("error reading tar archive: %w", err)
-		}
-
-		targetPath := filepath.Join(dest, header.Name)
-		realTargetPath, err := filepath.EvalSymlinks(targetPath)
-		if err != nil {
-			return fmt.Errorf("error resolving file path: %w", err)
-		}
-
-		// Check if the target path is within the destination directory
-		if !strings.HasPrefix(realTargetPath, dest) {
-			return fmt.Errorf("illegal file path: %s", header.Name)
-		}
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(targetPath, os.FileMode(header.Mode)); err != nil {
-				return fmt.Errorf("failed to create directory: %w", err)
-			}
-		case tar.TypeReg:
-			outFile, err := os.Create(targetPath)
-			if err != nil {
-				return fmt.Errorf("failed to create file: %w", err)
-			}
-			defer outFile.Close()
-
-			if _, err := io.Copy(outFile, tarReader); err != nil {
-				return fmt.Errorf("failed to write file data: %w", err)
-			}
-
-			if err := os.Chmod(targetPath, os.FileMode(header.Mode)); err != nil {
-				return fmt.Errorf("failed to set file permissions: %w", err)
-			}
-		case tar.TypeSymlink:
-			linkTarget, err := filepath.EvalSymlinks(filepath.Join(dest, header.Linkname))
-			if err != nil {
-				return fmt.Errorf("error evaluating symlinks for link target: %w", err)
-			}
-			if !strings.HasPrefix(linkTarget, dest) {
-				return fmt.Errorf("illegal symlink target: %s", header.Linkname)
-			}
-
-			if err := os.Symlink(header.Linkname, targetPath); err != nil {
-				return fmt.Errorf("failed to create symlink: %w", err)
-			}
-		default:
-			return fmt.Errorf("unsupported type: %v in tar archive", header.Typeflag)
-		}
-	}
-
-	return nil
-}
-
-func unarchiveTarGz(src io.Reader, dest string) error {
-	gzReader, err := gzip.NewReader(src)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzReader.Close()
-
-	return unarchiveTar(gzReader, dest)
-}
-
-func extractAndWriteFile(f *zip.File, dest, rootFolder string) error {
-	relativePath := strings.TrimPrefix(f.Name, rootFolder+"/")
-	if relativePath == "" || strings.Contains(relativePath, "..") {
-		return nil
-	}
-
-	path := filepath.Join(dest, relativePath)
-
-	if f.FileInfo().IsDir() {
-		return os.MkdirAll(path, f.Mode())
-	}
-
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-
-	srcFile, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	destFile, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, srcFile)
-	if err != nil {
-		return err
-	}
-
-	return os.Chmod(path, f.Mode())
-}
-
-func uncompressTo(src io.Reader, url, dest string) error {
-	if strings.HasSuffix(url, ".zip") {
-		buf, err := io.ReadAll(src)
-		if err != nil {
-			return fmt.Errorf("failed to create buffer for zip file: %s", err)
-		}
-
-		r := bytes.NewReader(buf)
-		z, err := zip.NewReader(r, r.Size())
-		if err != nil {
-			return fmt.Errorf("failed to uncompress zip file: %s", err)
-		}
-
-		// wont work in windows/linux, todo fix
-		// Extract all files and directories in the zip archive
-
-		for _, file := range z.File {
-			targetPath := filepath.Join(dest, file.Name)
-			absTargetPath, err := filepath.Abs(targetPath)
-			if err != nil {
-				return fmt.Errorf("error resolving file path: %w", err)
-			}
-
-			if !strings.HasPrefix(absTargetPath, filepath.Clean(dest)+string(os.PathSeparator)) {
-				return fmt.Errorf("illegal file path: %s", file.Name)
-			}
-
-			err = extractAndWriteFile(file, dest, "Zen.app")
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	} else if strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz") {
-		log.Println("Uncompressing tar.gz file", url)
-
-		gz, err := gzip.NewReader(src)
-		if err != nil {
-			return fmt.Errorf("failed to uncompress .tar.gz file: %s", err)
-		}
-
-		return unarchiveTarGz(gz, dest)
-	}
-
-	log.Println("Uncompression is not needed", url)
-	return nil
-}
-
-func (su *SelfUpdater) downloadFromURL(url string) (io.ReadCloser, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-
-	req.Header.Add("Accept", "application/octet-stream")
-
-	res, err := su.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("do request: %w", err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
-	}
-
-	return res.Body, nil
-}
-
-func (su *SelfUpdater) ApplyUpdate() error {
+func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	rel, err := su.checkForUpdates()
 	if err != nil {
 		return err
 	}
 
-	isNewer, err := su.isNewer(rel.Version)
-	if err != nil {
+	if isNewer, err := su.isNewer(rel.Version); err != nil {
 		return err
-	}
-
-	if !isNewer {
+	} else if !isNewer {
 		return nil
 	}
 
-	updateFile, err := su.downloadFromURL(rel.AssetURL)
+	action, err := wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{
+		Title:         "Would you like to update Zen?",
+		Message:       rel.Description,
+		Buttons:       []string{"Yes", "No"},
+		Type:          wailsruntime.QuestionDialog,
+		DefaultButton: "Yes",
+		CancelButton:  "No",
+	})
 	if err != nil {
+		log.Printf("error occurred while showing update dialog: %v", err)
 		return err
 	}
-	defer updateFile.Close()
+	if action == "No" {
+		log.Printf("aborting update, user declined")
+		return nil
+	}
 
-	hashMatches, err := checkSHA256(rel.SHA256, updateFile)
+	ext := filepath.Ext(rel.AssetURL)
+	if strings.HasSuffix(rel.AssetURL, ".tar.gz") {
+		ext = ".tar.gz"
+	}
+
+	if ext != ".tar.gz" && ext != ".zip" {
+		return fmt.Errorf("unsupported archive format: %s", ext)
+	}
+
+	tmpFile, err := os.CreateTemp("", "downloaded-*"+ext)
 	if err != nil {
-		return err
+		return fmt.Errorf("create temporary file: %v", err)
 	}
-	if !hashMatches {
-		return errors.New("SHA256 checksum mismatch")
+	defer os.Remove(tmpFile.Name())
+
+	err = DownloadFile(rel.AssetURL, tmpFile.Name())
+	if err != nil {
+		return fmt.Errorf("download file: %v", err)
 	}
 
-	applyUpdate(runtime.GOOS, updateFile, rel.AssetURL)
-	log.Println("Update applied")
+	err = verifyFileHash(tmpFile.Name(), rel.SHA256)
+	if err != nil {
+		return fmt.Errorf("verify file hash: %v", err)
+	}
+
+	var dest string
+	switch runtime.GOOS {
+	case "darwin":
+		dest = "/Applications"
+	case "windows":
+		dest = os.Getenv("ProgramFiles")
+	default:
+		panic("unsupported platform")
+	}
+
+	err = removeContents(path.Join(dest, "Zen.app"))
+	if err != nil {
+		return fmt.Errorf("remove contents: %v", err)
+	}
+
+	fmt.Println(tmpFile.Name(), dest)
+
+	err = Unarchive(tmpFile.Name(), dest)
+	if err != nil {
+		return fmt.Errorf("unzip file: %v", err)
+	}
+
+	action, err = wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{
+		Title:         "Zen has been updated",
+		Message:       "Zen has been updated to the latest version. Would you like to restart it now?",
+		Buttons:       []string{"Yes", "No"},
+		Type:          wailsruntime.QuestionDialog,
+		DefaultButton: "Yes",
+		CancelButton:  "No",
+	})
+	if err != nil {
+		log.Printf("error occurred while showing restart dialog: %v", err)
+	}
+	if action == "Yes" {
+		cmd := exec.Command(os.Args[0], os.Args[1:]...) // #nosec G204
+		if err := cmd.Start(); err != nil {
+			log.Printf("error occurred while restarting: %v", err)
+			return err
+		}
+		wailsruntime.Quit(ctx)
+	}
 
 	return nil
 }
 
-func applyUpdate(goos string, updateFile io.Reader, url string) error {
-	if goos == "darwin" {
-		appPath := "/Applications/Zen.app"
+func DownloadFile(url, filePath string) error {
+	out, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("create file: %v", err)
+	}
+	defer out.Close()
 
-		// remove for now, implement backup later
-		err := os.Remove(appPath)
-		if err != nil {
-			log.Println("Failed to rename app backup", err)
-		}
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("download file: %v", err)
+	}
+	defer resp.Body.Close()
 
-		err = uncompressTo(updateFile, url, appPath)
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return fmt.Errorf("write to file: %v", err)
+	}
+
+	return nil
+}
+
+func verifyFileHash(filePath, expectedHash string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("open file for hashing: %v", err)
+	}
+	defer file.Close()
+
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, file); err != nil {
+		return fmt.Errorf("hash file: %v", err)
+	}
+
+	calculatedHash := hex.EncodeToString(hasher.Sum(nil))
+	if calculatedHash != expectedHash {
+		return fmt.Errorf("hash mismatch: expected %s, got %s", expectedHash, calculatedHash)
+	}
+
+	return nil
+}
+
+func removeContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
 		if err != nil {
 			return err
 		}
-
-		err = restartApp()
-		if err != nil {
-			return fmt.Errorf("failed to restart app: %w", err)
-		}
-
-	} else if goos == "windows" || goos == "linux" {
-		err := update.Apply(updateFile, update.Options{})
-
-		if err != nil {
-			return fmt.Errorf("failed to apply update: %w", err)
-		}
-	} else {
-		return fmt.Errorf("unsupported OS: %s", goos)
 	}
-
 	return nil
-}
-
-func restartApp() error {
-	execPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command(execPath)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
-
-		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("failed to start new process: %w", err)
-		}
-
-		// Give time for the new process to start, then exit the current one
-		time.Sleep(2 * time.Second)
-		os.Exit(0)
-
-	} else {
-		// for unix-like systems
-		return syscall.Exec(execPath, os.Args, os.Environ())
-	}
-
-	return nil
-}
-
-func checkSHA256(expectedHash string, reader io.Reader) (bool, error) {
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, reader); err != nil {
-		return false, err
-	}
-
-	calculatedHash := hasher.Sum(nil)
-	calculatedHashString := hex.EncodeToString(calculatedHash)
-
-	return calculatedHashString == expectedHash, nil
 }

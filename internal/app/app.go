@@ -82,11 +82,15 @@ func (a *App) DomReady(ctx context.Context) {
 
 	su, err := selfupdate.NewSelfUpdater(&http.Client{})
 	if err != nil {
-		log.Printf("failed to create self updater: %v", err)
+		log.Printf("error creating self updater: %v", err)
 		return
 	}
 
-	su.ApplyUpdate()
+	if err := su.ApplyUpdate(ctx); err != nil {
+		log.Printf("failed to apply update: %v", err)
+	} else {
+		fmt.Println("update applied successfully")
+	}
 
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
