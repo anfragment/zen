@@ -6,3 +6,4 @@ export { setSessionStorageItem } from './set-session-storage-item';
 export { setConstant } from './set-constant';
 export { jsonPrune } from './json-prune';
 export { jsonPruneFetchResponse } from './json-prune-fetch-response';
+export { jsonPruneXHRResponse } from './json-prune-xhr-response';
