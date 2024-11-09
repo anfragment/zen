@@ -5,7 +5,6 @@ frontend/dist
 *.dmg
 *.app
 .env.local
-.vscode
 **/coverage/*
 **/dist/*
 .idea
