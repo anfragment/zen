@@ -10,7 +10,6 @@ import (
 	"github.com/anfragment/zen/internal/app"
 	"github.com/anfragment/zen/internal/autostart"
 	"github.com/anfragment/zen/internal/cfg"
-	"github.com/anfragment/zen/internal/files"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -36,15 +35,13 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	files := files.NewFiles()
-
 	var startOnDomReady bool
 	for _, arg := range os.Args[1:] {
 		if arg == "--start" {
 			startOnDomReady = true
 		}
 	}
-	app, err := app.NewApp(appName, config, files, startOnDomReady)
+	app, err := app.NewApp(appName, config, startOnDomReady)
 	if err != nil {
 		log.Fatalf("failed to create app: %v", err)
 	}
@@ -67,7 +64,6 @@ func main() {
 			app,
 			config,
 			autostart,
-			files,
 		},
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{

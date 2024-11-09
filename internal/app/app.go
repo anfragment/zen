@@ -2,16 +2,17 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/anfragment/zen/internal/certgen"
 	"github.com/anfragment/zen/internal/certstore"
 	"github.com/anfragment/zen/internal/cfg"
-	"github.com/anfragment/zen/internal/files"
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/proxy"
@@ -19,17 +20,18 @@ import (
 	"github.com/anfragment/zen/internal/scriptlet"
 	"github.com/anfragment/zen/internal/scriptlet/triestore"
 	"github.com/anfragment/zen/internal/systray"
+	"github.com/anfragment/zen/internal/types"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type App struct {
+	ctx context.Context
 	// name is the name of the application.
 	name            string
 	startOnDomReady bool
 	config          *cfg.Config
 	eventsHandler   *eventsHandler
 	proxy           *proxy.Proxy
-	files           *files.Files
 	proxyOn         bool
 	// proxyMu ensures that proxy is only started or stopped once at a time.
 	proxyMu    sync.Mutex
@@ -38,7 +40,7 @@ type App struct {
 }
 
 // NewApp initializes the app.
-func NewApp(name string, config *cfg.Config, files *files.Files, startOnDomReady bool) (*App, error) {
+func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error) {
 	if name == "" {
 		return nil, errors.New("name is empty")
 	}
@@ -54,7 +56,6 @@ func NewApp(name string, config *cfg.Config, files *files.Files, startOnDomReady
 	return &App{
 		name:            name,
 		config:          config,
-		files:           files,
 		certStore:       certStore,
 		startOnDomReady: startOnDomReady,
 	}, nil
@@ -92,14 +93,15 @@ func (a *App) DomReady(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("failed to initialize systray manager: %v", err)
 	}
+
+	a.ctx = ctx
 	a.systrayMgr = systrayMgr
-	a.eventsHandler = newEventsHandler(ctx)
+	a.eventsHandler = newEventsHandler(a.ctx)
 
 	a.config.RunMigrations()
-	a.systrayMgr.Init(ctx)
-	a.files.Init(ctx, a.config)
+	a.systrayMgr.Init(a.ctx)
 
-	cfg.SelfUpdate(ctx)
+	cfg.SelfUpdate(a.ctx)
 
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
@@ -239,4 +241,85 @@ func (a *App) OpenLogsDirectory() error {
 	}
 
 	return nil
+}
+
+// ExportCustomFilterListsToFile exports the custom filter lists to a file.
+func (a *App) ExportCustomFilterLists() string {
+
+	if a.ctx == nil {
+		return "App DOM is not ready"
+	}
+
+	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export Custom Filter Lists",
+		DefaultFilename: "filter-lists.json",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON", Pattern: "*.json"},
+		},
+	})
+
+	if err != nil {
+		log.Printf("failed to open file dialog: %v", err)
+		return err.Error()
+	}
+
+	customFilterLists := a.config.GetTargetTypeFilterLists(types.FilterListTypeCustom)
+
+	if len(customFilterLists) == 0 {
+		return "no custom filter lists to export"
+	}
+
+	data, err := json.MarshalIndent(customFilterLists, "", "  ")
+	if err != nil {
+		log.Printf("failed to marshal filter lists: %v", err)
+		return err.Error()
+	}
+
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		log.Printf("failed to write filter lists to file: %v", err)
+		return err.Error()
+	}
+
+	return ""
+}
+
+// ImportCustomFilterLists imports the custom filter lists from a file.
+func (a *App) ImportCustomFilterLists() string {
+	if a.ctx == nil {
+		return "App DOM is not ready"
+	}
+
+	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Import Custom Filter Lists",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON", Pattern: "*.json"},
+		},
+	})
+
+	if err != nil {
+		return err.Error()
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("failed to read filter lists file: %v", err)
+		return err.Error()
+	}
+
+	var filterLists []cfg.FilterList
+	if err := json.Unmarshal(data, &filterLists); err != nil {
+		log.Printf("failed to unmarshal filter lists: %v", err)
+		return err.Error()
+	}
+
+	if len(filterLists) == 0 {
+		return "no custom filter lists to import"
+	}
+
+	if err := a.config.AddFilterLists(filterLists); err != nil {
+		log.Printf("failed to add filter lists: %v", err)
+		return err.Error()
+	}
+
+	return ""
 }
