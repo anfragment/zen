@@ -39,7 +39,7 @@ export function FilterLists() {
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div className="filter-lists__header">
         <Select
           items={Object.values(FilterListType)}
           itemRenderer={(item) => (
@@ -63,7 +63,7 @@ export function FilterLists() {
           onItemSelect={(item) => {
             setType(item);
           }}
-          popoverProps={{ minimal: true, matchTargetWidth: true }}
+          popoverProps={{ minimal: true }}
           filterable={false}
         >
           <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />

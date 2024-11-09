@@ -1,7 +1,7 @@
-import { Intent, MenuItem } from '@blueprintjs/core';
+import { MenuItem } from '@blueprintjs/core';
 import { useState } from 'react';
 
-import { ImportFilterList as ImportFilterListBackend } from '../../wailsjs/go/files/Files';
+import { ImportCustomFilterLists } from '../../wailsjs/go/app/App';
 import { AppToaster } from '../common/toaster';
 
 export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
@@ -9,30 +9,20 @@ export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
 
   const handleImport = async () => {
     setLoading(true);
-
-    try {
-      const result = await ImportFilterListBackend();
-
-      const blob = new Blob([JSON.stringify(result)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'filter-lists.json';
-      document.body.appendChild(link);
-      link.click();
-
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      onAdd();
-    } catch (error) {
+    const error = await ImportCustomFilterLists();
+    if (error) {
       AppToaster.show({
-        message: error instanceof Error ? error.message : 'Failed to export filter lists',
-        intent: Intent.DANGER,
+        message: `Failed to import custom filter lists: ${error}`,
+        intent: 'danger',
       });
-    } finally {
-      setLoading(false);
+    } else {
+      AppToaster.show({
+        message: 'Custom filter lists imported successfully',
+        intent: 'success',
+      });
+      onAdd();
     }
+    setLoading(false);
   };
 
   return <MenuItem icon="download" text="Import" onClick={handleImport} disabled={loading} />;

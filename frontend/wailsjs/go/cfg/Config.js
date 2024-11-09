@@ -6,8 +6,8 @@ export function AddFilterList(arg1) {
   return window['go']['cfg']['Config']['AddFilterList'](arg1);
 }
 
-export function ExportFilterListToFile(arg1) {
-  return window['go']['cfg']['Config']['ExportFilterListToFile'](arg1);
+export function AddFilterLists(arg1) {
+  return window['go']['cfg']['Config']['AddFilterLists'](arg1);
 }
 
 export function GetCAInstalled() {
@@ -30,12 +30,12 @@ export function GetPort() {
   return window['go']['cfg']['Config']['GetPort']();
 }
 
-export function GetVersion() {
-  return window['go']['cfg']['Config']['GetVersion']();
+export function GetTargetTypeFilterLists(arg1) {
+  return window['go']['cfg']['Config']['GetTargetTypeFilterLists'](arg1);
 }
 
-export function ImportFilterList(arg1) {
-  return window['go']['cfg']['Config']['ImportFilterList'](arg1);
+export function GetVersion() {
+  return window['go']['cfg']['Config']['GetVersion']();
 }
 
 export function Lock() {
