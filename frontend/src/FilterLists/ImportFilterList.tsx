@@ -1,15 +1,13 @@
-
 import { Intent, MenuItem } from '@blueprintjs/core';
 import { useState } from 'react';
 
 import { ImportFilterList as ImportFilterListBackend } from '../../wailsjs/go/files/Files';
 import { AppToaster } from '../common/toaster';
 
-
 export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
   const [loading, setLoading] = useState(false);
 
-  const handleImport = async() => {
+  const handleImport = async () => {
     setLoading(true);
 
     try {
@@ -18,7 +16,7 @@ export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
       const blob = new Blob([JSON.stringify(result)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href =  url;
+      link.href = url;
       link.download = 'filter-lists.json';
       document.body.appendChild(link);
       link.click();
@@ -37,10 +35,5 @@ export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
     }
   };
 
-  return <MenuItem 
-    icon="upload" 
-    text="Import" 
-    onClick={handleImport}
-    disabled={loading}
-  />;
+  return <MenuItem icon="download" text="Import" onClick={handleImport} disabled={loading} />;
 }

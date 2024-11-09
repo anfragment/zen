@@ -4,11 +4,10 @@ import { useState } from 'react';
 import { ExportFilterList as ExportFilterListBackend } from '../../wailsjs/go/files/Files';
 import { AppToaster } from '../common/toaster';
 
-
 export function ExportFilterList() {
   const [loading, setLoading] = useState(false);
 
-  const handleExport = async() => {
+  const handleExport = async () => {
     setLoading(true);
     try {
       const result = await ExportFilterListBackend();
@@ -16,7 +15,7 @@ export function ExportFilterList() {
       const blob = new Blob([JSON.stringify(result)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href =  url;
+      link.href = url;
       link.download = 'filter-lists.json';
       document.body.appendChild(link);
       link.click();
@@ -33,10 +32,5 @@ export function ExportFilterList() {
     }
   };
 
-  return <MenuItem 
-    icon="download"
-    text="Export"
-    onClick={handleExport}
-    disabled={loading}
-  />;
+  return <MenuItem icon="upload" text="Export" onClick={handleExport} disabled={loading} />;
 }

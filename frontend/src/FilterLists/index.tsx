@@ -40,34 +40,34 @@ export function FilterLists() {
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-      <Select
-        items={Object.values(FilterListType)}
-        itemRenderer={(item) => (
-          <MenuItem
-            key={item}
-            text={
-              <>
-                {item[0].toUpperCase() + item.slice(1)}
-                <span className="bp5-text-muted filter-lists__select-count">
-                  ({state.filterLists.filter((filterList) => filterList.type === item && filterList.enabled).length}/
-                  {state.filterLists.filter((filterList) => filterList.type === item).length})
-                </span>
-              </>
-            }
-            onClick={() => {
-              setType(item);
-            }}
-            active={item === type}
-          />
-        )}
-        onItemSelect={(item) => {
-          setType(item);
-        }}
-        popoverProps={{ minimal: true, matchTargetWidth: true }}
-        filterable={false}
-      >
-        <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />
-      </Select>
+        <Select
+          items={Object.values(FilterListType)}
+          itemRenderer={(item) => (
+            <MenuItem
+              key={item}
+              text={
+                <>
+                  {item[0].toUpperCase() + item.slice(1)}
+                  <span className="bp5-text-muted filter-lists__select-count">
+                    ({state.filterLists.filter((filterList) => filterList.type === item && filterList.enabled).length}/
+                    {state.filterLists.filter((filterList) => filterList.type === item).length})
+                  </span>
+                </>
+              }
+              onClick={() => {
+                setType(item);
+              }}
+              active={item === type}
+            />
+          )}
+          onItemSelect={(item) => {
+            setType(item);
+          }}
+          popoverProps={{ minimal: true, matchTargetWidth: true }}
+          filterable={false}
+        >
+          <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />
+        </Select>
 
         {type === FilterListType.CUSTOM && (
           <Popover
@@ -76,11 +76,9 @@ export function FilterLists() {
                 <ExportFilterList />
                 <ImportFilterList onAdd={fetchLists} />
               </Menu>
-            }>
-            <Button 
-              icon="more"
-              text="More"
-            />
+            }
+          >
+            <Button icon="more" text="More" />
           </Popover>
         )}
       </div>
