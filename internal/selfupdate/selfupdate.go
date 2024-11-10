@@ -137,6 +137,9 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if rel == nil {
+		return nil
+	}
 
 	if isNewer, err := su.isNewer(rel.Version); err != nil {
 		return err
@@ -187,25 +190,61 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	}
 
 	var dest string
-	switch runtime.GOOS {
-	case "darwin":
+	if runtime.GOOS == "darwin" {
 		dest = "/Applications"
-	case "windows":
-		dest = os.Getenv("ProgramFiles")
-	default:
-		panic("unsupported platform")
-	}
 
-	err = removeContents(path.Join(dest, "Zen.app"))
-	if err != nil {
-		return fmt.Errorf("remove contents: %v", err)
-	}
+		err = removeContents(path.Join(dest, "Zen.app"))
+		if err != nil {
+			return fmt.Errorf("remove contents: %v", err)
+		}
 
-	fmt.Println(tmpFile.Name(), dest)
+		err = Unarchive(tmpFile.Name(), dest)
+		if err != nil {
+			return fmt.Errorf("unzip file: %v", err)
+		}
+	} else if runtime.GOOS == "windows" {
+		tempUnarchiveDir, err := os.MkdirTemp("", "unarchive-*")
+		if err != nil {
+			return fmt.Errorf("create temp unarchive dir: %v", err)
+		}
+		defer os.RemoveAll(tempUnarchiveDir)
 
-	err = Unarchive(tmpFile.Name(), dest)
-	if err != nil {
-		return fmt.Errorf("unzip file: %v", err)
+		err = Unarchive(tmpFile.Name(), tempUnarchiveDir)
+		if err != nil {
+			return fmt.Errorf("unzip file: %v", err)
+		}
+
+		var expectedExecName string
+		switch runtime.GOOS {
+		case "windows":
+			expectedExecName = "Zen.exe"
+		case "linux":
+			expectedExecName = "Zen"
+		default:
+			panic("unsupported platform")
+		}
+
+		newExecPath := filepath.Join(tempUnarchiveDir, expectedExecName)
+		if _, err := os.Stat(newExecPath); os.IsNotExist(err) {
+			return fmt.Errorf("expected executable '%s' not found in unarchive folder", expectedExecName)
+		}
+
+		currentExecPath, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("get executable path: %v", err)
+		}
+
+		// Rename current executable to allow overwriting
+		oldExecPath := currentExecPath + ".old"
+		err = os.Rename(currentExecPath, oldExecPath)
+		if err != nil {
+			return fmt.Errorf("rename current executable: %v", err)
+		}
+
+		err = os.Rename(newExecPath, currentExecPath)
+		if err != nil {
+			return fmt.Errorf("move new executable: %v", err)
+		}
 	}
 
 	action, err = wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{
