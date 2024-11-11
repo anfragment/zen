@@ -179,7 +179,7 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	err = DownloadFile(rel.AssetURL, tmpFile.Name())
+	err = su.DownloadFile(rel.AssetURL, tmpFile.Name())
 	if err != nil {
 		return fmt.Errorf("download file: %v", err)
 	}
@@ -270,14 +270,21 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	return nil
 }
 
-func DownloadFile(url, filePath string) error {
+func (su *SelfUpdater) DownloadFile(url, filePath string) error {
 	out, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("create file: %v", err)
 	}
 	defer out.Close()
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Add("Accept", "application/octet-stream")
+
+	resp, err := su.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("download file: %v", err)
 	}

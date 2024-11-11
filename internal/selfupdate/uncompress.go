@@ -35,7 +35,7 @@ func unzip(src, dest string) error {
 			}
 		}()
 
-		path := filepath.Join(dest, f.Name)
+		path := filepath.Join(dest, f.Name) // #nosec G305
 
 		// check for ZipSlip (Directory traversal).
 		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
@@ -56,7 +56,11 @@ func unzip(src, dest string) error {
 				}
 			}()
 
-			_, err = io.Copy(f, rc)
+			const maxDecompressedSize int64 = 100 << 20 // 100 MB
+
+			// Limit the size of the file to prevent zip bombs. G110 gosec
+			limitedReader := &io.LimitedReader{R: rc, N: maxDecompressedSize}
+			_, err = io.Copy(f, limitedReader)
 			if err != nil {
 				return err
 			}
@@ -98,7 +102,7 @@ func untarGz(src, dest string) error {
 			return err
 		}
 
-		path := filepath.Join(dest, header.Name)
+		path := filepath.Join(dest, header.Name) // #nosec G305
 
 		// check for ZipSlip (Directory traversal).
 		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
@@ -109,7 +113,7 @@ func untarGz(src, dest string) error {
 		case tar.TypeDir:
 			os.MkdirAll(path, 0755)
 		case tar.TypeReg:
-			err := writeTarFile(tarReader, path, header.Mode)
+			err := writeTarFile(tarReader, path, os.FileMode(header.Mode)) // #nosec G115
 			if err != nil {
 				return err
 			}
@@ -118,9 +122,13 @@ func untarGz(src, dest string) error {
 	return nil
 }
 
-func writeTarFile(tarReader *tar.Reader, path string, mode int64) error {
+func writeTarFile(tarReader *tar.Reader, path string, mode os.FileMode) error {
+	if mode > 0o777 {
+		return fmt.Errorf("invalid file mode: %d", mode)
+	}
+
 	os.MkdirAll(filepath.Dir(path), 0755)
-	outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(mode))
+	outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
 		return err
 	}
