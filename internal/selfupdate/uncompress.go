@@ -131,11 +131,12 @@ func writeTarFile(tarReader *tar.Reader, path string, mode int64) error {
 }
 
 func Unarchive(src, dest string) error {
-	if strings.HasSuffix(src, ".zip") {
+	switch {
+	case strings.HasSuffix(src, ".zip"):
 		return unzip(src, dest)
-	} else if strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
+	case strings.HasSuffix(src, ".tar.gz"), strings.HasSuffix(src, ".tgz"):
 		return untarGz(src, dest)
-	} else {
+	default:
 		return fmt.Errorf("unsupported archive format: %s", src)
 	}
 }
