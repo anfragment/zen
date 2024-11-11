@@ -7,6 +7,7 @@ tasks:
     cmds:
       - npm run build
       - cp dist/bundle.js ../internal/scriptlet
+      - du -sh ../internal/scriptlet/bundle.js
 
   lint:
     desc: Lints the code.

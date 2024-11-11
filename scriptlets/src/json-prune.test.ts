@@ -50,8 +50,10 @@ describe('json-prune', () => {
     jsonPrune('a.*.z');
     jsonPrune('a.*.h');
 
-    const obj = JSON.parse('{"a":{"arr":[{"bird":{"z":"remove","k":"keep","h":"remove"}}]},"b":"keep"}');
-    expect(obj).toEqual({ a: { arr: [{ bird: { k: 'keep' } }] }, b: 'keep' });
+    const obj = JSON.parse(
+      '{"a":{"arr":[{"bird":{"z":"remove","k":"keep","h":"remove"}},{"cat":{"z":"remove","k":"keep","h":"remove"}}]},"b":"keep"}',
+    );
+    expect(obj).toEqual({ a: { arr: [{ bird: { k: 'keep' } }, { cat: { k: 'keep' } }] }, b: 'keep' });
   });
 
   test('matches wildcard properties', () => {
