@@ -35,7 +35,11 @@ jobs:
         run: |
           mkdir -p ./frontend/dist
           touch ./frontend/dist/placeholder
-      - name: Run go linter
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+      - name: Run go vet
+        run: go vet ./...
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
           version: v1.60
