@@ -105,8 +105,6 @@ func (a *App) DomReady(ctx context.Context) {
 
 	if err := su.ApplyUpdate(ctx); err != nil {
 		log.Printf("failed to apply update: %v", err)
-	} else {
-		log.Printf("update applied successfully")
 	}
 
 	time.AfterFunc(time.Second, func() {
