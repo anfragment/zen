@@ -9,20 +9,21 @@ export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
 
   const handleImport = async () => {
     setLoading(true);
-    const error = await ImportCustomFilterLists();
-    if (error) {
-      AppToaster.show({
-        message: `Failed to import custom filter lists: ${error}`,
-        intent: 'danger',
-      });
-    } else {
+    try {
+      await ImportCustomFilterLists();
       AppToaster.show({
         message: 'Custom filter lists imported successfully',
         intent: 'success',
       });
       onAdd();
+    } catch (error) {
+      AppToaster.show({
+        message: `${error}`,
+        intent: 'danger',
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return <MenuItem icon="download" text="Import" onClick={handleImport} disabled={loading} />;

@@ -9,19 +9,20 @@ export function ExportFilterList() {
 
   const handleExport = async () => {
     setLoading(true);
-    const error = await ExportCustomFilterLists();
-    if (error) {
-      AppToaster.show({
-        message: `Failed to export custom filter lists: ${error}`,
-        intent: 'danger',
-      });
-    } else {
+    try {
+      await ExportCustomFilterLists();
       AppToaster.show({
         message: 'Custom filter lists exported successfully',
         intent: 'success',
       });
+    } catch (error) {
+      AppToaster.show({
+        message: `${error}`,
+        intent: 'danger',
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return <MenuItem icon="upload" text="Export" onClick={handleExport} disabled={loading} />;
