@@ -13,23 +13,26 @@ var (
 	reAdguardScriptlet = regexp.MustCompile(`(.*)#%#\/\/scriptlet\((.+)\)`)
 	// adguardToCanonical maps AdGuard scriptlet names to their respective implementations inside the scriptlet bundle.
 	adguardToCanonical = map[string]string{
-		"set-local-storage-item":   "setLocalStorageItem",
-		"set-session-storage-item": "setSessionStorageItem",
-		"nowebrtc":                 "nowebrtc",
-		"prevent-fetch":            "preventFetch",
-		"prevent-xhr":              "preventXHR",
-		"set-constant":             "setConstant",
+		"set-local-storage-item":    "setLocalStorageItem",
+		"set-session-storage-item":  "setSessionStorageItem",
+		"nowebrtc":                  "nowebrtc",
+		"prevent-fetch":             "preventFetch",
+		"prevent-xhr":               "preventXHR",
+		"set-constant":              "setConstant",
+		"json-prune":                "jsonPrune",
+		"json-prune-fetch-response": "jsonPruneFetchResponse",
+		"json-prune-xhr-response":   "jsonPruneXHRResponse",
 	}
 	// reUblockScriptlet detects and extracts key data from uBlock Origin-style scriptlets.
 	reUblockScriptlet = regexp.MustCompile(`(.*)##\+js\((.+)\)`)
 	// ublockToCanonical maps uBlock Origin scriptlet names to their respective implementations inside the scriptlet bundle.
 	ublockToCanonical = map[string]string{
-		// TODO: manually check ublock syntax compatibility
 		"set-local-storage-item": "setLocalStorageItem",
 		"no-xhr-if":              "preventXHR",
 		"no-fetch-if":            "preventFetch",
 		"nowebrtc":               "nowebrtc",
 		"set-constant":           "setConstant",
+		// TODO: add prune-json and related scriptlets after checking their compatibility with AdGuard.
 	}
 	errNotQuotedString    = errors.New("not a quoted string")
 	errUnsupportedSyntax  = errors.New("unsupported syntax")
