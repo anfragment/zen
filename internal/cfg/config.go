@@ -9,8 +9,6 @@ import (
 	"os"
 	"path"
 	"sync"
-
-	"github.com/anfragment/zen/internal/types"
 )
 
 var (
@@ -22,6 +20,12 @@ var (
 
 //go:embed default-config.json
 var defaultConfig embed.FS
+
+type FilterListType string
+
+const (
+	FilterListTypeCustom FilterListType = "custom"
+)
 
 // Config stores and manages the configuration for the application.
 // Although all fields are public, this is only for use by the JSON marshaller.
@@ -46,10 +50,10 @@ type Config struct {
 }
 
 type FilterList struct {
-	Name    string               `json:"name"`
-	Type    types.FilterListType `json:"type"`
-	URL     string               `json:"url"`
-	Enabled bool                 `json:"enabled"`
+	Name    string         `json:"name"`
+	Type    FilterListType `json:"type"`
+	URL     string         `json:"url"`
+	Enabled bool           `json:"enabled"`
 }
 
 func (f *FilterList) UnmarshalJSON(data []byte) error {
@@ -186,7 +190,8 @@ func (c *Config) AddFilterLists(lists []FilterList) error {
 
 	c.Filter.FilterLists = append(c.Filter.FilterLists, lists...)
 	if err := c.Save(); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
+		log.Printf("failed to save config: %v", err)
+		return err
 	}
 	return nil
 }
@@ -228,7 +233,7 @@ func (c *Config) ToggleFilterList(url string, enabled bool) string {
 }
 
 // GetTargetTypeFilterLists returns the list of filter lists with particular type.
-func (c *Config) GetTargetTypeFilterLists(targetType types.FilterListType) []FilterList {
+func (c *Config) GetTargetTypeFilterLists(targetType FilterListType) []FilterList {
 	c.RLock()
 	defer c.RUnlock()
 
