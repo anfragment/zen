@@ -24,7 +24,7 @@ tasks:
   test-go:
     desc: Run Go tests.
     cmds:
-      - go test -cover ./...
+      - go test -cover -race ./...
 
   test:
     desc: Run Go and scriptlets tests.
@@ -44,6 +44,6 @@ tasks:
         silent: true
 
   lint-go:
-    desc: Runs the go (golangci-lint) linter.
+    desc: Run Go linters.
     cmds:
       - golangci-lint run
