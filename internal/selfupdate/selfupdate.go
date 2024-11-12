@@ -51,6 +51,10 @@ type Release struct {
 	SHA256      string `json:"sha256"`
 }
 
+const (
+	appName = "Zen"
+)
+
 func NewSelfUpdater(httpClient HTTPClient) (*SelfUpdater, error) {
 	if httpClient == nil {
 		return nil, errors.New("httpClient is nil")
@@ -160,7 +164,7 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		return err
 	}
 	if action == "No" {
-		log.Printf("aborting update, user declined")
+		log.Println("aborting update, user declined")
 		return nil
 	}
 
@@ -175,7 +179,7 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 
 	tmpFile, err := os.CreateTemp("", "downloaded-*"+ext)
 	if err != nil {
-		return fmt.Errorf("create temporary file: %v", err)
+		return fmt.Errorf("create temporary file: %w", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
@@ -189,11 +193,11 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		return fmt.Errorf("verify file hash: %v", err)
 	}
 
-	var dest string
-	if runtime.GOOS == "darwin" {
-		dest = "/Applications"
+	switch runtime.GOOS {
+	case "darwin":
+		dest := "/Applications"
 
-		err = removeContents(path.Join(dest, "Zen.app"))
+		err = removeContents(path.Join(dest, appName+".app"))
 		if err != nil {
 			return fmt.Errorf("remove contents: %v", err)
 		}
@@ -202,7 +206,8 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("unzip file: %v", err)
 		}
-	} else if runtime.GOOS == "windows" {
+
+	case "windows", "linux":
 		tempUnarchiveDir, err := os.MkdirTemp("", "unarchive-*")
 		if err != nil {
 			return fmt.Errorf("create temp unarchive dir: %v", err)
@@ -214,14 +219,9 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 			return fmt.Errorf("unzip file: %v", err)
 		}
 
-		var expectedExecName string
-		switch runtime.GOOS {
-		case "windows":
-			expectedExecName = "Zen.exe"
-		case "linux":
-			expectedExecName = "Zen"
-		default:
-			panic("unsupported platform")
+		expectedExecName := appName
+		if runtime.GOOS == "windows" {
+			expectedExecName = appName + ".exe"
 		}
 
 		newExecPath := filepath.Join(tempUnarchiveDir, expectedExecName)
@@ -245,6 +245,9 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("move new executable: %v", err)
 		}
+
+	default:
+		panic("unsupported platform")
 	}
 
 	action, err = wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{

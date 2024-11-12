@@ -97,15 +97,19 @@ func (a *App) DomReady(ctx context.Context) {
 	a.config.RunMigrations()
 	a.systrayMgr.Init(ctx)
 
-	su, err := selfupdate.NewSelfUpdater(&http.Client{})
+	su, err := selfupdate.NewSelfUpdater(&http.Client{
+		Timeout: 20 * time.Second,
+	})
 	if err != nil {
 		log.Printf("error creating self updater: %v", err)
 		return
 	}
 
-	if err := su.ApplyUpdate(ctx); err != nil {
-		log.Printf("failed to apply update: %v", err)
-	}
+	go func() {
+		if err := su.ApplyUpdate(ctx); err != nil {
+			log.Printf("failed to apply update: %v", err)
+		}
+	}()
 
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
