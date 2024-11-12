@@ -31,16 +31,17 @@ jobs:
       - name: Run go version
         run: go version
       - name: Create placeholder asset
+        working-directory: frontend
         # go:embed in main.go requires the directory to exist and be non-empty
         run: |
-          mkdir -p frontend/dist
-          echo 1 > frontend/dist/placeholder
+          mkdir -p dist
+          touch dist/placeholder
       - name: Run govulncheck
         uses: golang/govulncheck-action@v1
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
-          version: v1.60
+          version: v1.62
 
   lint-frontend:
     name: Lint Frontend
