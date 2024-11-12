@@ -33,7 +33,7 @@ var releaseTrack = "stable"
 // manifestsBaseURL is the base URL for fetching update manifests.
 const manifestsBaseURL = "https://zenprivacy.net/update-manifests"
 
-type HTTPClient interface {
+type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
@@ -41,10 +41,10 @@ type SelfUpdater struct {
 	version      string
 	noSelfUpdate bool
 	releaseTrack string
-	httpClient   HTTPClient
+	httpClient   httpClient
 }
 
-type Release struct {
+type release struct {
 	Version     string `json:"version"`
 	Description string `json:"description"`
 	AssetURL    string `json:"assetURL"`
@@ -55,7 +55,7 @@ const (
 	appName = "Zen"
 )
 
-func NewSelfUpdater(httpClient HTTPClient) (*SelfUpdater, error) {
+func NewSelfUpdater(httpClient httpClient) (*SelfUpdater, error) {
 	if httpClient == nil {
 		return nil, errors.New("httpClient is nil")
 	}
@@ -76,7 +76,7 @@ func NewSelfUpdater(httpClient HTTPClient) (*SelfUpdater, error) {
 	return &u, nil
 }
 
-func (su *SelfUpdater) checkForUpdates() (*Release, error) {
+func (su *SelfUpdater) checkForUpdates() (*release, error) {
 	log.Println("checking for updates")
 	if su.noSelfUpdate {
 		log.Println("noSelfUpdate=true, self-update disabled")
@@ -101,9 +101,13 @@ func (su *SelfUpdater) checkForUpdates() (*Release, error) {
 		return nil, fmt.Errorf("do request: %w", err)
 	}
 
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("manifest request failed with status code %d", res.StatusCode)
+	}
+
 	defer res.Body.Close()
 
-	var rel Release
+	var rel release
 	if err := json.NewDecoder(res.Body).Decode(&rel); err != nil {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
@@ -139,14 +143,14 @@ func (su *SelfUpdater) isNewer(version string) (bool, error) {
 func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	rel, err := su.checkForUpdates()
 	if err != nil {
-		return err
+		return fmt.Errorf("check for updates: %w", err)
 	}
 	if rel == nil {
 		return nil
 	}
 
 	if isNewer, err := su.isNewer(rel.Version); err != nil {
-		return err
+		return fmt.Errorf("check if newer: %w", err)
 	} else if !isNewer {
 		return nil
 	}
@@ -160,8 +164,7 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		CancelButton:  "No",
 	})
 	if err != nil {
-		log.Printf("error occurred while showing update dialog: %v", err)
-		return err
+		return fmt.Errorf("show update dialog: %w", err)
 	}
 	if action == "No" {
 		log.Println("aborting update, user declined")
@@ -183,14 +186,14 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	err = su.DownloadFile(rel.AssetURL, tmpFile.Name())
+	err = su.downloadFile(rel.AssetURL, tmpFile.Name())
 	if err != nil {
-		return fmt.Errorf("download file: %v", err)
+		return fmt.Errorf("download file: %w", err)
 	}
 
 	err = verifyFileHash(tmpFile.Name(), rel.SHA256)
 	if err != nil {
-		return fmt.Errorf("verify file hash: %v", err)
+		return fmt.Errorf("verify file hash: %w", err)
 	}
 
 	switch runtime.GOOS {
@@ -199,24 +202,24 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 
 		err = removeContents(path.Join(dest, appName+".app"))
 		if err != nil {
-			return fmt.Errorf("remove contents: %v", err)
+			return fmt.Errorf("remove contents: %w", err)
 		}
 
-		err = Unarchive(tmpFile.Name(), dest)
+		err = unarchive(tmpFile.Name(), dest)
 		if err != nil {
-			return fmt.Errorf("unzip file: %v", err)
+			return fmt.Errorf("unzip file: %w", err)
 		}
 
 	case "windows", "linux":
 		tempUnarchiveDir, err := os.MkdirTemp("", "unarchive-*")
 		if err != nil {
-			return fmt.Errorf("create temp unarchive dir: %v", err)
+			return fmt.Errorf("create temp unarchive dir: %w", err)
 		}
 		defer os.RemoveAll(tempUnarchiveDir)
 
-		err = Unarchive(tmpFile.Name(), tempUnarchiveDir)
+		err = unarchive(tmpFile.Name(), tempUnarchiveDir)
 		if err != nil {
-			return fmt.Errorf("unzip file: %v", err)
+			return fmt.Errorf("unzip file: %w", err)
 		}
 
 		expectedExecName := appName
@@ -231,19 +234,19 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 
 		currentExecPath, err := os.Executable()
 		if err != nil {
-			return fmt.Errorf("get executable path: %v", err)
+			return fmt.Errorf("get executable path: %w", err)
 		}
 
 		// Rename current executable to allow overwriting
 		oldExecPath := currentExecPath + ".old"
 		err = os.Rename(currentExecPath, oldExecPath)
 		if err != nil {
-			return fmt.Errorf("rename current executable: %v", err)
+			return fmt.Errorf("rename current executable: %w", err)
 		}
 
 		err = os.Rename(newExecPath, currentExecPath)
 		if err != nil {
-			return fmt.Errorf("move new executable: %v", err)
+			return fmt.Errorf("move new executable: %w", err)
 		}
 
 	default:
@@ -273,10 +276,10 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	return nil
 }
 
-func (su *SelfUpdater) DownloadFile(url, filePath string) error {
+func (su *SelfUpdater) downloadFile(url, filePath string) error {
 	out, err := os.Create(filePath)
 	if err != nil {
-		return fmt.Errorf("create file: %v", err)
+		return fmt.Errorf("create file: %w", err)
 	}
 	defer out.Close()
 
@@ -289,13 +292,18 @@ func (su *SelfUpdater) DownloadFile(url, filePath string) error {
 
 	resp, err := su.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("download file: %v", err)
+		return fmt.Errorf("download file: %w", err)
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download file failed with status code %d", resp.StatusCode)
+	}
+
 	defer resp.Body.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return fmt.Errorf("write to file: %v", err)
+		return fmt.Errorf("write to file: %w", err)
 	}
 
 	return nil
@@ -304,13 +312,13 @@ func (su *SelfUpdater) DownloadFile(url, filePath string) error {
 func verifyFileHash(filePath, expectedHash string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("open file for hashing: %v", err)
+		return fmt.Errorf("open file for hashing: %w", err)
 	}
 	defer file.Close()
 
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
-		return fmt.Errorf("hash file: %v", err)
+		return fmt.Errorf("hash file: %w", err)
 	}
 
 	calculatedHash := hex.EncodeToString(hasher.Sum(nil))

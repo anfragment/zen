@@ -148,7 +148,7 @@ func writeTarFile(tarReader *tar.Reader, path string, mode os.FileMode) error {
 	return err
 }
 
-func Unarchive(src, dest string) error {
+func unarchive(src, dest string) error {
 	switch {
 	case strings.HasSuffix(src, ".zip"):
 		return unzip(src, dest)
