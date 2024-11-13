@@ -1,8 +1,9 @@
 package cfg
 
 import (
-	"embed"
+	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -15,10 +16,10 @@ var (
 	ConfigDir string
 	// DataDir is the path to the directory storing the application data.
 	DataDir string
+	// InitialConfig is the default configuration for the application.
+	//go:embed default-config.json
+	InitialConfig []byte
 )
-
-//go:embed default-config.json
-var defaultConfig embed.FS
 
 // Config stores and manages the configuration for the application.
 // Although all fields are public, this is only for use by the JSON marshaller.
@@ -88,7 +89,11 @@ func init() {
 	}
 }
 
-func NewConfig() (*Config, error) {
+func NewConfig(initialConfig []byte) (*Config, error) {
+	if initialConfig == nil {
+		return nil, errors.New("initialConfig is nil")
+	}
+
 	c := &Config{}
 
 	configFile := path.Join(ConfigDir, "config.json")
@@ -99,10 +104,7 @@ func NewConfig() (*Config, error) {
 			return nil, fmt.Errorf("failed to read config file: %v", err)
 		}
 	} else {
-		configData, err = defaultConfig.ReadFile("default-config.json")
-		if err != nil {
-			return nil, fmt.Errorf("failed to read default config file: %v", err)
-		}
+		configData = initialConfig
 		if err := os.WriteFile(configFile, configData, 0644); err != nil {
 			return nil, fmt.Errorf("failed to write config file: %v", err)
 		}

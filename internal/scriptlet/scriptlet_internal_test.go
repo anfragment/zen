@@ -12,7 +12,7 @@ func TestInjectorInternal(t *testing.T) {
 		t.Parallel()
 
 		spyStore := &spyScriptletStore{}
-		injector, err := NewInjector(spyStore)
+		injector, err := NewInjector(spyStore, []byte{})
 		if err != nil {
 			t.Fatalf("failed to create injector: %v", err)
 		}
@@ -53,7 +53,7 @@ func TestInjectorInternal(t *testing.T) {
 		t.Parallel()
 
 		spyStore := &spyScriptletStore{}
-		injector, err := NewInjector(spyStore)
+		injector, err := NewInjector(spyStore, []byte{})
 		if err != nil {
 			t.Fatalf("failed to create injector: %v", err)
 		}

@@ -81,7 +81,7 @@ func (a *App) BeforeClose(ctx context.Context) bool {
 }
 
 func (a *App) DomReady(ctx context.Context) {
-	systrayMgr, err := systray.NewManager(a.name, func() {
+	systrayMgr, err := systray.NewManager(a.name, systray.Icon, func() {
 		a.StartProxy()
 	}, func() {
 		a.StopProxy()
@@ -138,7 +138,7 @@ func (a *App) StartProxy() (err error) {
 	exceptionRuleMatcher := ruletree.NewRuleTree()
 
 	scriptletStore := triestore.NewTrieStore()
-	scriptletInjector, err := scriptlet.NewInjector(scriptletStore)
+	scriptletInjector, err := scriptlet.NewInjector(scriptletStore, scriptlet.Bundle)
 	if err != nil {
 		return fmt.Errorf("create scriptlets injector: %v", err)
 	}

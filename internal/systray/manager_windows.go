@@ -2,9 +2,8 @@ package systray
 
 import (
 	"context"
-	"embed"
+	_ "embed"
 	"errors"
-	"fmt"
 	"log"
 	"sync"
 
@@ -12,10 +11,10 @@ import (
 )
 
 //go:embed logo.ico
-var logoFS embed.FS
+var Icon []byte
 
 type Manager struct {
-	logoBytes         []byte
+	icon              []byte
 	appName           string
 	proxyStateMu      sync.Mutex
 	proxyActive       bool
@@ -24,9 +23,12 @@ type Manager struct {
 	startStopMenuItem *menuItem
 }
 
-func NewManager(appName string, proxyStart func(), proxyStop func()) (*Manager, error) {
+func NewManager(appName string, icon []byte, proxyStart func(), proxyStop func()) (*Manager, error) {
 	if appName == "" {
 		return nil, errors.New("appName is empty")
+	}
+	if icon == nil {
+		return nil, errors.New("icon is nil")
 	}
 	if proxyStart == nil {
 		return nil, errors.New("proxyStart is nil")
@@ -35,13 +37,8 @@ func NewManager(appName string, proxyStart func(), proxyStop func()) (*Manager, 
 		return nil, errors.New("proxyStop is nil")
 	}
 
-	logoBytes, err := logoFS.ReadFile("logo.ico")
-	if err != nil {
-		return nil, fmt.Errorf("read logo from embed: %w", err)
-	}
-
 	return &Manager{
-		logoBytes:  logoBytes,
+		icon:       icon,
 		proxyStart: proxyStart,
 		proxyStop:  proxyStop,
 		appName:    appName,
@@ -95,7 +92,7 @@ func (m *Manager) OnProxyStopped() {
 
 func (m *Manager) onReady(ctx context.Context) func() {
 	return func() {
-		setIcon(m.logoBytes)
+		setIcon(m.icon)
 		setTooltip(m.appName)
 
 		openMenuItem := addMenuItem("Open", "Open the application window")
