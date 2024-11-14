@@ -155,11 +155,9 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		return nil
 	}
 
-	proceed, err := su.showUpdateDialog(ctx, rel.Description)
-	if err != nil {
+	if proceed, err := su.showUpdateDialog(ctx, rel.Description); err != nil {
 		return fmt.Errorf("show update dialog: %w", err)
-	}
-	if !proceed {
+	} else if !proceed {
 		log.Println("aborting update, user declined")
 		return nil
 	}
@@ -183,10 +181,16 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		panic("unsupported platform")
 	}
 
-	if restart, err := su.showRestartDialog(ctx); err == nil && restart {
-		return su.restartApplication(ctx)
+	if restart, err := su.showRestartDialog(ctx); err != nil {
+		return fmt.Errorf("show restart dialog: %w", err)
+	} else if !restart {
+		log.Println("user declined to restart")
+		return nil
 	}
 
+	if err := su.restartApplication(ctx); err != nil {
+		return fmt.Errorf("restart application: %w", err)
+	}
 	return nil
 }
 
@@ -288,7 +292,6 @@ func (su *SelfUpdater) showRestartDialog(ctx context.Context) (bool, error) {
 		CancelButton:  "No",
 	})
 	if err != nil {
-		log.Printf("error showing restart dialog: %v", err)
 		return false, fmt.Errorf("show restart dialog: %w", err)
 	}
 	return action == "Yes", nil
@@ -381,7 +384,6 @@ func (su *SelfUpdater) replaceExecutable(tempDir string) error {
 func (su *SelfUpdater) restartApplication(ctx context.Context) error {
 	cmd := exec.Command(os.Args[0], os.Args[1:]...) // #nosec G204
 	if err := cmd.Start(); err != nil {
-		log.Printf("error while restarting: %v", err)
 		return fmt.Errorf("restart application: %w", err)
 	}
 	wailsruntime.Quit(ctx)
