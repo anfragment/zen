@@ -17,11 +17,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/anfragment/zen/internal/cfg"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
-
-// Version is the current version of the application. Set at compile time for production builds using ldflags (see tasks in the /tasks/build directory).
-var Version = "development"
 
 // noSelfUpdate is set to "true" for builds distributed to package managers to prevent auto-updating. It is typed as a string because the linker allows only setting string variables at compile time (see https://pkg.go.dev/cmd/link).
 // Set at compile time using ldflags (see the prod-noupdate task in the /tasks/build directory).
@@ -59,9 +57,12 @@ func NewSelfUpdater(httpClient httpClient) (*SelfUpdater, error) {
 	if httpClient == nil {
 		return nil, errors.New("httpClient is nil")
 	}
+	if cfg.Version == "" {
+		return nil, errors.New("cfg.Version is empty")
+	}
 
 	u := SelfUpdater{
-		version:      Version,
+		version:      cfg.Version,
 		releaseTrack: releaseTrack,
 		httpClient:   httpClient,
 	}

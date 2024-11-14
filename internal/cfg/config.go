@@ -15,6 +15,8 @@ var (
 	ConfigDir string
 	// DataDir is the path to the directory storing the application data.
 	DataDir string
+	// Version is the current version of the application. Set at compile time for production builds using ldflags (see tasks in the /tasks/build directory).
+	Version = "development"
 )
 
 //go:embed default-config.json
