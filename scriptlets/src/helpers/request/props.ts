@@ -42,7 +42,7 @@ export function parsePropsToMatch(propsToMatch: string): ParsedPropsToMatch {
   return res;
 }
 
-export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<typeof window.fetch>): boolean {
+export function matchFetchArgs(props: ParsedPropsToMatch, requestArgs: Parameters<typeof window.fetch>): boolean {
   let request: (Request | RequestInit) & { url: string };
   if (requestArgs[0] instanceof Request) {
     request = requestArgs[0];
@@ -66,7 +66,7 @@ export function matchFetch(props: ParsedPropsToMatch, requestArgs: Parameters<ty
   return true;
 }
 
-export function matchXhr(
+export function matchXhrArgs(
   props: ParsedPropsToMatch,
   ...args: Parameters<typeof XMLHttpRequest.prototype.open>
 ): boolean {

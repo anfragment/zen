@@ -26,10 +26,6 @@ export function GetPort() {
   return window['go']['cfg']['Config']['GetPort']();
 }
 
-export function GetVersion() {
-  return window['go']['cfg']['Config']['GetVersion']();
-}
-
 export function Lock() {
   return window['go']['cfg']['Config']['Lock']();
 }
