@@ -25,6 +25,14 @@ var migrations = map[string]func(c *Config) error{
 		}
 		return nil
 	},
+	"v0.6.0": func(c *Config) error {
+		// https://github.com/anfragment/zen/issues/146
+		errStr := c.ToggleFilterList("https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_2_Base/filter.txt", true)
+		if errStr != "" {
+			return errors.New(errStr)
+		}
+		return nil
+	},
 }
 
 // RunMigrations runs the version-to-version migrations.

@@ -10,7 +10,7 @@
       {
         "url": "https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_2_Base/filter.txt",
         "name": "AdGuard Base filter",
-        "enabled": false,
+        "enabled": true,
         "type": "ads"
       },
       {
