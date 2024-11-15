@@ -153,6 +153,7 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 	if isNewer, err := su.isNewer(rel.Version); err != nil {
 		return fmt.Errorf("check if newer: %w", err)
 	} else if !isNewer {
+		log.Println("no newer version available")
 		return nil
 	}
 
