@@ -8,7 +8,6 @@ require (
 	github.com/getlantern/elevate v0.0.0-20220903142053-479ab992b264
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
 	github.com/klauspost/compress v1.17.9
-	github.com/rhysd/go-github-selfupdate v1.2.3
 	github.com/wailsapp/wails/v2 v2.9.2
 	golang.org/x/net v0.25.0
 	golang.org/x/sys v0.20.0

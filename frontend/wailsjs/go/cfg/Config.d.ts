@@ -15,6 +15,8 @@ export function GetMyRules():Promise<Array<string>>;
 
 export function GetPort():Promise<number>;
 
+export function GetVersion():Promise<string>;
+
 export function Lock():Promise<void>;
 
 export function RLock():Promise<void>;

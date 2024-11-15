@@ -271,3 +271,7 @@ func (c *Config) SetCAInstalled(caInstalled bool) {
 		log.Printf("failed to save config: %v", err)
 	}
 }
+
+func (c *Config) GetVersion() string {
+	return Version
+}
