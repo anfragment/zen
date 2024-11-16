@@ -312,7 +312,7 @@ func (a *App) ImportCustomFilterLists() error {
 	var filterLists []cfg.FilterList
 	if err := json.Unmarshal(data, &filterLists); err != nil {
 		log.Printf("failed to unmarshal filter lists: %v", err)
-		return errors.New("invalid filter lists structure")
+		return errors.New("incorrect filter lists format")
 	}
 
 	if len(filterLists) == 0 {
