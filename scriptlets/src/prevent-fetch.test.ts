@@ -16,7 +16,6 @@ describe('prevent-fetch', () => {
   afterEach(() => {
     // @ts-ignore
     fetch = originalFetch;
-    jest.clearAllMocks();
   });
 
   test('prevents a request if called with "*"', async () => {
