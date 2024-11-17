@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -326,13 +325,22 @@ func (su *SelfUpdater) downloadAndVerifyFile(assetURL, expectedHash string) (str
 }
 
 func (su *SelfUpdater) applyUpdateForDarwin(tmpFile string) error {
-	dest := "/Applications"
-	err := removeContents(path.Join(dest, appName+".app"))
+	currentExecPath, err := getExecPath()
 	if err != nil {
+		return fmt.Errorf("get executable path: %w", err)
+	}
+
+	appBundlePath := findAppBundlePath(currentExecPath)
+	if appBundlePath == "" {
+		return fmt.Errorf("application is not running from an .app bundle: %s", currentExecPath)
+	}
+
+	if err := removeContents(appBundlePath); err != nil {
 		return fmt.Errorf("remove contents: %w", err)
 	}
-	if err := unarchive(tmpFile, dest); err != nil {
-		return fmt.Errorf("unzip file: %w", err)
+
+	if err := unarchive(tmpFile, filepath.Dir(appBundlePath)); err != nil {
+		return fmt.Errorf("unarchive file: %w", err)
 	}
 	return nil
 }
@@ -390,4 +398,26 @@ func (su *SelfUpdater) restartApplication(ctx context.Context) error {
 	}
 	wailsruntime.Quit(ctx)
 	return nil
+}
+
+func getExecPath() (string, error) {
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("get executable path: %w", err)
+	}
+	if execPath, err = filepath.EvalSymlinks(execPath); err != nil {
+		return "", fmt.Errorf("eval symlinks: %w", err)
+	}
+	return execPath, nil
+}
+
+func findAppBundlePath(execPath string) string {
+	dir := filepath.Dir(execPath)
+	for dir != "/" {
+		if strings.HasSuffix(dir, ".app") {
+			return dir
+		}
+		dir = filepath.Dir(dir)
+	}
+	return ""
 }
