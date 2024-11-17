@@ -8,9 +8,11 @@ import (
 	"context"
 )
 
+var Icon = []byte{}
+
 type Manager struct{}
 
-func NewManager(string, func(), func()) (*Manager, error) {
+func NewManager(string, []byte, func(), func()) (*Manager, error) {
 	return &Manager{}, nil
 }
 

@@ -30,7 +30,7 @@ func main() {
 		log.Printf("failed to setup logger: %v", err)
 	}
 
-	config, err := cfg.NewConfig()
+	config, err := cfg.NewConfig(cfg.InitialConfig)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}

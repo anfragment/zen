@@ -127,7 +127,7 @@ func newBlankHTTPResponse(t *testing.T) *http.Response {
 func newInjectorWithTrieStore(t *testing.T) *scriptlet.Injector {
 	t.Helper()
 	store := triestore.NewTrieStore()
-	injector, err := scriptlet.NewInjector(store)
+	injector, err := scriptlet.NewInjector(store, []byte{})
 	if err != nil {
 		t.Fatalf("failed to create injector: %v", err)
 	}

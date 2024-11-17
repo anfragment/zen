@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
-	"embed"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -21,8 +21,9 @@ import (
 )
 
 var (
+	// Bundle contains the default embedded scriptlets bundle.
 	//go:embed bundle.js
-	scriptletsBundleFS embed.FS
+	Bundle []byte
 	// reBody captures contents of the body tag in an HTML document.
 	reBody           = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
 	scriptOpeningTag = []byte("<script>")
@@ -43,20 +44,18 @@ type Injector struct {
 }
 
 // NewInjector creates a new Injector with the embedded scriptlets.
-func NewInjector(store Store) (*Injector, error) {
+func NewInjector(store Store, scriptletsBundle []byte) (*Injector, error) {
 	if store == nil {
 		return nil, errors.New("store is nil")
 	}
-
-	bundleData, err := scriptletsBundleFS.ReadFile("bundle.js")
-	if err != nil {
-		return nil, fmt.Errorf("read bundle from embed: %w", err)
+	if scriptletsBundle == nil {
+		return nil, errors.New("scriptletsBundle is nil")
 	}
 
-	scriptletsElement := make([]byte, len(scriptOpeningTag)+len(bundleData)+len(scriptClosingTag))
+	scriptletsElement := make([]byte, len(scriptOpeningTag)+len(scriptletsBundle)+len(scriptClosingTag))
 	copy(scriptletsElement, scriptOpeningTag)
-	copy(scriptletsElement[len(scriptOpeningTag):], bundleData)
-	copy(scriptletsElement[len(scriptOpeningTag)+len(bundleData):], scriptClosingTag)
+	copy(scriptletsElement[len(scriptOpeningTag):], scriptletsBundle)
+	copy(scriptletsElement[len(scriptOpeningTag)+len(scriptletsBundle):], scriptClosingTag)
 
 	return &Injector{
 		bundle: scriptletsElement,
