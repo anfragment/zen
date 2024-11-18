@@ -67,6 +67,8 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 
 // Startup is called when the app starts.
 func (a *App) Startup(ctx context.Context) {
+	a.ctx = ctx
+
 	systrayMgr, err := systray.NewManager(a.name, func() {
 		a.StartProxy()
 	}, func() {
@@ -75,6 +77,7 @@ func (a *App) Startup(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("failed to initialize systray manager: %v", err)
 	}
+
 	a.systrayMgr = systrayMgr
 	a.eventsHandler = newEventsHandler(ctx)
 
@@ -248,10 +251,7 @@ func (a *App) OpenLogsDirectory() error {
 
 // ExportCustomFilterListsToFile exports the custom filter lists to a file.
 func (a *App) ExportCustomFilterLists() error {
-
-	if a.ctx == nil {
-		return errors.New("App DOM is not ready")
-	}
+	<-a.startupDone
 
 	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		Title:           "Export Custom Filter Lists",
@@ -292,9 +292,7 @@ func (a *App) ExportCustomFilterLists() error {
 
 // ImportCustomFilterLists imports the custom filter lists from a file.
 func (a *App) ImportCustomFilterLists() error {
-	if a.ctx == nil {
-		return errors.New("App DOM is not ready")
-	}
+	<-a.startupDone
 
 	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Import Custom Filter Lists",
