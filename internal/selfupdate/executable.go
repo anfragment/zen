@@ -6,11 +6,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
-	"unsafe"
 )
 
-func replaceWindowsExecutable(tempDir string) error {
+func replaceExecutable(tempDir string) error {
 	expectedExecName := appName
 	if runtime.GOOS == "windows" {
 		expectedExecName += ".exe"
@@ -58,22 +56,4 @@ func findAppBundlePath(execPath string) string {
 		dir = filepath.Dir(dir)
 	}
 	return ""
-}
-
-// https://github.com/inconshreveable/go-update/blob/master/hide_windows.go#L8
-func hideWindowsFile(path string) error {
-	kernel32 := syscall.NewLazyDLL("kernel32.dll")
-	setFileAttributes := kernel32.NewProc("SetFileAttributesW")
-
-	utf16Path, err := syscall.UTF16PtrFromString(path)
-	if err != nil {
-		return fmt.Errorf("convert path to UTF-16: %w", err)
-	}
-
-	ret, _, err := setFileAttributes.Call(uintptr(unsafe.Pointer(utf16Path)), uintptr(0x2))
-	if ret == 0 {
-		return fmt.Errorf("set file attributes: %w", err)
-	}
-
-	return nil
 }

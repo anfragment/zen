@@ -399,8 +399,8 @@ func (su *SelfUpdater) applyUpdateForWindowsOrLinux(tmpFile string) error {
 			if err := os.Remove(oldExecPath); err != nil {
 				log.Printf("Failed to remove backup executable: %v", err)
 
-				log.Printf("Hiding backup executable: %s", oldExecPath)
-				err = hideWindowsFile(oldExecPath)
+				log.Printf("Attempting to hide file: %s", oldExecPath)
+				err = hideFile(oldExecPath)
 				if err != nil {
 					log.Printf("Failed to hide backup executable: %v", err)
 				}
@@ -408,7 +408,7 @@ func (su *SelfUpdater) applyUpdateForWindowsOrLinux(tmpFile string) error {
 		}
 	}()
 
-	if err := replaceWindowsExecutable(tempDir); err != nil {
+	if err := replaceExecutable(tempDir); err != nil {
 		rollback = true
 		return fmt.Errorf("replace executable: %w", err)
 	}
@@ -422,5 +422,18 @@ func (su *SelfUpdater) restartApplication(ctx context.Context) error {
 		return fmt.Errorf("restart application: %w", err)
 	}
 	wailsruntime.Quit(ctx)
+	return nil
+}
+
+// hideFile moves the file at the given path to a temporary directory in case it cannot be removed.
+func hideFile(path string) error {
+	tmpDir := os.TempDir()
+	newPath := filepath.Join(tmpDir, filepath.Base(path))
+
+	if err := os.Rename(path, newPath); err != nil {
+		return fmt.Errorf("move file to temp storage: %w", err)
+	}
+
+	log.Printf("Moved file to temporary storage: %s", newPath)
 	return nil
 }
