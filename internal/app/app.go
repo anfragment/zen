@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -22,6 +24,7 @@ import (
 )
 
 type App struct {
+	ctx context.Context
 	// name is the name of the application.
 	name            string
 	startOnDomReady bool
@@ -89,12 +92,16 @@ func (a *App) DomReady(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("failed to initialize systray manager: %v", err)
 	}
+
+	a.ctx = ctx
 	a.systrayMgr = systrayMgr
-	a.eventsHandler = newEventsHandler(ctx)
+	a.eventsHandler = newEventsHandler(a.ctx)
 
 	a.config.RunMigrations()
-	a.systrayMgr.Init(ctx)
-	cfg.SelfUpdate(ctx)
+	a.systrayMgr.Init(a.ctx)
+
+	cfg.SelfUpdate(a.ctx)
+
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
 		// StartProxy requires an active event listener on the frontend to show the user the correct proxy state.
@@ -229,6 +236,91 @@ func (a *App) UninstallCA() error {
 func (a *App) OpenLogsDirectory() error {
 	if err := logger.OpenLogsDirectory(); err != nil {
 		log.Printf("failed to open logs directory: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// ExportCustomFilterListsToFile exports the custom filter lists to a file.
+func (a *App) ExportCustomFilterLists() error {
+
+	if a.ctx == nil {
+		return errors.New("App DOM is not ready")
+	}
+
+	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export Custom Filter Lists",
+		DefaultFilename: "filter-lists.json",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON", Pattern: "*.json"},
+		},
+	})
+
+	if err != nil {
+		log.Printf("failed to open file dialog: %v", err)
+		return err
+	}
+
+	if filePath == "" {
+		return errors.New("no file selected")
+	}
+
+	customFilterLists := a.config.GetTargetTypeFilterLists(cfg.FilterListTypeCustom)
+
+	if len(customFilterLists) == 0 {
+		return errors.New("no custom filter lists to export")
+	}
+
+	data, err := json.MarshalIndent(customFilterLists, "", "  ")
+	if err != nil {
+		log.Printf("failed to marshal filter lists: %v", err)
+		return err
+	}
+
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		log.Printf("failed to write filter lists to file: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// ImportCustomFilterLists imports the custom filter lists from a file.
+func (a *App) ImportCustomFilterLists() error {
+	if a.ctx == nil {
+		return errors.New("App DOM is not ready")
+	}
+
+	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Import Custom Filter Lists",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON", Pattern: "*.json"},
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("failed to read filter lists file: %v", err)
+		return err
+	}
+
+	var filterLists []cfg.FilterList
+	if err := json.Unmarshal(data, &filterLists); err != nil {
+		log.Printf("failed to unmarshal filter lists: %v", err)
+		return errors.New("incorrect filter lists format")
+	}
+
+	if len(filterLists) == 0 {
+		return errors.New("no custom filter lists to import")
+	}
+
+	if err := a.config.AddFilterLists(filterLists); err != nil {
+		log.Printf("failed to add filter lists: %v", err)
 		return err
 	}
 

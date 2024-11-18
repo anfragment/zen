@@ -3,6 +3,7 @@ package cfg
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -19,6 +20,12 @@ var (
 
 //go:embed default-config.json
 var defaultConfig embed.FS
+
+type FilterListType string
+
+const (
+	FilterListTypeCustom FilterListType = "custom"
+)
 
 // Config stores and manages the configuration for the application.
 // Although all fields are public, this is only for use by the JSON marshaller.
@@ -43,10 +50,34 @@ type Config struct {
 }
 
 type FilterList struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"`
-	URL     string `json:"url"`
-	Enabled bool   `json:"enabled"`
+	Name    string         `json:"name"`
+	Type    FilterListType `json:"type"`
+	URL     string         `json:"url"`
+	Enabled bool           `json:"enabled"`
+}
+
+func (f *FilterList) UnmarshalJSON(data []byte) error {
+	type TempFilterList FilterList
+	var temp TempFilterList
+
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	if temp.Name == "" {
+		return errors.New("name is required")
+	}
+
+	if temp.URL == "" {
+		return errors.New("URL is required")
+	}
+
+	if temp.Type == "" {
+		return errors.New("type is required")
+	}
+
+	*f = FilterList(temp)
+	return nil
 }
 
 func init() {
@@ -153,6 +184,18 @@ func (c *Config) AddFilterList(list FilterList) string {
 	return ""
 }
 
+func (c *Config) AddFilterLists(lists []FilterList) error {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Filter.FilterLists = append(c.Filter.FilterLists, lists...)
+	if err := c.Save(); err != nil {
+		log.Printf("failed to save config: %v", err)
+		return err
+	}
+	return nil
+}
+
 // RemoveFilterList removes a filter list from the list of enabled filter lists.
 func (c *Config) RemoveFilterList(url string) string {
 	c.Lock()
@@ -187,6 +230,20 @@ func (c *Config) ToggleFilterList(url string, enabled bool) string {
 		return err.Error()
 	}
 	return ""
+}
+
+// GetTargetTypeFilterLists returns the list of filter lists with particular type.
+func (c *Config) GetTargetTypeFilterLists(targetType FilterListType) []FilterList {
+	c.RLock()
+	defer c.RUnlock()
+
+	var filterLists []FilterList
+	for _, filterList := range c.Filter.FilterLists {
+		if filterList.Type == targetType {
+			filterLists = append(filterLists, filterList)
+		}
+	}
+	return filterLists
 }
 
 func (c *Config) GetMyRules() []string {
