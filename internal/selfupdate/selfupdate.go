@@ -327,7 +327,7 @@ func (su *SelfUpdater) downloadAndVerifyFile(assetURL, expectedHash string) (str
 func (su *SelfUpdater) applyUpdateForDarwin(tmpFile string) error {
 	currentExecPath, err := getExecPath()
 	if err != nil {
-		return fmt.Errorf("get executable path: %w", err)
+		return fmt.Errorf("get exec path: %w", err)
 	}
 
 	appBundlePath := findAppBundlePath(currentExecPath)
@@ -335,12 +335,33 @@ func (su *SelfUpdater) applyUpdateForDarwin(tmpFile string) error {
 		return fmt.Errorf("application is not running from an .app bundle: %s", currentExecPath)
 	}
 
-	if err := removeContents(appBundlePath); err != nil {
-		return fmt.Errorf("remove contents: %w", err)
+	oldBundlePath := appBundlePath + ".old"
+	if err := os.Rename(appBundlePath, oldBundlePath); err != nil {
+		return fmt.Errorf("rename current app bundle: %w", err)
 	}
 
+	rollback := false
+	defer func() {
+		if rollback {
+			log.Printf("Restoring old app bundle from: %s", oldBundlePath)
+
+			if err := os.Rename(oldBundlePath, appBundlePath); err != nil {
+				log.Printf("Failed to restore old app bundle: %v", err)
+			}
+		} else {
+			log.Printf("Removing old app bundle backup: %s", oldBundlePath)
+
+			if err := removeContents(oldBundlePath); err != nil {
+				log.Printf("Failed to remove old app bundle backup: %v", err)
+			}
+		}
+	}()
+
 	if err := unarchive(tmpFile, filepath.Dir(appBundlePath)); err != nil {
-		return fmt.Errorf("unarchive file: %w", err)
+		if err := os.Rename(oldBundlePath, appBundlePath); err != nil {
+			rollback = true
+			return fmt.Errorf("unarchive file: %w", err)
+		}
 	}
 	return nil
 }
@@ -356,36 +377,40 @@ func (su *SelfUpdater) applyUpdateForWindowsOrLinux(tmpFile string) error {
 		return fmt.Errorf("unzip file: %w", err)
 	}
 
-	if err := su.replaceExecutable(tempDir); err != nil {
-		return fmt.Errorf("replace executable: %w", err)
-	}
-
-	return nil
-}
-
-func (su *SelfUpdater) replaceExecutable(tempDir string) error {
-	expectedExecName := appName
-	if runtime.GOOS == "windows" {
-		expectedExecName += ".exe"
-	}
-	newExecPath := filepath.Join(tempDir, expectedExecName)
-
-	if _, err := os.Stat(newExecPath); os.IsNotExist(err) {
-		return fmt.Errorf("expected executable '%s' not found", expectedExecName)
-	}
-
-	currentExecPath, err := os.Executable()
+	currentExecPath, err := getExecPath()
 	if err != nil {
-		return fmt.Errorf("get executable path: %w", err)
+		return fmt.Errorf("get exec path: %w", err)
 	}
 
 	oldExecPath := currentExecPath + ".old"
 	if err := os.Rename(currentExecPath, oldExecPath); err != nil {
-		return fmt.Errorf("rename current executable: %w", err)
+		return fmt.Errorf("rename current executable to backup: %w", err)
 	}
 
-	if err := os.Rename(newExecPath, currentExecPath); err != nil {
-		return fmt.Errorf("move new executable: %w", err)
+	rollback := false
+	defer func() {
+		if rollback {
+			log.Printf("Restoring original executable from: %s", oldExecPath)
+			if err := os.Rename(oldExecPath, currentExecPath); err != nil {
+				log.Printf("Failed to restore original executable: %v", err)
+			}
+		} else {
+			log.Printf("Removing backup executable: %s", oldExecPath)
+			if err := os.Remove(oldExecPath); err != nil {
+				log.Printf("Failed to remove backup executable: %v", err)
+
+				log.Printf("Hiding backup executable: %s", oldExecPath)
+				err = hideWindowsFile(oldExecPath)
+				if err != nil {
+					log.Printf("Failed to hide backup executable: %v", err)
+				}
+			}
+		}
+	}()
+
+	if err := replaceWindowsExecutable(tempDir); err != nil {
+		rollback = true
+		return fmt.Errorf("replace executable: %w", err)
 	}
 
 	return nil
@@ -398,26 +423,4 @@ func (su *SelfUpdater) restartApplication(ctx context.Context) error {
 	}
 	wailsruntime.Quit(ctx)
 	return nil
-}
-
-func getExecPath() (string, error) {
-	execPath, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("get executable path: %w", err)
-	}
-	if execPath, err = filepath.EvalSymlinks(execPath); err != nil {
-		return "", fmt.Errorf("eval symlinks: %w", err)
-	}
-	return execPath, nil
-}
-
-func findAppBundlePath(execPath string) string {
-	dir := filepath.Dir(execPath)
-	for dir != "/" {
-		if strings.HasSuffix(dir, ".app") {
-			return dir
-		}
-		dir = filepath.Dir(dir)
-	}
-	return ""
 }
