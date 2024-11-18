@@ -1,4 +1,4 @@
-import { Spinner, SpinnerSize, Switch, Button, MenuItem } from '@blueprintjs/core';
+import { Spinner, SpinnerSize, Switch, Button, MenuItem, Popover, Menu } from '@blueprintjs/core';
 import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
 
@@ -11,6 +11,8 @@ import './index.css';
 import { AppToaster } from '../common/toaster';
 
 import { CreateFilterList } from './CreateFilterList';
+import { ExportFilterList } from './ExportFilterList';
+import { ImportFilterList } from './ImportFilterList';
 import { FilterListType } from './types';
 
 export function FilterLists() {
@@ -37,34 +39,49 @@ export function FilterLists() {
 
   return (
     <>
-      <Select
-        items={Object.values(FilterListType)}
-        itemRenderer={(item) => (
-          <MenuItem
-            key={item}
-            text={
-              <>
-                {item[0].toUpperCase() + item.slice(1)}
-                <span className="bp5-text-muted filter-lists__select-count">
-                  ({state.filterLists.filter((filterList) => filterList.type === item && filterList.enabled).length}/
-                  {state.filterLists.filter((filterList) => filterList.type === item).length})
-                </span>
-              </>
+      <div className="filter-lists__header">
+        <Select
+          items={Object.values(FilterListType)}
+          itemRenderer={(item) => (
+            <MenuItem
+              key={item}
+              text={
+                <>
+                  {item[0].toUpperCase() + item.slice(1)}
+                  <span className="bp5-text-muted filter-lists__select-count">
+                    ({state.filterLists.filter((filterList) => filterList.type === item && filterList.enabled).length}/
+                    {state.filterLists.filter((filterList) => filterList.type === item).length})
+                  </span>
+                </>
+              }
+              onClick={() => {
+                setType(item);
+              }}
+              active={item === type}
+            />
+          )}
+          onItemSelect={(item) => {
+            setType(item);
+          }}
+          popoverProps={{ minimal: true }}
+          filterable={false}
+        >
+          <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />
+        </Select>
+
+        {type === FilterListType.CUSTOM && (
+          <Popover
+            content={
+              <Menu>
+                <ExportFilterList />
+                <ImportFilterList onAdd={fetchLists} />
+              </Menu>
             }
-            onClick={() => {
-              setType(item);
-            }}
-            active={item === type}
-          />
+          >
+            <Button icon="more" text="More" />
+          </Popover>
         )}
-        onItemSelect={(item) => {
-          setType(item);
-        }}
-        popoverProps={{ minimal: true, matchTargetWidth: true }}
-        filterable={false}
-      >
-        <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />
-      </Select>
+      </div>
 
       {state.loading && <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />}
 

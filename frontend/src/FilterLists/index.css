@@ -49,3 +49,8 @@
 .filter-lists__list-delete {
   margin-top: 10px;
 }
+
+.filter-lists__header {
+  display: flex;
+  justify-content: space-between;
+}

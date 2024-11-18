@@ -6,6 +6,10 @@ export function AddFilterList(arg1) {
   return window['go']['cfg']['Config']['AddFilterList'](arg1);
 }
 
+export function AddFilterLists(arg1) {
+  return window['go']['cfg']['Config']['AddFilterLists'](arg1);
+}
+
 export function GetCAInstalled() {
   return window['go']['cfg']['Config']['GetCAInstalled']();
 }
@@ -24,6 +28,10 @@ export function GetMyRules() {
 
 export function GetPort() {
   return window['go']['cfg']['Config']['GetPort']();
+}
+
+export function GetTargetTypeFilterLists(arg1) {
+  return window['go']['cfg']['Config']['GetTargetTypeFilterLists'](arg1);
 }
 
 export function GetVersion() {
