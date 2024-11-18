@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/anfragment/zen/internal/cfg"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -248,25 +249,6 @@ func verifyFileHash(filePath, expectedHash string) error {
 	return nil
 }
 
-func removeContents(dir string) error {
-	d, err := os.Open(dir)
-	if err != nil {
-		return fmt.Errorf("open directory: %w", err)
-	}
-	defer d.Close()
-	names, err := d.Readdirnames(-1)
-	if err != nil {
-		return fmt.Errorf("read directory names: %w", err)
-	}
-	for _, name := range names {
-		err = os.RemoveAll(filepath.Join(dir, name))
-		if err != nil {
-			return fmt.Errorf("remove all: %w", err)
-		}
-	}
-	return nil
-}
-
 func (su *SelfUpdater) showUpdateDialog(ctx context.Context, description string) (bool, error) {
 	action, err := wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{
 		Title:         "Would you like to update Zen?",
@@ -325,6 +307,16 @@ func (su *SelfUpdater) downloadAndVerifyFile(assetURL, expectedHash string) (str
 }
 
 func (su *SelfUpdater) applyUpdateForDarwin(tmpFile string) error {
+	tempDir, err := os.MkdirTemp("", "unarchive-*")
+	if err != nil {
+		return fmt.Errorf("create temp unarchive dir: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	if err := unarchive(tmpFile, tempDir); err != nil {
+		return fmt.Errorf("unarchive file: %w", err)
+	}
+
 	currentExecPath, err := getExecPath()
 	if err != nil {
 		return fmt.Errorf("get exec path: %w", err)
@@ -335,7 +327,12 @@ func (su *SelfUpdater) applyUpdateForDarwin(tmpFile string) error {
 		return fmt.Errorf("application is not running from an .app bundle: %s", currentExecPath)
 	}
 
-	oldBundlePath := appBundlePath + ".old"
+	newBundlePath, err := findAppBundleInDir(tempDir)
+	if err != nil {
+		return fmt.Errorf("find new app bundle: %w", err)
+	}
+
+	oldBundlePath := generateBackupName(appBundlePath)
 	if err := os.Rename(appBundlePath, oldBundlePath); err != nil {
 		return fmt.Errorf("rename current app bundle: %w", err)
 	}
@@ -351,18 +348,17 @@ func (su *SelfUpdater) applyUpdateForDarwin(tmpFile string) error {
 		} else {
 			log.Printf("Removing old app bundle backup: %s", oldBundlePath)
 
-			if err := removeContents(oldBundlePath); err != nil {
+			if err := os.RemoveAll(oldBundlePath); err != nil {
 				log.Printf("Failed to remove old app bundle backup: %v", err)
 			}
 		}
 	}()
 
-	if err := unarchive(tmpFile, filepath.Dir(appBundlePath)); err != nil {
-		if err := os.Rename(oldBundlePath, appBundlePath); err != nil {
-			rollback = true
-			return fmt.Errorf("unarchive file: %w", err)
-		}
+	if err := os.Rename(newBundlePath, appBundlePath); err != nil {
+		rollback = true
+		return fmt.Errorf("rename new app bundle: %w", err)
 	}
+
 	return nil
 }
 
@@ -382,7 +378,7 @@ func (su *SelfUpdater) applyUpdateForWindowsOrLinux(tmpFile string) error {
 		return fmt.Errorf("get exec path: %w", err)
 	}
 
-	oldExecPath := currentExecPath + ".old"
+	oldExecPath := generateBackupName(currentExecPath)
 	if err := os.Rename(currentExecPath, oldExecPath); err != nil {
 		return fmt.Errorf("rename current executable to backup: %w", err)
 	}
@@ -436,4 +432,22 @@ func hideFile(path string) error {
 
 	log.Printf("Moved file to temporary storage: %s", newPath)
 	return nil
+}
+
+func findAppBundleInDir(dir string) (string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", fmt.Errorf("read directory: %w", err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() && filepath.Ext(entry.Name()) == ".app" {
+			return filepath.Join(dir, entry.Name()), nil
+		}
+	}
+	return "", fmt.Errorf("no .app bundle found in directory: %s", dir)
+}
+
+func generateBackupName(originalName string) string {
+	timestamp := time.Now().UnixMilli()
+	return fmt.Sprintf("%s.backup-%d", originalName, timestamp)
 }
