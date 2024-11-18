@@ -59,7 +59,6 @@ func main() {
 		},
 		OnStartup:     app.Startup,
 		OnBeforeClose: app.BeforeClose,
-		OnDomReady:    app.DomReady,
 		Bind: []interface{}{
 			app,
 			config,
