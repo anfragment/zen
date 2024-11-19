@@ -1,6 +1,9 @@
 module github.com/anfragment/zen
 
-go 1.23
+// Note: Always set the patch version when updating the Go version.
+// Omitting the patch version may cause some Go commands to fail.
+// For more details, see: https://go.dev/doc/toolchain#version
+go 1.23.3
 
 require (
 	github.com/andybalholm/brotli v1.1.0
