@@ -49,11 +49,10 @@ func main() {
 	autostart := &autostart.Manager{}
 
 	err = wails.Run(&options.App{
-		Title:     appName,
-		MinWidth:  420,
-		MaxWidth:  420,
-		MinHeight: 650,
-		MaxHeight: 650,
+		Title:         appName,
+		Width:         420,
+		Height:        650,
+		DisableResize: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
