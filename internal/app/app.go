@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/anfragment/zen/internal/ruletree"
 	"github.com/anfragment/zen/internal/scriptlet"
 	"github.com/anfragment/zen/internal/scriptlet/triestore"
+	"github.com/anfragment/zen/internal/selfupdate"
 	"github.com/anfragment/zen/internal/systray"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -80,10 +82,23 @@ func (a *App) Startup(ctx context.Context) {
 
 	a.systrayMgr = systrayMgr
 	a.eventsHandler = newEventsHandler(ctx)
-
 	a.config.RunMigrations()
 	a.systrayMgr.Init(ctx)
-	cfg.SelfUpdate(ctx)
+
+	go func() {
+		su, err := selfupdate.NewSelfUpdater(&http.Client{
+			Timeout: 20 * time.Second,
+		})
+		if err != nil {
+			log.Printf("error creating self updater: %v", err)
+			return
+		}
+
+		if err := su.ApplyUpdate(ctx); err != nil {
+			log.Printf("failed to apply update: %v", err)
+		}
+	}()
+
 	time.AfterFunc(time.Second, func() {
 		// This is a workaround for the issue where not all React components are mounted in time.
 		// StartProxy requires an active event listener on the frontend to show the user the correct proxy state.
@@ -92,6 +107,7 @@ func (a *App) Startup(ctx context.Context) {
 			a.StartProxy()
 		}
 	})
+
 	close(a.startupDone)
 }
 
