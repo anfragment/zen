@@ -2,10 +2,12 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -24,8 +26,13 @@ import (
 )
 
 type App struct {
+	ctx context.Context
 	// name is the name of the application.
-	name            string
+	name string
+	// startupDone is closed once the application has fully started.
+	// It ensures that all dependencies are fully initialized
+	// before frontend-bound methods can use them.
+	startupDone     chan struct{}
 	startOnDomReady bool
 	config          *cfg.Config
 	eventsHandler   *eventsHandler
@@ -53,6 +60,7 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 
 	return &App{
 		name:            name,
+		startupDone:     make(chan struct{}),
 		config:          config,
 		certStore:       certStore,
 		startOnDomReady: startOnDomReady,
@@ -60,7 +68,48 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 }
 
 // Startup is called when the app starts.
-func (a *App) Startup(context.Context) {}
+func (a *App) Startup(ctx context.Context) {
+	a.ctx = ctx
+
+	systrayMgr, err := systray.NewManager(a.name, func() {
+		a.StartProxy()
+	}, func() {
+		a.StopProxy()
+	})
+	if err != nil {
+		log.Fatalf("failed to initialize systray manager: %v", err)
+	}
+
+	a.systrayMgr = systrayMgr
+	a.eventsHandler = newEventsHandler(ctx)
+	a.config.RunMigrations()
+	a.systrayMgr.Init(ctx)
+
+	go func() {
+		su, err := selfupdate.NewSelfUpdater(&http.Client{
+			Timeout: 20 * time.Second,
+		})
+		if err != nil {
+			log.Printf("error creating self updater: %v", err)
+			return
+		}
+
+		if err := su.ApplyUpdate(ctx); err != nil {
+			log.Printf("failed to apply update: %v", err)
+		}
+	}()
+
+	time.AfterFunc(time.Second, func() {
+		// This is a workaround for the issue where not all React components are mounted in time.
+		// StartProxy requires an active event listener on the frontend to show the user the correct proxy state.
+		// TODO: implement a more reliable solution.
+		if a.startOnDomReady {
+			a.StartProxy()
+		}
+	})
+
+	close(a.startupDone)
+}
 
 func (a *App) BeforeClose(ctx context.Context) bool {
 	log.Println("shutting down")
@@ -82,49 +131,12 @@ func (a *App) BeforeClose(ctx context.Context) bool {
 	return false
 }
 
-func (a *App) DomReady(ctx context.Context) {
-	systrayMgr, err := systray.NewManager(a.name, func() {
-		a.StartProxy()
-	}, func() {
-		a.StopProxy()
-	})
-	if err != nil {
-		log.Fatalf("failed to initialize systray manager: %v", err)
-	}
-	a.systrayMgr = systrayMgr
-	a.eventsHandler = newEventsHandler(ctx)
-
-	a.config.RunMigrations()
-	a.systrayMgr.Init(ctx)
-
-	go func() {
-		su, err := selfupdate.NewSelfUpdater(&http.Client{
-			Timeout: 20 * time.Second,
-		})
-		if err != nil {
-			log.Printf("error creating self updater: %v", err)
-			return
-		}
-
-		if err := su.ApplyUpdate(ctx); err != nil {
-			log.Printf("failed to apply update: %v", err)
-		}
-	}()
-
-	time.AfterFunc(time.Second, func() {
-		// This is a workaround for the issue where not all React components are mounted in time.
-		// StartProxy requires an active event listener on the frontend to show the user the correct proxy state.
-		if a.startOnDomReady {
-			a.StartProxy()
-		}
-	})
-}
-
 // StartProxy starts the proxy.
 func (a *App) StartProxy() (err error) {
+	<-a.startupDone
 	defer func() {
 		// You might see this pattern both in this file and throughout the application.
-		// It is used in functions that get called by the frontend, in which case we cannot log the error at the callerp level.
+		// It is used in functions that get called by the frontend, in which case we cannot log the error at the caller level.
 		if err != nil {
 			log.Printf("error starting proxy: %v", err)
 		} else {
@@ -195,6 +207,7 @@ func (a *App) StartProxy() (err error) {
 
 // StopProxy stops the proxy.
 func (a *App) StopProxy() (err error) {
+	<-a.startupDone
 	defer func() {
 		if err != nil {
 			log.Printf("error stopping proxy: %v", err)
@@ -234,6 +247,7 @@ func (a *App) StopProxy() (err error) {
 
 // UninstallCA uninstalls the CA.
 func (a *App) UninstallCA() error {
+	<-a.startupDone
 	if err := a.certStore.UninstallCA(); err != nil {
 		log.Printf("failed to uninstall CA: %v", err)
 		return err
@@ -245,6 +259,86 @@ func (a *App) UninstallCA() error {
 func (a *App) OpenLogsDirectory() error {
 	if err := logger.OpenLogsDirectory(); err != nil {
 		log.Printf("failed to open logs directory: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// ExportCustomFilterListsToFile exports the custom filter lists to a file.
+func (a *App) ExportCustomFilterLists() error {
+	<-a.startupDone
+
+	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export Custom Filter Lists",
+		DefaultFilename: "filter-lists.json",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON", Pattern: "*.json"},
+		},
+	})
+
+	if err != nil {
+		log.Printf("failed to open file dialog: %v", err)
+		return err
+	}
+
+	if filePath == "" {
+		return errors.New("no file selected")
+	}
+
+	customFilterLists := a.config.GetTargetTypeFilterLists(cfg.FilterListTypeCustom)
+
+	if len(customFilterLists) == 0 {
+		return errors.New("no custom filter lists to export")
+	}
+
+	data, err := json.MarshalIndent(customFilterLists, "", "  ")
+	if err != nil {
+		log.Printf("failed to marshal filter lists: %v", err)
+		return err
+	}
+
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		log.Printf("failed to write filter lists to file: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// ImportCustomFilterLists imports the custom filter lists from a file.
+func (a *App) ImportCustomFilterLists() error {
+	<-a.startupDone
+
+	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Import Custom Filter Lists",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON", Pattern: "*.json"},
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("failed to read filter lists file: %v", err)
+		return err
+	}
+
+	var filterLists []cfg.FilterList
+	if err := json.Unmarshal(data, &filterLists); err != nil {
+		log.Printf("failed to unmarshal filter lists: %v", err)
+		return errors.New("incorrect filter lists format")
+	}
+
+	if len(filterLists) == 0 {
+		return errors.New("no custom filter lists to import")
+	}
+
+	if err := a.config.AddFilterLists(filterLists); err != nil {
+		log.Printf("failed to add filter lists: %v", err)
 		return err
 	}
 
