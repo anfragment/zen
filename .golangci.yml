@@ -41,11 +41,11 @@ linters-settings:
       # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
       # Default: "0600" 
       G306: "0644"
-  revive:
-    rules:
-      - name: var-naming
-        disabled: true # Gets in the way in Windows API-related files.
 
 issues:
-  exclude-files:
-    - internal/systray/systray_internal_windows.go
+  exclude-rules:
+    - path: (.+)_windows.go
+      linters:
+        # These give false positives for Windows API-related identifier names.
+        - revive
+        - stylecheck
