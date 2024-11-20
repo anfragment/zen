@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	GWL_WNDPROC = uint(0xFFFFFFFFFFFFFFFC) // -4 in two's complement. Should be fine as long as we only support 64-bit architectures.
+	GWLP_WNDPROC = uint(0xFFFFFFFFFFFFFFFC) // -4 in two's complement. Should be fine as long as we only support 64-bit architectures.
 
 	WM_ENDSESSION = 0x0016
 )
@@ -26,18 +26,18 @@ var (
 )
 
 func runShutdownOnWmEndsession(ctx context.Context) {
-	processId := uint32(windows.GetCurrentProcessId())
+	processId := windows.GetCurrentProcessId()
 	windowHandle := findWindowByProcessId(processId)
 	originalWndProc := getWindowProcPointer(windowHandle)
 
 	newWndProc := func(hwnd windows.Handle, msg uint32, wParam, lParam uintptr) uintptr {
-		switch msg {
-		case WM_ENDSESSION:
+		if msg == WM_ENDSESSION {
 			runtime.Quit(ctx)
 			// https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-endsession#return-value
 			return 0
 		}
 
+		// Let Wails's wndProc handle other messages.
 		return callWindowProc(originalWndProc, hwnd, msg, wParam, lParam)
 	}
 
@@ -47,7 +47,7 @@ func runShutdownOnWmEndsession(ctx context.Context) {
 func findWindowByProcessId(processId uint32) windows.Handle {
 	var targetHwnd windows.Handle
 	cb := func(hwnd windows.Handle, _ uintptr) uintptr {
-		_, wndProcessId := getWindowThreadProcessId(hwnd)
+		wndProcessId := getWindowProcessId(hwnd)
 		if wndProcessId == processId {
 			targetHwnd = hwnd
 			return 0
@@ -59,17 +59,17 @@ func findWindowByProcessId(processId uint32) windows.Handle {
 }
 
 func getWindowProcPointer(hwnd windows.Handle) uintptr {
-	wndProc, _, _ := procGetWindowLongPtrW.Call(uintptr(hwnd), uintptr(GWL_WNDPROC))
+	wndProc, _, _ := procGetWindowLongPtrW.Call(uintptr(hwnd), uintptr(GWLP_WNDPROC))
 	return wndProc
 }
 
-func getWindowThreadProcessId(hwnd windows.Handle) (uint32, uint32) {
-	var processID uint32
-	threadID, _, _ := procGetWindowThreadProcessId.Call(
+func getWindowProcessId(hwnd windows.Handle) uint32 {
+	var processId uint32
+	procGetWindowThreadProcessId.Call(
 		uintptr(hwnd),
-		uintptr(unsafe.Pointer(&processID)),
+		uintptr(unsafe.Pointer(&processId)),
 	)
-	return uint32(threadID), processID
+	return processId
 }
 
 func callWindowProc(lpPrevWndFunc uintptr, hwnd windows.Handle, msg uint32, wParam, lParam uintptr) uintptr {
@@ -86,7 +86,7 @@ func callWindowProc(lpPrevWndFunc uintptr, hwnd windows.Handle, msg uint32, wPar
 func subclassWndProc(hwnd windows.Handle, fn any) {
 	procSetWindowLongPtrW.Call(
 		uintptr(hwnd),
-		uintptr(GWL_WNDPROC),
+		uintptr(GWLP_WNDPROC),
 		syscall.NewCallback(fn),
 	)
 }
