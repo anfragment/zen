@@ -41,6 +41,10 @@ linters-settings:
       # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
       # Default: "0600" 
       G306: "0644"
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true # Gets in the way in Windows API-related files.
 
 issues:
   exclude-files:
