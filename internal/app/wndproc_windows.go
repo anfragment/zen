@@ -10,7 +10,11 @@ import (
 )
 
 const (
-	GWLP_WNDPROC = uint(0xFFFFFFFFFFFFFFFC) // -4 in two's complement. Should be fine as long as we only support 64-bit architectures.
+	// GWLP_WNDPROC is used with GetWindowLongPtrW and SetWindowLongPtrW to retrieve and overwrite a window's WndProc.
+	// Its value, -4 in two's complement, is defined here explicitly as a uintptr to avoid compiler overflow warnings
+	// when converting to an unsigned type.
+	// This is safe as long as we only target 64-bit architectures.
+	GWLP_WNDPROC = uintptr(0xFFFFFFFFFFFFFFFC)
 
 	WM_ENDSESSION = 0x0016
 )
@@ -37,7 +41,7 @@ func runShutdownOnWmEndsession(ctx context.Context) {
 			return 0
 		}
 
-		// Let Wails's wndProc handle other messages.
+		// Let Wails's WndProc handle other messages.
 		return callWindowProc(originalWndProc, hwnd, msg, wParam, lParam)
 	}
 
@@ -59,7 +63,7 @@ func findWindowByProcessId(processId uint32) windows.Handle {
 }
 
 func getWindowProcPointer(hwnd windows.Handle) uintptr {
-	wndProc, _, _ := procGetWindowLongPtrW.Call(uintptr(hwnd), uintptr(GWLP_WNDPROC))
+	wndProc, _, _ := procGetWindowLongPtrW.Call(uintptr(hwnd), GWLP_WNDPROC)
 	return wndProc
 }
 
@@ -86,7 +90,7 @@ func callWindowProc(lpPrevWndFunc uintptr, hwnd windows.Handle, msg uint32, wPar
 func subclassWndProc(hwnd windows.Handle, fn any) {
 	procSetWindowLongPtrW.Call(
 		uintptr(hwnd),
-		uintptr(GWLP_WNDPROC),
+		GWLP_WNDPROC,
 		syscall.NewCallback(fn),
 	)
 }
