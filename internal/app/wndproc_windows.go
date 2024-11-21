@@ -16,7 +16,11 @@ const (
 	// This is safe as long as we only target 64-bit architectures.
 	GWLP_WNDPROC = uintptr(0xFFFFFFFFFFFFFFFC)
 
-	WM_ENDSESSION = 0x0016
+	// WM_ENDSESSION message informs the application about a session ending.
+	//
+	// For more message number identifiers, see https://gitlab.winehq.org/wine/wine/-/wikis/Wine-Developer's-Guide/List-of-Windows-Messages.
+	WM_ENDSESSION       = 0x0016
+	ENDSESSION_CLOSEAPP = 0x1
 )
 
 var (
@@ -35,7 +39,9 @@ func runShutdownOnWmEndsession(ctx context.Context) {
 	originalWndProc := getWindowProcPointer(windowHandle)
 
 	newWndProc := func(hwnd windows.Handle, msg uint32, wParam, lParam uintptr) uintptr {
-		if msg == WM_ENDSESSION {
+		// lParam: ENDSESSION_CLOSEAPP && wParam: FALSE identifies a condition where the application should not shut down:
+		// https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-endsession#parameters
+		if msg == WM_ENDSESSION && !(lParam == ENDSESSION_CLOSEAPP && wParam == 0) {
 			runtime.Quit(ctx)
 			// https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-endsession#return-value
 			return 0
