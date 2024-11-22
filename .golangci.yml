@@ -43,5 +43,9 @@ linters-settings:
       G306: "0644"
 
 issues:
-  exclude-files:
-    - internal/systray/systray_internal_windows.go
+  exclude-rules:
+    - path: (.+)_windows.go
+      linters:
+        # These give false positives for Windows API-related identifier names.
+        - revive
+        - stylecheck

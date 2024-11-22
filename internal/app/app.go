@@ -67,8 +67,8 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 	}, nil
 }
 
-// Startup is called when the app starts.
-func (a *App) Startup(ctx context.Context) {
+// commonStartup defines startup procedures common to all platforms.
+func (a *App) commonStartup(ctx context.Context) {
 	a.ctx = ctx
 
 	systrayMgr, err := systray.NewManager(a.name, func() {
