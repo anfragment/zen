@@ -29,6 +29,7 @@ func main() {
 	if err != nil {
 		log.Printf("failed to setup logger: %v", err)
 	}
+	log.Printf("initializing the app; version=%q", cfg.Version)
 
 	config, err := cfg.NewConfig()
 	if err != nil {
