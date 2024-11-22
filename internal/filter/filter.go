@@ -141,7 +141,7 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCou
 		}
 
 		if isException, err := f.AddRule(line, filterName); err != nil {
-			log.Printf("error adding rule: %v", err)
+			// log.Printf("error adding rule: %v", err)
 		} else if isException {
 			exceptionCount++
 		} else {
