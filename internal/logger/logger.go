@@ -2,38 +2,15 @@ package logger
 
 import (
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 const (
 	appName = "Zen"
 )
-
-func SetupLogger() error {
-	logsDir, err := getLogsDir(appName)
-	if err != nil {
-		return fmt.Errorf("get logs directory: %w", err)
-	}
-
-	fileLogger := &lumberjack.Logger{
-		Filename:   filepath.Join(logsDir, "application.log"),
-		MaxSize:    5,
-		MaxBackups: 5,
-		MaxAge:     1,
-		Compress:   true,
-	}
-
-	log.SetOutput(io.MultiWriter(os.Stdout, fileLogger))
-
-	return nil
-}
 
 func OpenLogsDirectory() error {
 	logsDir, err := getLogsDir(appName)

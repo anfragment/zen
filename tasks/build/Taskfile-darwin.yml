@@ -34,7 +34,7 @@ tasks:
   app:
     desc: Build the .app application bundle. The .app file will be placed in the build/bin directory.
     cmds:
-      - wails build -platform "darwin/{{default .ARCH64 .ARCH}}" -m -skipbindings -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version={{.GIT_TAG}}'"
+      - wails build -platform "darwin/{{default .ARCH64 .ARCH}}" -m -skipbindings -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version={{.GIT_TAG}}'" -tags prod
 
   dmg:
     desc: Create a DMG installer for the application. The DMG file will be placed in the build/bin directory.
