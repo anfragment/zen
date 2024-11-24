@@ -82,6 +82,6 @@ func (c *Config) RunMigrations() {
 	}
 
 	if err := os.WriteFile(lastMigrationFile, []byte(Version), 0644); err != nil {
-		log.Printf("error writing last migration file: %v\n", err)
+		log.Printf("error writing last migration file: %v", err)
 	}
 }
