@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/andybalholm/brotli"
+	"github.com/anfragment/zen/internal/logger"
 	"github.com/klauspost/compress/zstd"
 	"golang.org/x/net/html/charset"
 )
@@ -68,8 +69,9 @@ func NewInjector(store Store) (*Injector, error) {
 //
 // In case of an error, the response body is unchanged and the caller may proceed as if the function had not been called.
 func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
-	scriptlets := inj.store.Get(req.URL.Hostname())
-	log.Printf("got %d scriptlets for %q", len(scriptlets), req.URL.Hostname())
+	hostname := req.URL.Hostname()
+	scriptlets := inj.store.Get(hostname)
+	log.Printf("got %d scriptlets for %q", len(scriptlets), logger.Redacted(hostname))
 	if len(scriptlets) == 0 {
 		return nil
 	}
