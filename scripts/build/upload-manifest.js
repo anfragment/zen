@@ -17,8 +17,8 @@ const GITHUB_REPO_OWNER = 'anfragment';
 const GITHUB_REPO = 'zen';
 const PLATFORM_ASSETS = {
     darwin: {
-        arm64: 'Zen_darwin_arm64.zip',
-        amd64: 'Zen_darwin_amd64.zip',
+        arm64: 'Zen_darwin_arm64.tar.gz',
+        amd64: 'Zen_darwin_amd64.tar.gz',
     },
     windows: {
         arm64: 'Zen_windows_arm64.zip',
