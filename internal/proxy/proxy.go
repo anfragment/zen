@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/anfragment/zen/internal/logger"
 )
 
 // certGenerator is an interface capable of generating certificates for the proxy.
@@ -211,7 +213,7 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := p.requestClient.Do(r)
 	if err != nil {
-		log.Printf("error making request: %v", err)
+		log.Printf("error making request: %v", logger.Redacted(err)) // The error might contain information about the hostname we are connecting to.
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
@@ -246,7 +248,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 
 	clientConn, _, err := hj.Hijack()
 	if err != nil {
-		log.Printf("hijacking connection(%s): %v", connReq.Host, err)
+		log.Printf("hijacking connection(%s): %v", logger.Redacted(connReq.Host), err)
 		return
 	}
 	defer clientConn.Close()
@@ -261,7 +263,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 
 	host, _, err := net.SplitHostPort(connReq.Host)
 	if err != nil {
-		log.Printf("splitting host and port(%s): %v", connReq.Host, err)
+		log.Printf("splitting host and port(%s): %v", logger.Redacted(connReq.Host), err)
 		return
 	}
 
@@ -274,12 +276,12 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 
 	tlsCert, err := p.certGenerator.GetCertificate(host)
 	if err != nil {
-		log.Printf("getting certificate(%s): %v", connReq.Host, err)
+		log.Printf("getting certificate(%s): %v", logger.Redacted(connReq.Host), err)
 		return
 	}
 
 	if _, err := clientConn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n")); err != nil {
-		log.Printf("writing 200 OK to client(%s): %v", connReq.Host, err)
+		log.Printf("writing 200 OK to client(%s): %v", logger.Redacted(connReq.Host), err)
 		return
 	}
 
@@ -297,13 +299,13 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 		if err != nil {
 			if err != io.EOF {
 				if strings.Contains(err.Error(), "tls: ") {
-					log.Printf("adding %s to ignored hosts", host)
+					log.Printf("adding %s to ignored hosts", logger.Redacted(host))
 					p.ignoredHostsMu.Lock()
 					p.ignoredHosts = append(p.ignoredHosts, host)
 					p.ignoredHostsMu.Unlock()
 				}
 
-				log.Printf("reading request(%s): %v", connReq.Host, err)
+				log.Printf("reading request(%s): %v", logger.Redacted(connReq.Host), err)
 			}
 			break
 		}
@@ -325,13 +327,13 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 		resp, err := p.requestTransport.RoundTrip(req)
 		if err != nil {
 			if strings.Contains(err.Error(), "tls: ") {
-				log.Printf("adding %s to ignored hosts", host)
+				log.Printf("adding %s to ignored hosts", logger.Redacted(host))
 				p.ignoredHostsMu.Lock()
 				p.ignoredHosts = append(p.ignoredHosts, host)
 				p.ignoredHostsMu.Unlock()
 			}
 
-			log.Printf("roundtrip(%s): %v", connReq.Host, err)
+			log.Printf("roundtrip(%s): %v", logger.Redacted(connReq.Host), err)
 			// TODO: better error presentation
 			response := fmt.Sprintf("HTTP/1.1 502 Bad Gateway\r\n\r\n%s", err.Error())
 			tlsConn.Write([]byte(response))
@@ -339,14 +341,14 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 		}
 
 		if err := p.filter.HandleResponse(req, resp); err != nil {
-			log.Printf("error handling response by filter for %s, %v", req.URL, err)
+			log.Printf("error handling response by filter for %s, %v", logger.Redacted(req.URL), err)
 			response := fmt.Sprintf("HTTP/1.1 502 Bad Gateway\r\n\r\n%s", err.Error())
 			tlsConn.Write([]byte(response))
 			break
 		}
 
 		if err := resp.Write(tlsConn); err != nil {
-			log.Printf("writing response(%s): %v", connReq.Host, err)
+			log.Printf("writing response(%s): %v", logger.Redacted(connReq.Host), err)
 			resp.Body.Close()
 			break
 		}
@@ -383,14 +385,14 @@ func (p *Proxy) shouldMITM(host string) bool {
 func (p *Proxy) tunnel(w net.Conn, r *http.Request) {
 	remoteConn, err := net.Dial("tcp", r.Host)
 	if err != nil {
-		log.Printf("dialing remote(%s): %v", r.Host, err)
+		log.Printf("dialing remote(%s): %v", logger.Redacted(r.Host), err)
 		w.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
 		return
 	}
 	defer remoteConn.Close()
 
 	if _, err := w.Write([]byte("HTTP/1.1 200 OK\r\n\r\n")); err != nil {
-		log.Printf("writing 200 OK to client(%s): %v", r.Host, err)
+		log.Printf("writing 200 OK to client(%s): %v", logger.Redacted(r.Host), err)
 		return
 	}
 
