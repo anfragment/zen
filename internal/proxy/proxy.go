@@ -213,7 +213,7 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := p.requestClient.Do(r)
 	if err != nil {
-		log.Printf("error making request: %v", err)
+		log.Printf("error making request: %v", logger.Redacted(err)) // The error might contain information about the hostname we are connecting to.
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
