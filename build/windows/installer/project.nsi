@@ -28,7 +28,7 @@ Unicode true
 ## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"
 ## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Default "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
 ####
-## !define REQUEST_EXECUTION_LEVEL "admin"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
+!define REQUEST_EXECUTION_LEVEL "user"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
 ####
 ## Include the wails tools
 ####
@@ -45,7 +45,10 @@ VIAddVersionKey "FileVersion"     "${INFO_PRODUCTVERSION}"
 VIAddVersionKey "LegalCopyright"  "${INFO_COPYRIGHT}"
 VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
 
-!include "MUI.nsh"
+BrandingText "Zen v${INFO_PRODUCTVERSION}"
+
+
+!include MUI2.nsh
 
 !define MUI_ICON "..\icon.ico"
 !define MUI_UNICON "..\icon.ico"
@@ -54,9 +57,27 @@ VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
 !define MUI_ABORTWARNING # This will warn the user if they exit from the installer.
 
 !insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
-# !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
-!insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
-!insertmacro MUI_PAGE_INSTFILES # Installing page.
+!insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
+
+
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW RestrictDirPage
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+
+Function RestrictDirPage
+!if "${MUI_SYSVERSION}" >= 2.0
+SendMessage $mui.DirectoryPage.Directory ${EM_SETREADONLY} 1 0
+EnableWindow $mui.DirectoryPage.BrowseButton 0
+!else
+FindWindow $0 '#32770' '' $HWNDPARENT
+GetDlgItem $1 $0 0x3FB
+SendMessage $1 ${EM_SETREADONLY} 1 0
+GetDlgItem $1 $0 0x3E9
+EnableWindow $1 0
+!endif
+FunctionEnd
+
+
 !insertmacro MUI_PAGE_FINISH # Finished installation page.
 
 !insertmacro MUI_UNPAGE_INSTFILES # Uinstalling page
@@ -69,7 +90,7 @@ VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
 
 Name "${INFO_PRODUCTNAME}"
 OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.
-InstallDir "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" # Default installing folder ($PROGRAMFILES is Program Files folder).
+InstallDir "$LOCALAPPDATA\Programs\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
 ShowInstDetails show # This will always show the installation details.
 
 Function .onInit
