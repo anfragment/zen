@@ -147,6 +147,6 @@ function uploadManifestToBucket(_a) {
 }
 function markdownToPlaintext(input) {
     return __awaiter(this, void 0, void 0, function* () {
-        return convert(yield marked(input));
+        return convert(yield marked(input), { wordwrap: false });
     });
 }

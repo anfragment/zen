@@ -191,5 +191,5 @@ async function uploadManifestToBucket({
 }
 
 async function markdownToPlaintext(input: string): Promise<string> {
-  return convert(await marked(input));
+  return convert(await marked(input), { wordwrap: false });
 }
