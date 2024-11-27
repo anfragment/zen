@@ -93,18 +93,12 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 		return fmt.Errorf("read raw body: %w", err)
 	}
 
-	var modified bool
 	modifiedBody := reBody.ReplaceAllFunc(rawBodyBytes, func(match []byte) []byte {
-		modified = true
 		match = append(match, inj.bundle...)
 		match = append(match, '\n')
 		match = append(match, ruleInjection.Bytes()...)
 		return match
 	})
-
-	if !modified {
-		return nil
-	}
 
 	res.Body = io.NopCloser(bytes.NewReader(modifiedBody))
 	res.ContentLength = int64(len(modifiedBody))
