@@ -71,7 +71,6 @@ func TestStore(t *testing.T) {
 
 		rs := NewStore()
 		rs.Add([]string{"example.org"}, ".rule")
-		rs.Add([]string{}, ".rule2")
 		rs.Add([]string{"example.org"}, ".rule3")
 
 		rules := rs.Get("example.org")
@@ -89,16 +88,17 @@ func TestStore(t *testing.T) {
 		}
 	})
 
-	t.Run("get rule for global hostname", func(t *testing.T) {
+	t.Run("should return both global and hostname specific rules", func(t *testing.T) {
 		t.Parallel()
 
 		rs := NewStore()
 		rs.Add([]string{}, ".rule")
+		rs.Add([]string{"example.org"}, ".rule2")
 
-		rules := rs.Get("*")
+		rules := rs.Get("example.org")
 
-		if len(rules) != 1 {
-			t.Errorf("expected 1 rule, got %d", len(rules))
+		if len(rules) != 2 {
+			t.Errorf("expected 2 rules, got %d", len(rules))
 		}
 
 		if rules[0] != ".rule" {

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -33,10 +34,34 @@ func (rs *RuleStore) Get(hostname string) []string {
 	rs.mu.RLock()
 	defer rs.mu.RUnlock()
 
-	selectors, ok := rs.store[hostname]
-	if !ok {
+	var selectors []string
+
+	if global := rs.store["*"]; len(global) > 0 {
+		selectors = append(selectors, global...)
+	}
+
+	h := normalizeDomain(hostname)
+	if hostSpecific := rs.store[h]; len(hostSpecific) > 0 {
+		selectors = append(selectors, hostSpecific...)
+	}
+
+	if len(selectors) == 0 {
 		return nil
 	}
 
 	return selectors
+}
+
+func normalizeDomain(hostname string) string {
+	parts := strings.Split(hostname, ".")
+
+	if len(parts) <= 1 {
+		return hostname
+	}
+
+	if len(parts) >= 3 && len(parts[len(parts)-1]) == 2 {
+		return strings.Join(parts[len(parts)-3:], ".")
+	}
+
+	return strings.Join(parts[len(parts)-2:], ".")
 }
