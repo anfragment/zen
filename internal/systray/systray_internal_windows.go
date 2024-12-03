@@ -6,13 +6,12 @@ package systray
 */
 
 import (
-	"crypto/md5"
+	"crypto/md5" // #nosec G501 -- MD5 is used to hash data, not for cryptographic purposes.
 	"encoding/hex"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -170,13 +169,13 @@ type menuItemInfo struct {
 	BMPItem                     windows.Handle
 }
 
-// The POINT structure defines the x- and y- coordinates of a point.
+// point defines the x- and y- coordinates of a point.
 // https://msdn.microsoft.com/en-us/library/windows/desktop/dd162805(v=vs.85).aspx
 type point struct {
 	X, Y int32
 }
 
-// Contains information about loaded resources
+// winTray contains information about loaded resources.
 type winTray struct {
 	instance,
 	icon,
@@ -238,7 +237,7 @@ func (t *winTray) setTooltip(src string) error {
 
 	t.muNID.Lock()
 	defer t.muNID.Unlock()
-	copy(t.nid.Tip[:], b[:])
+	copy(t.nid.Tip[:], b)
 	t.nid.Flags |= NIF_TIP
 	t.nid.Size = uint32(unsafe.Sizeof(*t.nid))
 
@@ -294,8 +293,8 @@ func (t *winTray) wndProc(hWnd windows.Handle, message uint32, wParam, lParam ui
 		lResult, _, _ = pDefWindowProc.Call(
 			uintptr(hWnd),
 			uintptr(message),
-			uintptr(wParam),
-			uintptr(lParam),
+			wParam,
+			lParam,
 		)
 	}
 	return
@@ -341,7 +340,7 @@ func (t *winTray) initInstance() error {
 
 	taskbarEventNamePtr, _ := windows.UTF16PtrFromString("TaskbarCreated")
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms644947
-	res, _, err := pRegisterWindowMessage.Call(
+	res, _, _ := pRegisterWindowMessage.Call(
 		uintptr(unsafe.Pointer(taskbarEventNamePtr)),
 	)
 	t.wmTaskbarCreated = uint32(res)
@@ -423,7 +422,7 @@ func (t *winTray) initInstance() error {
 	t.muNID.Lock()
 	defer t.muNID.Unlock()
 	t.nid = &notifyIconData{
-		Wnd:             windows.Handle(t.window),
+		Wnd:             t.window,
 		ID:              100,
 		Flags:           NIF_MESSAGE,
 		CallbackMessage: t.wmSystrayMessage,
@@ -515,9 +514,9 @@ func (t *winTray) addOrUpdateMenuItem(menuItemId uint32, parentId uint32, title 
 	mi := menuItemInfo{
 		Mask:     MIIM_FTYPE | MIIM_STRING | MIIM_ID | MIIM_STATE,
 		Type:     MFT_STRING,
-		ID:       uint32(menuItemId),
+		ID:       menuItemId,
 		TypeData: titlePtr,
-		Cch:      uint32(len(title)),
+		Cch:      uint32(len(title)), // #nosec G115 -- Highly unlikely to overflow in practice.
 	}
 	mi.Size = uint32(unsafe.Sizeof(mi))
 	if disabled {
@@ -548,7 +547,7 @@ func (t *winTray) addOrUpdateMenuItem(menuItemId uint32, parentId uint32, title 
 		t.muMenus.Unlock()
 	} else if t.getVisibleItemIndex(parentId, menuItemId) != -1 {
 		// We set the menu item info based on the menuID
-		res, _, err = pSetMenuItemInfo.Call(
+		res, _, _ = pSetMenuItemInfo.Call(
 			uintptr(menu),
 			uintptr(menuItemId),
 			0,
@@ -597,7 +596,7 @@ func (t *winTray) addSeparatorMenuItem(menuItemId, parentId uint32) error {
 	mi := menuItemInfo{
 		Mask: MIIM_FTYPE | MIIM_ID | MIIM_STATE,
 		Type: MFT_SEPARATOR,
-		ID:   uint32(menuItemId),
+		ID:   menuItemId,
 	}
 
 	mi.Size = uint32(unsafe.Sizeof(mi))
@@ -687,9 +686,9 @@ func (t *winTray) addToVisibleItems(parent, val uint32) {
 	if visibleItems, exists := t.visibleItems[parent]; !exists {
 		t.visibleItems[parent] = []uint32{val}
 	} else {
-		newvisible := append(visibleItems, val)
-		sort.Slice(newvisible, func(i, j int) bool { return newvisible[i] < newvisible[j] })
-		t.visibleItems[parent] = newvisible
+		visibleItems = append(visibleItems, val)
+		slices.Sort(visibleItems)
+		t.visibleItems[parent] = visibleItems
 	}
 }
 
@@ -801,7 +800,7 @@ func nativeLoop() {
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/ms644936(v=vs.85).aspx
 		switch int32(ret) {
 		case -1:
-			log.Printf("Error at message loop: %v", err)
+			log.Printf("systray message loop error: %v", err)
 			return
 		case 0:
 			return
@@ -824,12 +823,12 @@ func quitInternal() {
 }
 
 func iconBytesToFilePath(iconBytes []byte) (string, error) {
-	bh := md5.Sum(iconBytes)
+	bh := md5.Sum(iconBytes) // #nosec G401
 	dataHash := hex.EncodeToString(bh[:])
 	iconFilePath := filepath.Join(os.TempDir(), "systray_temp_icon_"+dataHash)
 
 	if _, err := os.Stat(iconFilePath); os.IsNotExist(err) {
-		if err := ioutil.WriteFile(iconFilePath, iconBytes, 0644); err != nil {
+		if err := os.WriteFile(iconFilePath, iconBytes, 0644); err != nil {
 			return "", err
 		}
 	}
@@ -838,13 +837,13 @@ func iconBytesToFilePath(iconBytes []byte) (string, error) {
 
 func (item *menuItem) parentId() uint32 {
 	if item.parent != nil {
-		return uint32(item.parent.id)
+		return item.parent.id
 	}
 	return 0
 }
 
 // SetIcon sets the icon of a menu item. Only works on macOS and Windows.
-// iconBytes should be the content of .ico/.jpg/.png
+// iconBytes should be the contents of an .ico/.jpg/.png file.
 func (item *menuItem) SetIcon(iconBytes []byte) {
 	iconFilePath, err := iconBytesToFilePath(iconBytes)
 	if err != nil {
@@ -864,10 +863,10 @@ func (item *menuItem) SetIcon(iconBytes []byte) {
 		return
 	}
 	wt.muMenuItemIcons.Lock()
-	wt.menuItemIcons[uint32(item.id)] = h
+	wt.menuItemIcons[item.id] = h
 	wt.muMenuItemIcons.Unlock()
 
-	err = wt.addOrUpdateMenuItem(uint32(item.id), item.parentId(), item.title, item.disabled, item.checked)
+	err = wt.addOrUpdateMenuItem(item.id, item.parentId(), item.title, item.disabled, item.checked)
 	if err != nil {
 		log.Printf("Unable to addOrUpdateMenuItem: %v", err)
 		return
@@ -875,7 +874,7 @@ func (item *menuItem) SetIcon(iconBytes []byte) {
 }
 
 func addOrUpdateMenuItem(item *menuItem) {
-	err := wt.addOrUpdateMenuItem(uint32(item.id), item.parentId(), item.title, item.disabled, item.checked)
+	err := wt.addOrUpdateMenuItem(item.id, item.parentId(), item.title, item.disabled, item.checked)
 	if err != nil {
 		log.Printf("Unable to addOrUpdateMenuItem: %v", err)
 		return
@@ -891,7 +890,7 @@ func (item *menuItem) SetTemplateIcon(templateIconBytes []byte, regularIconBytes
 }
 
 func hideMenuItem(item *menuItem) {
-	err := wt.hideMenuItem(uint32(item.id), item.parentId())
+	err := wt.hideMenuItem(item.id, item.parentId())
 	if err != nil {
 		log.Printf("Unable to hideMenuItem: %v", err)
 		return
