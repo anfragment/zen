@@ -7,17 +7,22 @@ import (
 )
 
 var (
-	// CosmeticRuleRegex matches cosmetic rules.
-	CosmeticRuleRegex = regexp.MustCompile(`^(?:([^#$]+?)##|##)(.+)$`)
+	// RuleRegex matches cosmetic rules.
+	RuleRegex = regexp.MustCompile(`^(?:([^#$]+?)##|##)(.+)$`)
 
 	errUnsupportedSyntax = errors.New("unsupported syntax")
+	errNotAllowed        = errors.New("rule contains </style> which is not allowed")
 )
 
 func (inj *Injector) AddRule(rule string) error {
+	if strings.Contains(rule, "</style>") {
+		return errNotAllowed
+	}
+
 	var rawHostnames string
 	var selector string
 
-	if match := CosmeticRuleRegex.FindStringSubmatch(rule); match != nil {
+	if match := RuleRegex.FindStringSubmatch(rule); match != nil {
 		rawHostnames = match[1]
 		selector = match[2]
 	} else {

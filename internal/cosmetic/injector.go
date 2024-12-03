@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/andybalholm/brotli"
@@ -20,8 +21,8 @@ import (
 )
 
 var (
-	// reBody captures contents of the body tag in an HTML document.
-	reBody          = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
+	// headTagRegex captures contents of the head tag in an HTML document.
+	headTagRegex    = regexp.MustCompile(`(?i)(<head[^>]*>)([\s\S]*?)(</head>)`)
 	styleOpeningTag = []byte("<style>")
 	styleClosingTag = []byte("</style>")
 )
@@ -48,8 +49,6 @@ func NewInjector(store Store) (*Injector, error) {
 
 func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	hostname := req.URL.Hostname()
-	log.Printf("injecting css for %q\n", logger.Redacted(hostname))
-
 	selectors := inj.store.Get(hostname)
 	log.Printf("got %d selectors for %q", len(selectors), logger.Redacted(hostname))
 	if len(selectors) == 0 {
@@ -68,14 +67,13 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 		return fmt.Errorf("read raw body: %w", err)
 	}
 
-	modifiedBody := reBody.ReplaceAllFunc(rawBodyBytes, func(body []byte) []byte {
-		// Inject ruleInjection right after the <body> tag.
-		return bytes.Join([][]byte{body, ruleInjection.Bytes()}, nil)
+	modifiedBody := headTagRegex.ReplaceAllFunc(rawBodyBytes, func(head []byte) []byte {
+		return bytes.Join([][]byte{head, ruleInjection.Bytes()}, nil)
 	})
 
 	res.Body = io.NopCloser(bytes.NewReader(modifiedBody))
 	res.ContentLength = int64(len(modifiedBody))
-	res.Header.Set("Content-Length", fmt.Sprintf("%d", len(modifiedBody)))
+	res.Header.Set("Content-Length", strconv.Itoa(len(modifiedBody)))
 	res.Header.Del("Content-Encoding")
 	res.Header.Set("Content-Type", "text/html; charset=utf-8")
 

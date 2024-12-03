@@ -45,10 +45,6 @@ func (rs *RuleStore) Get(hostname string) []string {
 		selectors = append(selectors, hostSpecific...)
 	}
 
-	if len(selectors) == 0 {
-		return nil
-	}
-
 	return selectors
 }
 

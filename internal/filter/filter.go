@@ -64,14 +64,14 @@ type Filter struct {
 }
 
 var (
-	// ignoreLineRegex matches comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	ignoreLineRegex = regexp.MustCompile(`^(?:!|#|\[)`)
+	// ignoreLineRegex matches comments and [Adblock Plus 2.0]-style headers.
+	ignoreLineRegex = regexp.MustCompile(`^(?:!|\[)`)
 	// exceptionRegex matches exception rules.
 	exceptionRegex = regexp.MustCompile(`^@@`)
 	// scriptletRegex matches scriptlet rules.
 	scriptletRegex = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
 	// cosmeticRuleRegex matches cosmetic rules.
-	cosmeticRuleRegex = cosmetic.CosmeticRuleRegex
+	cosmeticRuleRegex = cosmetic.RuleRegex
 )
 
 // NewFilter creates and initializes a new filter.
@@ -173,10 +173,6 @@ func (f *Filter) AddRule(rule string, filterName *string) (isException bool, err
 			return false, fmt.Errorf("add scriptlet: %w", err)
 		}
 		return false, nil
-	}
-
-	if strings.Contains(rule, "##") || strings.Contains(rule, "#$#") {
-		log.Println("cosmostar:", rule)
 	}
 
 	if cosmeticRuleRegex.MatchString(rule) {
