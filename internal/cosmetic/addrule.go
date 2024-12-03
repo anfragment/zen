@@ -2,6 +2,7 @@ package cosmetic
 
 import (
 	"errors"
+	"net"
 	"regexp"
 	"strings"
 )
@@ -35,12 +36,18 @@ func (inj *Injector) AddRule(rule string) error {
 	}
 
 	hostnames := strings.Split(rawHostnames, ",")
+	subdomainHostnames := make([]string, 0, len(hostnames))
 	for _, hostname := range hostnames {
 		if len(hostname) == 0 {
 			return errors.New("empty hostnames are not allowed")
 		}
+
+		if net.ParseIP(hostname) == nil && !strings.HasPrefix(hostname, "*.") {
+			subdomainHostnames = append(subdomainHostnames, "*."+hostname)
+		}
 	}
 	inj.store.Add(hostnames, selector)
+	inj.store.Add(subdomainHostnames, selector)
 
 	return nil
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/anfragment/zen/internal/certstore"
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/cosmetic"
-	"github.com/anfragment/zen/internal/cosmetic/store"
+	cosmeticTrieStore "github.com/anfragment/zen/internal/cosmetic/triestore"
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/proxy"
@@ -173,7 +173,7 @@ func (a *App) StartProxy() (err error) {
 		return fmt.Errorf("create scriptlets injector: %v", err)
 	}
 
-	cosmeticRulesStore := store.NewStore()
+	cosmeticRulesStore := cosmeticTrieStore.NewTrieStore()
 	cosmeticRulesInjector, err := cosmetic.NewInjector(cosmeticRulesStore)
 	if err != nil {
 		return fmt.Errorf("create cosmetic rules injector: %v", err)

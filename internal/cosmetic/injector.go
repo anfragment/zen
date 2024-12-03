@@ -22,7 +22,7 @@ import (
 
 var (
 	// headTagRegex captures contents of the head tag in an HTML document.
-	headTagRegex    = regexp.MustCompile(`(?i)(<head[^>]*>)([\s\S]*?)(</head>)`)
+	headTagRegex    = regexp.MustCompile(`(?i)<head[^>]*>([\s\S]*?)</head>`)
 	styleOpeningTag = []byte("<style>")
 	styleClosingTag = []byte("</style>")
 )
