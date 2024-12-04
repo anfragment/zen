@@ -12,6 +12,8 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+// More on the logging setup in README.md.
+
 func SetupLogger() error {
 	logsDir, err := getLogsDir(appName)
 	if err != nil {
