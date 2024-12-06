@@ -34,12 +34,14 @@ var (
 		"set-constant":           "setConstant",
 		// TODO: add prune-json and related scriptlets after checking their compatibility with AdGuard.
 	}
-	errNotQuotedString    = errors.New("not a quoted string")
-	errUnsupportedSyntax  = errors.New("unsupported syntax")
-	errEmptyScriptletBody = errors.New("scriptlet body is empty")
+	trustedOnlyScriptlets              = []string{}
+	errNotQuotedString                 = errors.New("not a quoted string")
+	errUnsupportedSyntax               = errors.New("unsupported syntax")
+	errEmptyScriptletBody              = errors.New("scriptlet body is empty")
+	errTrustedScriptletInUntrustedList = errors.New("trusted scriptlet in untrusted list")
 )
 
-func (inj *Injector) AddRule(rule string) error {
+func (inj *Injector) AddRule(rule string, filterListTrusted bool) error {
 	var rawHostnames string
 	var scriptlet *Scriptlet
 	var err error
@@ -57,6 +59,14 @@ func (inj *Injector) AddRule(rule string) error {
 		}
 	} else {
 		return errUnsupportedSyntax
+	}
+
+	if !filterListTrusted {
+		for _, trusted := range trustedOnlyScriptlets {
+			if trusted == scriptlet.Name {
+				return errTrustedScriptletInUntrustedList
+			}
+		}
 	}
 
 	if len(rawHostnames) == 0 {

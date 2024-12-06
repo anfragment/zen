@@ -11,7 +11,8 @@
         "url": "https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_2_Base/filter.txt",
         "name": "AdGuard Base filter",
         "enabled": true,
-        "type": "ads"
+        "type": "ads",
+        "trusted": true
       },
       {
         "url": "https://easylist.to/easylist/easyprivacy.txt",
@@ -23,7 +24,8 @@
         "url": "https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_3_Spyware/filter.txt",
         "name": "AdGuard Spyware filter",
         "enabled": true,
-        "type": "privacy"
+        "type": "privacy",
+        "trusted": true
       },
       {
         "url": "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/LegitimateURLShortener.txt",

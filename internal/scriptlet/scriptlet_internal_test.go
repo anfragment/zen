@@ -17,7 +17,7 @@ func TestInjectorInternal(t *testing.T) {
 			t.Fatalf("failed to create injector: %v", err)
 		}
 
-		injector.AddRule("example.org#%#//scriptlet('set-constant', 'first', 'false')")
+		injector.AddRule("example.org#%#//scriptlet('set-constant', 'first', 'false')", false)
 
 		if len(spyStore.Entries) != 2 {
 			t.Errorf("expected exactly two entries to be collected, got %d", len(spyStore.Entries))
@@ -58,7 +58,7 @@ func TestInjectorInternal(t *testing.T) {
 			t.Fatalf("failed to create injector: %v", err)
 		}
 
-		injector.AddRule("example.com##+js(set-local-storage-item, player.live.current.mute, false)")
+		injector.AddRule("example.com##+js(set-local-storage-item, player.live.current.mute, false)", false)
 
 		if len(spyStore.Entries) != 2 {
 			t.Errorf("expected exactly two entries to be collected, got %d", len(spyStore.Entries))

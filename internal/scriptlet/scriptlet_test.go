@@ -18,7 +18,7 @@ func TestInjectorPublic(t *testing.T) {
 		t.Parallel()
 
 		i := newInjectorWithTrieStore(t)
-		err := i.AddRule(`#%#//scriptlet('prevent-xhr', 'example.com')`)
+		err := i.AddRule(`#%#//scriptlet('prevent-xhr', 'example.com')`, false)
 		if err != nil {
 			t.Fatalf("failed to add rule: %v", err)
 		}
@@ -42,7 +42,7 @@ func TestInjectorPublic(t *testing.T) {
 		t.Parallel()
 
 		i := newInjectorWithTrieStore(t)
-		err := i.AddRule(`news.example.com#%#//scriptlet('prevent-xhr', 'example.com')`)
+		err := i.AddRule(`news.example.com#%#//scriptlet('prevent-xhr', 'example.com')`, false)
 		if err != nil {
 			t.Fatalf("failed to add rule: %v", err)
 		}
@@ -66,7 +66,7 @@ func TestInjectorPublic(t *testing.T) {
 		t.Parallel()
 
 		i := newInjectorWithTrieStore(t)
-		err := i.AddRule(`example.com#%#//scriptlet('prevent-xhr', 'example.com')`)
+		err := i.AddRule(`example.com#%#//scriptlet('prevent-xhr', 'example.com')`, false)
 		if err != nil {
 			t.Fatalf("failed to add rule: %v", err)
 		}

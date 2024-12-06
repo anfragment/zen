@@ -56,6 +56,7 @@ type FilterList struct {
 	Type    FilterListType `json:"type"`
 	URL     string         `json:"url"`
 	Enabled bool           `json:"enabled"`
+	Trusted bool           `json:"trusted"`
 }
 
 func (f *FilterList) UnmarshalJSON(data []byte) error {
