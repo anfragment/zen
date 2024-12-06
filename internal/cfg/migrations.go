@@ -2,6 +2,7 @@ package cfg
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -30,6 +31,22 @@ var migrations = map[string]func(c *Config) error{
 		errStr := c.ToggleFilterList("https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_2_Base/filter.txt", true)
 		if errStr != "" {
 			return errors.New(errStr)
+		}
+		return nil
+	},
+	"v0.7.0": func(c *Config) error {
+		// https://github.com/anfragment/zen/issues/147#issuecomment-2521317897
+		c.Lock()
+		defer c.Unlock()
+		for i, list := range c.Filter.FilterLists {
+			if list.URL == "https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_2_Base/filter.txt" || list.URL == "https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_3_Spyware/filter.txt" {
+				c.Filter.FilterLists[i].Trusted = true
+				log.Printf("v0.7.0 migration: setting %q list as trusted", list.URL)
+			}
+		}
+
+		if err := c.Save(); err != nil {
+			return fmt.Errorf("save config: %v", err)
 		}
 		return nil
 	},
