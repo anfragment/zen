@@ -5,6 +5,7 @@ export namespace cfg {
 	    type: string;
 	    url: string;
 	    enabled: boolean;
+	    trusted: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new FilterList(source);
@@ -16,6 +17,7 @@ export namespace cfg {
 	        this.type = source["type"];
 	        this.url = source["url"];
 	        this.enabled = source["enabled"];
+	        this.trusted = source["trusted"];
 	    }
 	}
 
