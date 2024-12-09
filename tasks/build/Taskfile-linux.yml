@@ -19,4 +19,4 @@ tasks:
   deps:
     desc: Install the apt dependencies required to create a production build.
     cmds:
-      - sudo apt update && sudo apt install libgtk-3-0 gcc-aarch64-linux-gnu
+      - sudo apt update && sudo apt install libgtk-3-0 gcc-aarch64-linux-gnu libwebkit2gtk-4.1-dev
