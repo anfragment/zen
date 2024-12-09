@@ -1,4 +1,4 @@
-import { Spinner, SpinnerSize, Switch, Button, MenuItem, Popover, Menu } from '@blueprintjs/core';
+import { Spinner, SpinnerSize, Switch, Button, MenuItem, Popover, Menu, Tag } from '@blueprintjs/core';
 import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
 
@@ -135,6 +135,12 @@ function ListItem({
           className="filter-lists__list-switch"
         />
       </div>
+      {filterList.trusted ? (
+        <Tag intent="success" className="filter-lists__list-trusted">
+          Trusted
+        </Tag>
+      ) : null}
+
       <div className="bp5-text-muted filter-lists__list-url">{filterList.url}</div>
 
       {showDelete && (
