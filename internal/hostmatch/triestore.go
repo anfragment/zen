@@ -1,11 +1,11 @@
-package triestore
+package hostmatch
 
 import (
 	"strings"
 	"sync"
 )
 
-type node[T comparable] struct {
+type node[T any] struct {
 	children map[string]*node[T]
 	data     []T
 }
@@ -50,43 +50,34 @@ func (n *node[T]) getMatchingData(segments []string, isWildcard bool) []T {
 	return data
 }
 
-type TrieStore[T comparable] struct {
-	mu sync.RWMutex
-	// universal data is data not tied to a specific hostname.
-	universalData []T
-	root          *node[T]
+type trieStore[T any] struct {
+	mu   sync.RWMutex
+	root *node[T]
 }
 
-func NewTrieStore[T comparable]() *TrieStore[T] {
-	return &TrieStore[T]{
+func newTrieStore[T any]() *trieStore[T] {
+	return &trieStore[T]{
 		root: &node[T]{},
 	}
 }
 
-func (ts *TrieStore[T]) Add(hostnames []string, data T) {
+func (ts *trieStore[T]) Add(hostnamePattern string, data T) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 
-	if len(hostnames) == 0 {
-		ts.universalData = append(ts.universalData, data)
-		return
-	}
+	segments := strings.Split(hostnamePattern, ".")
 
-	for _, hostname := range hostnames {
-		segments := strings.Split(hostname, ".")
-
-		node := ts.root
-		for _, segment := range segments {
-			node = node.findOrAddChild(segment)
-		}
-		node.data = append(node.data, data)
+	node := ts.root
+	for _, segment := range segments {
+		node = node.findOrAddChild(segment)
 	}
+	node.data = append(node.data, data)
 }
 
-func (ts *TrieStore[T]) Get(hostname string) []T {
+func (ts *trieStore[T]) Get(hostname string) []T {
 	ts.mu.RLock()
 	defer ts.mu.RUnlock()
 
 	segments := strings.Split(hostname, ".")
-	return append(ts.root.getMatchingData(segments, false), ts.universalData...)
+	return ts.root.getMatchingData(segments, false)
 }
