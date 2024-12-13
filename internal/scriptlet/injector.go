@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 
 	"github.com/anfragment/zen/internal/htmlrewrite"
 	"github.com/anfragment/zen/internal/logger"
@@ -17,7 +16,6 @@ var (
 	//go:embed bundle.js
 	scriptletsBundleFS embed.FS
 	// reBody captures contents of the body tag in an HTML document.
-	reBody           = regexp.MustCompile(`(?i)<body[\s\S]*?>([\s\S]*)</body>`)
 	scriptOpeningTag = []byte("<script>")
 	scriptClosingTag = []byte("</script>")
 )
