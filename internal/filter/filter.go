@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/anfragment/zen/internal/cfg"
+	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/rule"
 )
@@ -45,6 +46,11 @@ type scriptletsInjector interface {
 	AddRule(string, bool) error
 }
 
+type jsRuleInjector interface {
+	AddRule(rule string) error
+	Inject(*http.Request, *http.Response) error
+}
+
 // Filter is capable of parsing Adblock-style filter lists and hosts rules and matching URLs against them.
 //
 // Safe for concurrent use.
@@ -53,6 +59,7 @@ type Filter struct {
 	ruleMatcher          ruleMatcher
 	exceptionRuleMatcher ruleMatcher
 	scriptletsInjector   scriptletsInjector
+	jsRuleInjector       jsRuleInjector
 	eventsEmitter        filterEventsEmitter
 }
 
@@ -66,7 +73,7 @@ var (
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -79,6 +86,9 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 	if scriptletsInjector == nil {
 		return nil, errors.New("scriptletsInjector is nil")
 	}
+	if jsRuleInjector == nil {
+		return nil, errors.New("jsRuleInjector is nil")
+	}
 	if exceptionRuleMatcher == nil {
 		return nil, errors.New("exceptionRuleMatcher is nil")
 	}
@@ -88,6 +98,7 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 		ruleMatcher:          ruleMatcher,
 		exceptionRuleMatcher: exceptionRuleMatcher,
 		scriptletsInjector:   scriptletsInjector,
+		jsRuleInjector:       jsRuleInjector,
 		eventsEmitter:        eventsEmitter,
 	}
 	f.init()
@@ -161,6 +172,15 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		}
 		return false, nil
 	}
+	if filterListTrusted && jsrule.RuleRegex.MatchString(rule) {
+		// The order of operations is crucial here.
+		// RuleRegex in jsrule also matches scriptlet rules.
+		// Therefore, we must first check for a scriptlet rule match before testing for a jsrule match.
+		if err := f.jsRuleInjector.AddRule(rule); err != nil {
+			return false, fmt.Errorf("add js rule: %w", err)
+		}
+		return false, nil
+	}
 	if exceptionRegex.MatchString(rule) {
 		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterListName); err != nil {
 			return true, fmt.Errorf("add exception: %w", err)
@@ -223,6 +243,10 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 		if err := f.scriptletsInjector.Inject(req, res); err != nil {
 			// The error is recoverable, so we log it and continue processing the response.
 			log.Printf("error injecting scriptlets for %q: %v", logger.Redacted(req.URL), err)
+		}
+		if err := f.jsRuleInjector.Inject(req, res); err != nil {
+			// The error is recoverable, so we log it and continue processing the response.
+			log.Printf("error injecting js rules for %q: %v", logger.Redacted(req.URL), err)
 		}
 	}
 
