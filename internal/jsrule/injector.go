@@ -36,16 +36,16 @@ func NewInjector() *Injector {
 	}
 }
 
-func (i *Injector) AddRule(rule string) error {
+func (inj *Injector) AddRule(rule string) error {
 	if match := primaryRuleRegex.FindStringSubmatch(rule); match != nil {
-		if err := i.store.AddPrimaryRule(match[1], match[2]); err != nil {
+		if err := inj.store.AddPrimaryRule(match[1], match[2]); err != nil {
 			return fmt.Errorf("add primary rule: %w", err)
 		}
 		return nil
 	}
 
 	if match := exceptionRuleRegex.FindStringSubmatch(rule); match != nil {
-		if err := i.store.AddExceptionRule(match[1], match[2]); err != nil {
+		if err := inj.store.AddExceptionRule(match[1], match[2]); err != nil {
 			return fmt.Errorf("add exception rule: %w", err)
 		}
 		return nil

@@ -14,21 +14,21 @@ type hostnameStore[T any] interface {
 	Get(hostname string) []T
 }
 
-type hostMatcher[T comparable] struct {
+type HostMatcher[T comparable] struct {
 	primaryStore      hostnameStore[T]
 	generic           []T
 	exceptionStore    hostnameStore[T]
 	genericExceptions []T
 }
 
-func NewHostMatcher[T comparable]() *hostMatcher[T] {
-	return &hostMatcher[T]{
+func NewHostMatcher[T comparable]() *HostMatcher[T] {
+	return &HostMatcher[T]{
 		primaryStore:   newTrieStore[T](),
 		exceptionStore: newTrieStore[T](),
 	}
 }
 
-func (hm *hostMatcher[T]) AddPrimaryRule(hostnamePatterns string, data T) error {
+func (hm *HostMatcher[T]) AddPrimaryRule(hostnamePatterns string, data T) error {
 	if len(hostnamePatterns) == 0 {
 		hm.generic = append(hm.generic, data)
 		return nil
@@ -56,7 +56,7 @@ func (hm *hostMatcher[T]) AddPrimaryRule(hostnamePatterns string, data T) error 
 	return nil
 }
 
-func (hm *hostMatcher[T]) AddExceptionRule(hostnamePatterns string, data T) error {
+func (hm *HostMatcher[T]) AddExceptionRule(hostnamePatterns string, data T) error {
 	if len(hostnamePatterns) == 0 {
 		hm.generic = append(hm.generic, data)
 		return nil
@@ -77,11 +77,18 @@ func (hm *hostMatcher[T]) AddExceptionRule(hostnamePatterns string, data T) erro
 	return nil
 }
 
-func (hm *hostMatcher[T]) Get(hostname string) []T {
-	generic := append(hm.generic, hm.primaryStore.Get(hostname)...)
-	exceptions := append(hm.genericExceptions, hm.exceptionStore.Get(hostname)...)
+func (hm *HostMatcher[T]) Get(hostname string) []T {
+	primaryResults := hm.primaryStore.Get(hostname)
+	generic := make([]T, len(hm.generic)+len(primaryResults))
+	copy(generic, hm.generic)
+	copy(generic[len(hm.generic):], primaryResults)
 
-	exceptionRuleMap := make(map[T]any, len(exceptions))
+	exceptionResults := hm.exceptionStore.Get(hostname)
+	exceptions := make([]T, len(hm.genericExceptions)+len(exceptionResults))
+	copy(exceptions, hm.genericExceptions)
+	copy(exceptions[len(hm.genericExceptions):], exceptionResults)
+
+	exceptionRuleMap := make(map[T]struct{}, len(exceptions))
 	for _, exception := range exceptions {
 		exceptionRuleMap[exception] = struct{}{}
 	}
