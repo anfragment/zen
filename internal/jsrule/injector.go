@@ -37,7 +37,6 @@ func NewInjector() *Injector {
 }
 
 func (i *Injector) AddRule(rule string) error {
-	log.Println("adding rule:", rule)
 	if match := primaryRuleRegex.FindStringSubmatch(rule); match != nil {
 		if err := i.store.AddPrimaryRule(match[1], match[2]); err != nil {
 			return fmt.Errorf("add primary rule: %w", err)
