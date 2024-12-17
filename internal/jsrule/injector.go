@@ -26,8 +26,8 @@ var (
 	primaryRuleRegex   = regexp.MustCompile(`(.*)#%#(.+)`)
 	exceptionRuleRegex = regexp.MustCompile(`(.*)#@%#(.+)`)
 
-	scriptOpeningTag = []byte("<script>")
-	scriptClosingTag = []byte("</script>")
+	injectionStart = []byte("<script>(function() {")
+	injectionEnd   = []byte("})()</script>")
 )
 
 func NewInjector() *Injector {
@@ -63,14 +63,14 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	}
 
 	var injection []byte
-	injection = append(injection, scriptOpeningTag...)
+	injection = append(injection, injectionStart...)
 	for _, script := range scripts {
 		injection = append(injection, script...)
 		if len(script) > 0 && script[len(script)-1] != ';' {
 			injection = append(injection, ';')
 		}
 	}
-	injection = append(injection, scriptClosingTag...)
+	injection = append(injection, injectionEnd...)
 
 	htmlrewrite.ReplaceBodyContents(res, func(match []byte) []byte {
 		match = append(match, injection...)
