@@ -64,8 +64,8 @@ type Filter struct {
 }
 
 var (
-	// ignoreLineRegex matches comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	ignoreLineRegex = regexp.MustCompile(`^(?:!|#|\[)`)
+	// ignoreLineRegex matches comments and [Adblock Plus 2.0]-style headers.
+	ignoreLineRegex = regexp.MustCompile(`^(?:!|\[|#([^#%]|$))`)
 	// exceptionRegex matches exception rules.
 	exceptionRegex = regexp.MustCompile(`^@@`)
 	// scriptletRegex matches scriptlet rules.
