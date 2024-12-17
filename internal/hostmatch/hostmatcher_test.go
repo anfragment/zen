@@ -109,4 +109,17 @@ func TestHostMatcherPublic(t *testing.T) {
 			t.Errorf("expected result for notsub.example.com to be 'test', got %v", res)
 		}
 	})
+
+	t.Run("rule with empty hostnamePatterns matches any hostname", func(t *testing.T) {
+		t.Parallel()
+
+		hm := hostmatch.NewHostMatcher[string]()
+		if err := hm.AddPrimaryRule("", "test"); err != nil {
+			t.Fatalf("failed to add rule: %v", err)
+		}
+
+		if res := hm.Get("example.com"); len(res) == 0 || res[0] != "test" {
+			t.Errorf("expected result for example.com to be 'test', got %v", res)
+		}
+	})
 }
