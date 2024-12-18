@@ -166,6 +166,11 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterListName *string, filt
 
 // AddRule adds a new rule to the filter. It returns true if the rule is an exception, false otherwise.
 func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted bool) (isException bool, err error) {
+	/*
+		The order of operations is crucial here.
+		jsRule.RuleRegex also matches scriptlet rules.
+		Therefore, we must first check for a scriptlet rule match before checking for a JS rule match.
+	*/
 	if scriptletRegex.MatchString(rule) {
 		if err := f.scriptletsInjector.AddRule(rule, filterListTrusted); err != nil {
 			return false, fmt.Errorf("add scriptlet: %w", err)
@@ -173,9 +178,6 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		return false, nil
 	}
 	if filterListTrusted && jsrule.RuleRegex.MatchString(rule) {
-		// The order of operations is crucial here.
-		// RuleRegex in jsrule also matches scriptlet rules.
-		// Therefore, we must first check for a scriptlet rule match before testing for a jsrule match.
 		if err := f.jsRuleInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add js rule: %w", err)
 		}
