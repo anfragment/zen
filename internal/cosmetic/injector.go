@@ -50,16 +50,15 @@ func NewInjector(store Store) (*Injector, error) {
 func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	hostname := req.URL.Hostname()
 	selectors := inj.store.Get(hostname)
-	log.Printf("got %d selectors for %q", len(selectors), logger.Redacted(hostname))
+	log.Printf("got %d cosmetic rules for %q", len(selectors), logger.Redacted(hostname))
 	if len(selectors) == 0 {
 		return nil
 	}
 
 	var ruleInjection bytes.Buffer
 	ruleInjection.Write(styleOpeningTag)
-	for _, selector := range selectors {
-		ruleInjection.WriteString(fmt.Sprintf("%s { display: none !important; }\n", selector))
-	}
+	css := generateBatchedCSS(selectors)
+	ruleInjection.WriteString(css)
 	ruleInjection.Write(styleClosingTag)
 
 	rawBodyBytes, err := readRawBody(res)
@@ -78,6 +77,24 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	res.Header.Set("Content-Type", "text/html; charset=utf-8")
 
 	return nil
+}
+
+func generateBatchedCSS(selectors []string) string {
+	const batchSize = 100
+
+	var builder strings.Builder
+	for i := 0; i < len(selectors); i += batchSize {
+		end := i + batchSize
+		if end > len(selectors) {
+			end = len(selectors)
+		}
+		batch := selectors[i:end]
+
+		joinedSelectors := strings.Join(batch, ", ")
+		builder.WriteString(fmt.Sprintf("%s { display: none !important; }\n", joinedSelectors))
+	}
+
+	return builder.String()
 }
 
 // readRawBody is replicated from internal/filter/scriptlet/injector.go for now.
