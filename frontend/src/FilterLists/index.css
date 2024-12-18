@@ -15,6 +15,10 @@
   margin-bottom: 6px;
 }
 
+.filter-lists__list-trusted {
+  margin-bottom: 6px;
+}
+
 .filter-lists__select-count {
   display: inline-block;
   margin-left: 5px;

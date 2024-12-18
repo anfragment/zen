@@ -1,14 +1,17 @@
-import { Button, FormGroup, InputGroup } from '@blueprintjs/core';
+import { Button, Classes, FormGroup, InputGroup, Switch, Tooltip } from '@blueprintjs/core';
+import { InfoSign } from '@blueprintjs/icons';
 import { useState, useRef } from 'react';
 
-import { AddFilterList } from '../../wailsjs/go/cfg/Config';
-import { AppToaster } from '../common/toaster';
+import './index.css';
 
-import { FilterListType } from './types';
+import { AddFilterList } from '../../../wailsjs/go/cfg/Config';
+import { AppToaster } from '../../common/toaster';
+import { FilterListType } from '../types';
 
 export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
   const urlRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const [trusted, setTrusted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   return (
@@ -19,6 +22,38 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
 
       <FormGroup label="Name" labelFor="name" labelInfo="(optional)">
         <InputGroup id="name" placeholder="Example filter list" type="text" inputRef={nameRef} />
+      </FormGroup>
+
+      <FormGroup
+        label={
+          <Tooltip
+            content={
+              <span className={Classes.TEXT_SMALL}>
+                Trusted lists can use powerful blocking capabilities, such as <code>trusted-</code> scriptlets and
+                JavaScript rules but <strong>may disrupt privacy and security</strong> if hijacked by a malicious party.
+                Only enable this option for lists from sources you trust.
+              </span>
+            }
+            placement="top"
+            minimal
+            matchTargetWidth
+          >
+            <span className="create-filter-list__trusted-label">
+              <span>Trusted</span>
+              <InfoSign className={Classes.TEXT_MUTED} size={12} />
+            </span>
+          </Tooltip>
+        }
+        labelFor="trusted"
+      >
+        <Switch
+          id="trusted"
+          large
+          checked={trusted}
+          onClick={(e) => {
+            setTrusted(e.currentTarget.checked);
+          }}
+        />
       </FormGroup>
 
       <Button
@@ -39,6 +74,7 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
             name,
             type: FilterListType.CUSTOM,
             enabled: true,
+            trusted,
           });
           if (err) {
             AppToaster.show({
@@ -49,6 +85,7 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
           setLoading(false);
           urlRef.current!.value = '';
           nameRef.current!.value = '';
+          setTrusted(false);
           onAdd();
         }}
         loading={loading}

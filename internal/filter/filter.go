@@ -43,7 +43,7 @@ type config interface {
 // scriptletsInjector injects scriptlets into HTML responses.
 type scriptletsInjector interface {
 	Inject(*http.Request, *http.Response) error
-	AddRule(string) error
+	AddRule(string, bool) error
 }
 
 type cosmeticRulesInjector interface {
@@ -118,34 +118,34 @@ func (f *Filter) init() {
 			continue
 		}
 		wg.Add(1)
-		go func(url string, name string) {
+		go func(filterList cfg.FilterList) {
 			defer wg.Done()
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, filterList.URL, nil)
 			if err != nil {
-				log.Printf("filter initialization: %v", err)
+				log.Printf("filter initialization error: %v", err)
 				return
 			}
 			resp, err := http.DefaultClient.Do(req) // FIXME: use a custom client with a timeout
 			if err != nil {
-				log.Printf("filter initialization: %v", err)
+				log.Printf("filter initialization error: %v", err)
 				return
 			}
 			defer resp.Body.Close()
-			rules, exceptions := f.ParseAndAddRules(resp.Body, &name)
-			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, url)
-		}(filterList.URL, filterList.Name)
+			rules, exceptions := f.ParseAndAddRules(resp.Body, &filterList.Name, filterList.Trusted)
+			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, filterList.URL)
+		}(filterList)
 	}
 	wg.Wait()
 
 	myRules := f.config.GetMyRules()
 	filterName := "My rules"
 	for _, rule := range myRules {
-		f.AddRule(rule, &filterName)
+		f.AddRule(rule, &filterName, true)
 	}
 }
 
 // ParseAndAddRules parses the rules from the given reader and adds them to the filter.
-func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCount, exceptionCount int) {
+func (f *Filter) ParseAndAddRules(reader io.Reader, filterListName *string, filterListTrusted bool) (ruleCount, exceptionCount int) {
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
@@ -154,7 +154,7 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCou
 			continue
 		}
 
-		if isException, err := f.AddRule(line, filterName); err != nil { // nolint:revive
+		if isException, err := f.AddRule(line, filterListName, filterListTrusted); err != nil { // nolint:revive
 			// log.Printf("error adding rule: %v", err)
 		} else if isException {
 			exceptionCount++
@@ -167,9 +167,9 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterName *string) (ruleCou
 }
 
 // AddRule adds a new rule to the filter. It returns true if the rule is an exception, false otherwise.
-func (f *Filter) AddRule(rule string, filterName *string) (isException bool, err error) {
+func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted bool) (isException bool, err error) {
 	if scriptletRegex.MatchString(rule) {
-		if err := f.scriptletsInjector.AddRule(rule); err != nil {
+		if err := f.scriptletsInjector.AddRule(rule, filterListTrusted); err != nil {
 			return false, fmt.Errorf("add scriptlet: %w", err)
 		}
 		return false, nil
@@ -182,12 +182,12 @@ func (f *Filter) AddRule(rule string, filterName *string) (isException bool, err
 	}
 
 	if exceptionRegex.MatchString(rule) {
-		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterName); err != nil {
+		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterListName); err != nil {
 			return true, fmt.Errorf("add exception: %w", err)
 		}
 		return true, nil
 	}
-	if err := f.ruleMatcher.AddRule(rule, filterName); err != nil {
+	if err := f.ruleMatcher.AddRule(rule, filterListName); err != nil {
 		return false, fmt.Errorf("add rule: %w", err)
 	}
 	return false, nil
