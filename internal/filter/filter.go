@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/anfragment/zen/internal/cfg"
+	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/rule"
 )
@@ -45,6 +46,11 @@ type scriptletsInjector interface {
 	AddRule(string, bool) error
 }
 
+type jsRuleInjector interface {
+	AddRule(rule string) error
+	Inject(*http.Request, *http.Response) error
+}
+
 // Filter is capable of parsing Adblock-style filter lists and hosts rules and matching URLs against them.
 //
 // Safe for concurrent use.
@@ -53,12 +59,13 @@ type Filter struct {
 	ruleMatcher          ruleMatcher
 	exceptionRuleMatcher ruleMatcher
 	scriptletsInjector   scriptletsInjector
+	jsRuleInjector       jsRuleInjector
 	eventsEmitter        filterEventsEmitter
 }
 
 var (
-	// ignoreLineRegex matches comments, cosmetic rules and [Adblock Plus 2.0]-style headers.
-	ignoreLineRegex = regexp.MustCompile(`^(?:!|#|\[)`)
+	// ignoreLineRegex matches comments and [Adblock Plus 2.0]-style headers.
+	ignoreLineRegex = regexp.MustCompile(`^(?:!|\[|#([^#%]|$))`)
 	// exceptionRegex matches exception rules.
 	exceptionRegex = regexp.MustCompile(`^@@`)
 	// scriptletRegex matches scriptlet rules.
@@ -66,7 +73,7 @@ var (
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -79,6 +86,9 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 	if scriptletsInjector == nil {
 		return nil, errors.New("scriptletsInjector is nil")
 	}
+	if jsRuleInjector == nil {
+		return nil, errors.New("jsRuleInjector is nil")
+	}
 	if exceptionRuleMatcher == nil {
 		return nil, errors.New("exceptionRuleMatcher is nil")
 	}
@@ -88,6 +98,7 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 		ruleMatcher:          ruleMatcher,
 		exceptionRuleMatcher: exceptionRuleMatcher,
 		scriptletsInjector:   scriptletsInjector,
+		jsRuleInjector:       jsRuleInjector,
 		eventsEmitter:        eventsEmitter,
 	}
 	f.init()
@@ -155,9 +166,20 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterListName *string, filt
 
 // AddRule adds a new rule to the filter. It returns true if the rule is an exception, false otherwise.
 func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted bool) (isException bool, err error) {
+	/*
+		The order of operations is crucial here.
+		jsRule.RuleRegex also matches scriptlet rules.
+		Therefore, we must first check for a scriptlet rule match before checking for a JS rule match.
+	*/
 	if scriptletRegex.MatchString(rule) {
 		if err := f.scriptletsInjector.AddRule(rule, filterListTrusted); err != nil {
 			return false, fmt.Errorf("add scriptlet: %w", err)
+		}
+		return false, nil
+	}
+	if filterListTrusted && jsrule.RuleRegex.MatchString(rule) {
+		if err := f.jsRuleInjector.AddRule(rule); err != nil {
+			return false, fmt.Errorf("add js rule: %w", err)
 		}
 		return false, nil
 	}
@@ -224,6 +246,10 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 			// The error is recoverable, so we log it and continue processing the response.
 			log.Printf("error injecting scriptlets for %q: %v", logger.Redacted(req.URL), err)
 		}
+		if err := f.jsRuleInjector.Inject(req, res); err != nil {
+			// The error is recoverable, so we log it and continue processing the response.
+			log.Printf("error injecting js rules for %q: %v", logger.Redacted(req.URL), err)
+		}
 	}
 
 	if len(f.exceptionRuleMatcher.FindMatchingRulesRes(req, res)) > 0 {
@@ -254,7 +280,8 @@ func isDocumentNavigation(req *http.Request, res *http.Response) bool {
 	// Sec-Fetch-Dest: document indicates that the destination is a document (HTML or XML),
 	// and the request is the result of a user-initiated top-level navigation (e.g. resulting from a user clicking a link).
 	// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-Fetch-Dest#document
-	if req.Header.Get("Sec-Fetch-Dest") != "document" {
+	// Note: Although not explicitly stated in the spec, Fetch Metadata Request Headers are only included in requests sent to HTTPS endpoints.
+	if req.URL.Scheme == "https" && req.Header.Get("Sec-Fetch-Dest") != "document" {
 		return false
 	}
 
