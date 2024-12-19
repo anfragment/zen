@@ -2,6 +2,7 @@ package cosmetic
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -30,8 +31,13 @@ func (inj *Injector) AddRule(rule string) error {
 		return errUnsupportedSyntax
 	}
 
+	sanitizedSelector, err := SanitizeCSSSelector(selector)
+	if err != nil {
+		return fmt.Errorf("failed to sanitize selector: %w", err)
+	}
+
 	if len(rawHostnames) == 0 {
-		inj.store.Add(nil, selector)
+		inj.store.Add(nil, sanitizedSelector)
 		return nil
 	}
 
@@ -46,8 +52,8 @@ func (inj *Injector) AddRule(rule string) error {
 			subdomainHostnames = append(subdomainHostnames, "*."+hostname)
 		}
 	}
-	inj.store.Add(hostnames, selector)
-	inj.store.Add(subdomainHostnames, selector)
+	inj.store.Add(hostnames, sanitizedSelector)
+	inj.store.Add(subdomainHostnames, sanitizedSelector)
 
 	return nil
 }
