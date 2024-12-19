@@ -12,7 +12,7 @@ require (
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
 	github.com/klauspost/compress v1.17.9
 	github.com/wailsapp/wails/v2 v2.9.2
-	golang.org/x/net v0.25.0
+	golang.org/x/net v0.32.0
 	golang.org/x/sys v0.28.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	howett.net/plist v1.0.0
