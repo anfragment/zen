@@ -1,29 +1,29 @@
 package cosmetic
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-// SanitizeCSSSelector validates and sanitizes a CSS selector.
-func SanitizeCSSSelector(selectorInput string) (string, error) {
-	// Step 1: Decode Unicode escapes.
-	selector := decodeUnicodeEscapes(selectorInput)
-
-	// Step 2: Check for balanced quotes and brackets.
-	if !hasBalancedQuotesAndBrackets(selector) {
-		return "", fmt.Errorf("selector has unbalanced quotes or brackets")
+// sanitizeCSSSelector validates and sanitizes a CSS selector.
+func sanitizeCSSSelector(selectorInput string) (string, error) {
+	if strings.Contains(selectorInput, "</style>") {
+		return "", errors.New("selector contains '</style>' which is not allowed")
 	}
 
-	// Step 3: Sanitize dangerous characters outside of strings.
-	sanitizedSelector, err := sanitizeSelector(selector)
-	if err != nil {
+	selector := decodeUnicodeEscapes(selectorInput)
+	if !hasBalancedQuotesAndBrackets(selector) {
+		return "", errors.New("selector has unbalanced quotes or brackets")
+	}
+
+	if err := validateSelector(selector); err != nil {
 		return "", fmt.Errorf("sanitize selector: %w", err)
 	}
 
-	return sanitizedSelector, nil
+	return selector, nil
 }
 
 // decodeUnicodeEscapes replaces CSS Unicode escapes with their actual characters.
@@ -104,9 +104,8 @@ func hasBalancedQuotesAndBrackets(s string) bool {
 	return !inSingleQuote && !inDoubleQuote && len(stack) == 0 && !escaped
 }
 
-// sanitizeSelector removes dangerous characters outside of strings.
-func sanitizeSelector(s string) (string, error) {
-	var builder strings.Builder
+// validateSelector checks for dangerous sequences in the selector.
+func validateSelector(s string) error {
 	inSingleQuote := false
 	inDoubleQuote := false
 	escaped := false
@@ -117,13 +116,11 @@ func sanitizeSelector(s string) (string, error) {
 
 		if escaped {
 			escaped = false
-			builder.WriteRune(c)
 			continue
 		}
 
 		if c == '\\' {
 			escaped = true
-			builder.WriteRune(c)
 			continue
 		}
 
@@ -131,7 +128,6 @@ func sanitizeSelector(s string) (string, error) {
 			if c == '\'' {
 				inSingleQuote = false
 			}
-			builder.WriteRune(c)
 			continue
 		}
 
@@ -139,39 +135,34 @@ func sanitizeSelector(s string) (string, error) {
 			if c == '"' {
 				inDoubleQuote = false
 			}
-			builder.WriteRune(c)
 			continue
 		}
 
 		if c == '\'' {
 			inSingleQuote = true
-			builder.WriteRune(c)
 			continue
 		}
 
 		if c == '"' {
 			inDoubleQuote = true
-			builder.WriteRune(c)
 			continue
 		}
 
 		if !inSingleQuote && !inDoubleQuote {
 			// Check for dangerous sequences.
 			if c == '/' && i+1 < len(runes) && runes[i+1] == '*' {
-				return "", fmt.Errorf("found '/*' outside of quotes")
+				return errors.New("found '/*' outside of quotes")
 			}
 
 			if c == '*' && i+1 < len(runes) && runes[i+1] == '/' {
-				return "", fmt.Errorf("found '*/' outside of quotes")
+				return errors.New("found '*/' outside of quotes")
 			}
 
 			if c == '{' || c == '}' || c == ';' || c == '@' {
-				return "", fmt.Errorf("found dangerous character '%c' outside of quotes", c)
+				return fmt.Errorf("found dangerous character '%c' outside of quotes", c)
 			}
 		}
-
-		builder.WriteRune(c)
 	}
 
-	return builder.String(), nil
+	return nil
 }

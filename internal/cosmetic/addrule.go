@@ -13,13 +13,9 @@ var (
 	RuleRegex = regexp.MustCompile(`^(?:([^#$]+?)##|##)(.+)$`)
 
 	errUnsupportedSyntax = errors.New("unsupported syntax")
-	errNotAllowed        = errors.New("rule contains </style> which is not allowed")
 )
 
 func (inj *Injector) AddRule(rule string) error {
-	if strings.Contains(rule, "</style>") {
-		return errNotAllowed
-	}
 
 	var rawHostnames string
 	var selector string
@@ -31,7 +27,7 @@ func (inj *Injector) AddRule(rule string) error {
 		return errUnsupportedSyntax
 	}
 
-	sanitizedSelector, err := SanitizeCSSSelector(selector)
+	sanitizedSelector, err := sanitizeCSSSelector(selector)
 	if err != nil {
 		return fmt.Errorf("failed to sanitize selector: %w", err)
 	}
