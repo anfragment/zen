@@ -15,9 +15,8 @@ import (
 var (
 	//go:embed bundle.js
 	scriptletsBundleFS embed.FS
-	// reBody captures contents of the body tag in an HTML document.
-	scriptOpeningTag = []byte("<script>")
-	scriptClosingTag = []byte("</script>")
+	scriptOpeningTag   = []byte("<script>")
+	scriptClosingTag   = []byte("</script>")
 )
 
 type Store interface {

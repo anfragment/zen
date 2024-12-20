@@ -17,6 +17,7 @@ import (
 	"github.com/anfragment/zen/internal/cosmetic"
 	cosmeticTrieStore "github.com/anfragment/zen/internal/cosmetic/triestore"
 	"github.com/anfragment/zen/internal/filter"
+	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/ruletree"
@@ -179,7 +180,9 @@ func (a *App) StartProxy() (err error) {
 		return fmt.Errorf("create cosmetic rules injector: %v", err)
 	}
 
-	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, scriptletInjector, cosmeticRulesInjector, a.eventsHandler)
+	jsRuleInjector := jsrule.NewInjector()
+
+	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, scriptletInjector, cosmeticRulesInjector, jsRuleInjector, a.eventsHandler)
 	if err != nil {
 		return fmt.Errorf("create filter: %v", err)
 	}
