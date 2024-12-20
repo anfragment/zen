@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/anfragment/zen/internal/cfg"
+	"github.com/anfragment/zen/internal/cosmetic"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/rule"
@@ -46,6 +47,11 @@ type scriptletsInjector interface {
 	AddRule(string, bool) error
 }
 
+type cosmeticRulesInjector interface {
+	Inject(*http.Request, *http.Response) error
+	AddRule(string) error
+}
+
 type jsRuleInjector interface {
 	AddRule(rule string) error
 	Inject(*http.Request, *http.Response) error
@@ -55,12 +61,13 @@ type jsRuleInjector interface {
 //
 // Safe for concurrent use.
 type Filter struct {
-	config               config
-	ruleMatcher          ruleMatcher
-	exceptionRuleMatcher ruleMatcher
-	scriptletsInjector   scriptletsInjector
-	jsRuleInjector       jsRuleInjector
-	eventsEmitter        filterEventsEmitter
+	config                config
+	ruleMatcher           ruleMatcher
+	exceptionRuleMatcher  ruleMatcher
+	scriptletsInjector    scriptletsInjector
+	cosmeticRulesInjector cosmeticRulesInjector
+	jsRuleInjector        jsRuleInjector
+	eventsEmitter         filterEventsEmitter
 }
 
 var (
@@ -70,10 +77,12 @@ var (
 	exceptionRegex = regexp.MustCompile(`^@@`)
 	// scriptletRegex matches scriptlet rules.
 	scriptletRegex = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
+	// cosmeticRuleRegex matches cosmetic rules.
+	cosmeticRuleRegex = cosmetic.RuleRegex
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -86,6 +95,9 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 	if scriptletsInjector == nil {
 		return nil, errors.New("scriptletsInjector is nil")
 	}
+	if cosmeticRulesInjector == nil {
+		return nil, errors.New("cosmeticRulesInjector is nil")
+	}
 	if jsRuleInjector == nil {
 		return nil, errors.New("jsRuleInjector is nil")
 	}
@@ -94,12 +106,13 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 	}
 
 	f := &Filter{
-		config:               config,
-		ruleMatcher:          ruleMatcher,
-		exceptionRuleMatcher: exceptionRuleMatcher,
-		scriptletsInjector:   scriptletsInjector,
-		jsRuleInjector:       jsRuleInjector,
-		eventsEmitter:        eventsEmitter,
+		config:                config,
+		ruleMatcher:           ruleMatcher,
+		exceptionRuleMatcher:  exceptionRuleMatcher,
+		scriptletsInjector:    scriptletsInjector,
+		cosmeticRulesInjector: cosmeticRulesInjector,
+		jsRuleInjector:        jsRuleInjector,
+		eventsEmitter:         eventsEmitter,
 	}
 	f.init()
 
@@ -177,6 +190,13 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		}
 		return false, nil
 	}
+
+	if cosmeticRuleRegex.MatchString(rule) {
+		if err := f.cosmeticRulesInjector.AddRule(rule); err != nil {
+			return false, fmt.Errorf("add cosmetic rule: %w", err)
+		}
+	}
+
 	if filterListTrusted && jsrule.RuleRegex.MatchString(rule) {
 		if err := f.jsRuleInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add js rule: %w", err)
@@ -245,6 +265,10 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 		if err := f.scriptletsInjector.Inject(req, res); err != nil {
 			// The error is recoverable, so we log it and continue processing the response.
 			log.Printf("error injecting scriptlets for %q: %v", logger.Redacted(req.URL), err)
+		}
+
+		if err := f.cosmeticRulesInjector.Inject(req, res); err != nil {
+			log.Printf("error injecting cosmetic rules for %q: %v", logger.Redacted(req.URL), err)
 		}
 		if err := f.jsRuleInjector.Inject(req, res); err != nil {
 			// The error is recoverable, so we log it and continue processing the response.
