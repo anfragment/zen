@@ -6,35 +6,55 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 
+	"github.com/anfragment/zen/internal/hostmatch"
 	"github.com/anfragment/zen/internal/htmlrewrite"
 	"github.com/anfragment/zen/internal/logger"
 )
 
 var (
-	styleOpeningTag = []byte("<style>")
-	styleClosingTag = []byte("</style>")
+	RuleRegex          = regexp.MustCompile(`.*#@?#.+`)
+	primaryRuleRegex   = regexp.MustCompile(`(.*?)##(.*)`)
+	exceptionRuleRegex = regexp.MustCompile(`(.*?)#@#(.+)`)
+
+	injectionStart = []byte("<style>")
+	injectionEnd   = []byte("</style>")
 )
 
-type Injector struct {
-	// store stores and retrieves css by hostname.
-	store Store
-}
-
-type Store interface {
-	Add(hostnames []string, selector string)
+type store interface {
+	AddPrimaryRule(hostnamePatterns string, selector string) error
+	AddExceptionRule(hostnamePatterns string, selector string) error
 	Get(hostname string) []string
 }
 
-func NewInjector(store Store) (*Injector, error) {
-	if store == nil {
-		return nil, errors.New("store is nil")
+type Injector struct {
+	store store
+}
+
+func NewInjector() *Injector {
+	return &Injector{
+		store: hostmatch.NewHostMatcher[string](),
+	}
+}
+
+func (inj *Injector) AddRule(rule string) error {
+	if match := primaryRuleRegex.FindStringSubmatch(rule); match != nil {
+		if err := inj.store.AddPrimaryRule(match[1], match[2]); err != nil {
+			return fmt.Errorf("add primary rule: %w", err)
+		}
+		return nil
 	}
 
-	return &Injector{
-		store: store,
-	}, nil
+	if match := exceptionRuleRegex.FindStringSubmatch(rule); match != nil {
+		if err := inj.store.AddExceptionRule(match[1], match[2]); err != nil {
+			return fmt.Errorf("add exception rule: %w", err)
+		}
+		return nil
+	}
+
+	return errors.New("unsupported syntax")
 }
 
 func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
@@ -46,10 +66,10 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	}
 
 	var ruleInjection bytes.Buffer
-	ruleInjection.Write(styleOpeningTag)
+	ruleInjection.Write(injectionStart)
 	css := generateBatchedCSS(selectors)
 	ruleInjection.WriteString(css)
-	ruleInjection.Write(styleClosingTag)
+	ruleInjection.Write(injectionEnd)
 
 	htmlrewrite.ReplaceHeadContents(res, func(match []byte) []byte {
 		return bytes.Join([][]byte{match, ruleInjection.Bytes()}, nil)
