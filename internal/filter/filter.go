@@ -77,8 +77,6 @@ var (
 	exceptionRegex = regexp.MustCompile(`^@@`)
 	// scriptletRegex matches scriptlet rules.
 	scriptletRegex = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
-	// cosmeticRuleRegex matches cosmetic rules.
-	cosmeticRuleRegex = cosmetic.RuleRegex
 )
 
 // NewFilter creates and initializes a new filter.
@@ -191,7 +189,7 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		return false, nil
 	}
 
-	if cosmeticRuleRegex.MatchString(rule) {
+	if cosmetic.RuleRegex.MatchString(rule) {
 		if err := f.cosmeticRulesInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add cosmetic rule: %w", err)
 		}
