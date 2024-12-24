@@ -47,7 +47,7 @@ export function createPrune(propsToRemove: string, requiredProps?: string, stack
 }
 
 function prunePath(obj: any, path: PropPath) {
-  if (path.length === 0) {
+  if (path.length === 0 || obj == null) {
     return;
   }
 
@@ -83,6 +83,9 @@ function prunePath(obj: any, path: PropPath) {
 }
 
 function matchesPath(obj: any, path: PropPath): boolean {
+  if (obj == null) {
+    return false;
+  }
   if (path.length === 0) {
     return true;
   }

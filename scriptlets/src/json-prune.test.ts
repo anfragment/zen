@@ -83,4 +83,10 @@ describe('json-prune', () => {
     const obj = JSON.parse('{"a": 123}');
     expect(obj).toEqual({});
   });
+
+  test('"null" gets parsed to null', () => {
+    jsonPrune('test');
+
+    expect(JSON.parse('null')).toEqual(null);
+  });
 });
