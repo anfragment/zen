@@ -1,6 +1,7 @@
 package jsrule
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -73,8 +74,7 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	injection = append(injection, injectionEnd...)
 
 	htmlrewrite.ReplaceBodyContents(res, func(match []byte) []byte {
-		match = append(match, injection...)
-		return match
+		return bytes.Join([][]byte{injection, match}, nil)
 	})
 
 	return nil
