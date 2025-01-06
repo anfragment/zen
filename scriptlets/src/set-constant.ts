@@ -161,7 +161,9 @@ export function setConstant(
     get: () => {
       let capturedValue;
       if (typeof prevGetter === 'function') {
-        capturedValue = prevGetter();
+        // On certain properties, Safari wants window getters to be called with "window" as "this".
+        // Therefore, we apply instead of doing a regular function call.
+        capturedValue = prevGetter.apply(window);
       } else {
         capturedValue = window[localKey];
       }
