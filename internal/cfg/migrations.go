@@ -43,6 +43,10 @@ var migrations = map[string]func(c *Config) error{
 				c.Filter.FilterLists[i].Trusted = true
 				log.Printf("v0.7.0 migration: setting %q list as trusted", list.URL)
 			}
+			if list.URL == "https://easylist-downloads.adblockplus.org/easylist_noelemhide.txt" {
+				c.Filter.FilterLists[i].URL = "https://easylist.to/easylist/easylist.txt"
+				log.Printf("v0.7.0 migration: updating EasyList's URL")
+			}
 		}
 
 		if err := c.Save(); err != nil {
