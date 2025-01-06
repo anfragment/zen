@@ -2,7 +2,7 @@
   "filter": {
     "filterLists": [
       { 
-        "url": "https://easylist-downloads.adblockplus.org/easylist_noelemhide.txt",
+        "url": "https://easylist.to/easylist/easylist.txt",
         "name": "EasyList",
         "enabled": true,
         "type": "ads"
