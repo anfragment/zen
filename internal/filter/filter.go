@@ -16,6 +16,7 @@ import (
 
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/cosmetic"
+	"github.com/anfragment/zen/internal/cssrule"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/rule"
@@ -52,6 +53,11 @@ type cosmeticRulesInjector interface {
 	AddRule(string) error
 }
 
+type cssRulesInjector interface {
+	Inject(*http.Request, *http.Response) error
+	AddRule(string) error
+}
+
 type jsRuleInjector interface {
 	AddRule(rule string) error
 	Inject(*http.Request, *http.Response) error
@@ -66,6 +72,7 @@ type Filter struct {
 	exceptionRuleMatcher  ruleMatcher
 	scriptletsInjector    scriptletsInjector
 	cosmeticRulesInjector cosmeticRulesInjector
+	cssRulesInjector      cssRulesInjector
 	jsRuleInjector        jsRuleInjector
 	eventsEmitter         filterEventsEmitter
 }
@@ -80,7 +87,7 @@ var (
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -96,6 +103,9 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 	if cosmeticRulesInjector == nil {
 		return nil, errors.New("cosmeticRulesInjector is nil")
 	}
+	if cssRulesInjector == nil {
+		return nil, errors.New("cssRulesInjector is nil")
+	}
 	if jsRuleInjector == nil {
 		return nil, errors.New("jsRuleInjector is nil")
 	}
@@ -109,6 +119,7 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 		exceptionRuleMatcher:  exceptionRuleMatcher,
 		scriptletsInjector:    scriptletsInjector,
 		cosmeticRulesInjector: cosmeticRulesInjector,
+		cssRulesInjector:      cssRulesInjector,
 		jsRuleInjector:        jsRuleInjector,
 		eventsEmitter:         eventsEmitter,
 	}
@@ -195,6 +206,13 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		}
 	}
 
+	if filterListTrusted && cssrule.RuleRegex.MatchString(rule) {
+		if err := f.cssRulesInjector.AddRule(rule); err != nil {
+			return false, fmt.Errorf("add css rule: %w", err)
+		}
+		return false, nil
+	}
+
 	if filterListTrusted && jsrule.RuleRegex.MatchString(rule) {
 		if err := f.jsRuleInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add js rule: %w", err)
@@ -267,6 +285,9 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 
 		if err := f.cosmeticRulesInjector.Inject(req, res); err != nil {
 			log.Printf("error injecting cosmetic rules for %q: %v", logger.Redacted(req.URL), err)
+		}
+		if err := f.cssRulesInjector.Inject(req, res); err != nil {
+			log.Printf("error injecting css rules for %q: %v", logger.Redacted(req.URL), err)
 		}
 		if err := f.jsRuleInjector.Inject(req, res); err != nil {
 			// The error is recoverable, so we log it and continue processing the response.
