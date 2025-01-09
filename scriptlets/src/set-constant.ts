@@ -140,6 +140,16 @@ export function setConstant(
       return fakeValue;
     }
     if (chain[0] !== key || (typeof link !== 'object' && link != undefined)) {
+      if (
+        typeof link === 'function' &&
+        // Prevent rebinding if the function is already bound.
+        // Bound functions can be identified by the "bound " prefix in their name. See:
+        // https://262.ecma-international.org/6.0/index.html#sec-function.prototype.bind
+        !link.name.startsWith('bound ')
+      ) {
+        // Fixes https://github.com/anfragment/zen/issues/201
+        return link.bind(target);
+      }
       return link;
     }
 
