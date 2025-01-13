@@ -60,4 +60,6 @@ require (
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/text v0.21.0 // indirect
+	github.com/likexian/doh v0.7.1 // indirect
+	github.com/likexian/gokit v0.25.15 // indirect
 )

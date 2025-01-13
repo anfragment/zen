@@ -74,6 +74,10 @@ github.com/leaanthony/slicer v1.6.0 h1:1RFP5uiPJvT93TAHi+ipd3NACobkW53yUiBqZheE/
 github.com/leaanthony/slicer v1.6.0/go.mod h1:o/Iz29g7LN0GqH3aMjWAe90381nyZlDNquK+mtH2Fj8=
 github.com/leaanthony/u v1.1.0 h1:2n0d2BwPVXSUq5yhe8lJPHdxevE2qK5G99PMStMZMaI=
 github.com/leaanthony/u v1.1.0/go.mod h1:9+o6hejoRljvZ3BzdYlVL0JYCwtnAsVuN9pVTQcaRfI=
+github.com/likexian/doh v0.7.1 h1:0p75orMxXrfGNAOnOEtl2xZ5T9Ctqi++i/WhN6P6hs8=
+github.com/likexian/doh v0.7.1/go.mod h1:aIEOK197o6nC82iRo5+5L5ws+X7xRCmuer3M4In91WA=
+github.com/likexian/gokit v0.25.15 h1:QjospM1eXhdMMHwZRpMKKAHY/Wig9wgcREmLtf9NslY=
+github.com/likexian/gokit v0.25.15/go.mod h1:S2QisdsxLEHWeD/XI0QMVeggp+jbxYqUxMvSBil7MRg=
 github.com/matryer/is v1.4.0 h1:sosSmIWwkYITGrxZ25ULNDeKiMNzFSr4V/eqBQP0PeE=
 github.com/matryer/is v1.4.0/go.mod h1:8I/i5uYgLzgsgEloJE1U6xx5HkBQpAZvepWuujKwMRU=
 github.com/mattn/go-colorable v0.1.11/go.mod h1:u5H1YNBxpqRaxsYJYSkiCWKzEfiAb1Gb520KVy5xxl4=

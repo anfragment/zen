@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/anfragment/zen/internal/logger"
+	"github.com/likexian/doh"
+    	"github.com/likexian/doh/dns"
 )
 
 // certGenerator is an interface capable of generating certificates for the proxy.
@@ -68,6 +70,26 @@ func NewProxy(filter filter, certGenerator certGenerator, port int, ignoredHosts
 	p.requestTransport = &http.Transport{
 		Dial:                p.netDialer.Dial,
 		TLSHandshakeTimeout: 20 * time.Second,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				// init doh client, auto select the fastest provider base on your like
+				// you can also use as: c := doh.Use(), it will select from all providers
+				c := doh.Use(doh.CloudflareProvider, doh.GoogleProvider)
+		
+				// do doh query
+				rsp, err := c.Query(ctx, dns.Domain(strings.Split(addr,":")[0]), dns.TypeA)
+				if err != nil {
+					panic(err)
+				}
+		
+				// close the client
+				c.Close()
+		
+				// doh dns answer
+				ip := rsp.Answer[0].Data
+				
+				addr = ip + ":443"
+		        return p.netDialer.DialContext(ctx, network, addr)
+		    },
 	}
 	p.requestClient = &http.Client{
 		Timeout:   60 * time.Second,
