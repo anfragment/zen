@@ -77,7 +77,7 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	ruleInjection.WriteString("})();\n")
 	ruleInjection.Write(scriptClosingTag)
 
-	htmlrewrite.ReplaceBodyContents(res, func(match []byte) []byte {
+	htmlrewrite.ReplaceHeadContents(res, func(match []byte) []byte {
 		return bytes.Join([][]byte{inj.bundle, ruleInjection.Bytes(), match}, nil)
 	})
 
