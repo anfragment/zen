@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"strings"
 
@@ -31,13 +30,7 @@ func readRawBody(res *http.Response) ([]byte, error) {
 		return nil, fmt.Errorf("create decompressed reader: %w", err)
 	}
 
-	contentType := res.Header.Get("Content-Type")
-	_, params, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		res.Body = io.NopCloser(bytes.NewReader(resBytes))
-		return nil, fmt.Errorf("parse media type: %w", err)
-	}
-	decodedReader, err := decodeReader(decompressedReader, params["charset"])
+	decodedReader, err := charset.NewReader(decompressedReader, res.Header.Get("Content-Type"))
 	if err != nil {
 		decompressedReader.Close()
 		res.Body = io.NopCloser(bytes.NewReader(resBytes))
@@ -78,20 +71,5 @@ func decompressReader(reader io.Reader, compressionAlg string) (io.ReadCloser, e
 		return io.NopCloser(reader), nil
 	default:
 		return nil, fmt.Errorf("unsupported encoding %q", compressionAlg)
-	}
-}
-
-// decodeReader decodes the reader based on the provided character encoding.
-func decodeReader(reader io.Reader, encoding string) (io.Reader, error) {
-	// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type#media-type
-	switch strings.ToLower(encoding) {
-	case "utf-8", "us-ascii", "":
-		return reader, nil
-	default:
-		encoding, _ := charset.Lookup(encoding)
-		if encoding == nil {
-			return nil, fmt.Errorf("unsupported charset %q", encoding)
-		}
-		return encoding.NewDecoder().Reader(reader), nil
 	}
 }
