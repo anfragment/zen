@@ -13,15 +13,16 @@ var (
 	reAdguardScriptlet = regexp.MustCompile(`(.*)#%#\/\/scriptlet\((.+)\)`)
 	// adguardToCanonical maps AdGuard scriptlet names to their respective implementations inside the scriptlet bundle.
 	adguardToCanonical = map[string]string{
-		"set-local-storage-item":    "setLocalStorageItem",
-		"set-session-storage-item":  "setSessionStorageItem",
-		"nowebrtc":                  "nowebrtc",
-		"prevent-fetch":             "preventFetch",
-		"prevent-xhr":               "preventXHR",
-		"set-constant":              "setConstant",
-		"json-prune":                "jsonPrune",
-		"json-prune-fetch-response": "jsonPruneFetchResponse",
-		"json-prune-xhr-response":   "jsonPruneXHRResponse",
+		"set-local-storage-item":      "setLocalStorageItem",
+		"set-session-storage-item":    "setSessionStorageItem",
+		"nowebrtc":                    "nowebrtc",
+		"prevent-fetch":               "preventFetch",
+		"prevent-xhr":                 "preventXHR",
+		"set-constant":                "setConstant",
+		"json-prune":                  "jsonPrune",
+		"json-prune-fetch-response":   "jsonPruneFetchResponse",
+		"json-prune-xhr-response":     "jsonPruneXHRResponse",
+		"abort-current-inline-script": "abortCurrentInlineScript",
 	}
 	// reUblockScriptlet detects and extracts key data from uBlock Origin-style scriptlets.
 	reUblockScriptlet = regexp.MustCompile(`(.*)##\+js\((.+)\)`)
