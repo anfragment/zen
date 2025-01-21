@@ -279,7 +279,7 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 	if isDocumentNavigation(req, res) {
 		if err := f.scriptletsInjector.Inject(req, res); err != nil {
-			// The error is recoverable, so we log it and continue processing the response.
+			// This and the following injection errors are recoverable, so we log them and continue processing the response.
 			log.Printf("error injecting scriptlets for %q: %v", logger.Redacted(req.URL), err)
 		}
 
@@ -290,7 +290,6 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 			log.Printf("error injecting css rules for %q: %v", logger.Redacted(req.URL), err)
 		}
 		if err := f.jsRuleInjector.Inject(req, res); err != nil {
-			// The error is recoverable, so we log it and continue processing the response.
 			log.Printf("error injecting js rules for %q: %v", logger.Redacted(req.URL), err)
 		}
 	}

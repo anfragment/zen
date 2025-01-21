@@ -1,7 +1,6 @@
 package jsrule
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -73,9 +72,9 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	}
 	injection = append(injection, injectionEnd...)
 
-	htmlrewrite.ReplaceBodyContents(res, func(match []byte) []byte {
-		return bytes.Join([][]byte{injection, match}, nil)
-	})
+	if err := htmlrewrite.PrependBodyContents(res, injection); err != nil {
+		return fmt.Errorf("prepend body contents: %w", err)
+	}
 
 	return nil
 }
