@@ -39,9 +39,7 @@ func (p *Proxy) proxyWebsocket(w http.ResponseWriter, req *http.Request) {
 
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("http server does not support hijacking")
-		return
+		panic("http server does not support hijacking")
 	}
 	clientConn, _, err := hj.Hijack()
 	if err != nil {
