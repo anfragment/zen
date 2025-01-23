@@ -3,6 +3,37 @@ import { parseRegexpFromString, parseRegexpLiteral } from './helpers/parseRegexp
 
 const logger = createLogger('abort-current-inline-script');
 
+type AnyObject = { [key: string]: any };
+
+function isPropertyConfigurable(o: AnyObject, prop: string): boolean {
+  if (!o) {
+    return true;
+  }
+
+  const descriptor = Object.getOwnPropertyDescriptor(o, prop);
+  if (!descriptor) {
+    return true;
+  }
+
+  return Boolean(descriptor.configurable);
+}
+
+function createProxy(chainParts: string[] = []): any {
+  const backingStore: AnyObject = {};
+  return new Proxy(backingStore, {
+    get(target, prop: string) {
+      if (!(prop in target)) {
+        target[prop] = createProxy([...chainParts, prop]);
+      }
+      return target[prop];
+    },
+    set(target, prop: string, value) {
+      target[prop] = value;
+      return true;
+    },
+  });
+}
+
 export function abortCurrentInlineScript(property: string, search?: string | null): void {
   if (typeof property !== 'string' || property.length === 0) {
     logger.warn('property should be a non-empty string');
@@ -14,106 +45,97 @@ export function abortCurrentInlineScript(property: string, search?: string | nul
     searchRe = parseRegexpLiteral(search) || parseRegexpFromString(search);
   }
   const rid = generateRandomId();
-
   const currentScript = document.currentScript;
 
   const abort = () => {
     const element = document.currentScript;
-
     if (
-      true
-      // element instanceof HTMLScriptElement &&
-      // // !element.src &&
-      // element !== currentScript &&
-      // (!searchRe || searchRe.test(element.textContent || ''))
+      element instanceof HTMLScriptElement &&
+      element !== currentScript &&
+      (!searchRe || searchRe.test(element.textContent || ''))
     ) {
-      logger.info(`Blocked ${property} in`, element);
+      logger.info(`Blocked ${property} in, currentScript`);
       throw new ReferenceError(`Aborted script with ID: ${rid}`);
     }
   };
 
-  if (!property.includes('.')) {
-    const descriptor = Object.getOwnPropertyDescriptor(window, property) || {};
-    const originalGetter = descriptor.get;
-    const originalSetter = descriptor.set;
+  function defineProxyChain(root: AnyObject, chain: string): void {
+    const parts = chain.split('.');
+    let current = root;
 
-    let currentValue = window[property as any];
-    Object.defineProperty(window, property, {
-      configurable: true,
-      get() {
-        abort();
-        return originalGetter ? originalGetter.call(this) : currentValue;
-      },
-      set(value) {
-        abort();
-        if (originalSetter) {
-          originalSetter.call(this, value);
-        } else {
-          currentValue = value;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isLast = i === parts.length - 1;
+      const chainSoFar = parts.slice(0, i + 1);
+
+      // final property in chain
+      if (isLast) {
+        const propName = chainSoFar[chainSoFar.length - 1];
+        const originalDescriptor = Object.getOwnPropertyDescriptor(current, propName) || {};
+        let originalGetter = originalDescriptor.get;
+        let originalSetter = originalDescriptor.set;
+        let originalValue = originalDescriptor.value;
+
+        Object.defineProperty(current, parts[parts.length - 1], {
+          configurable: true,
+          enumerable: true,
+          get() {
+            abort();
+
+            return originalGetter ? originalGetter.call(this) : originalValue;
+          },
+          set(newValue) {
+            abort();
+
+            if (originalSetter) {
+              originalSetter.call(this, newValue);
+            } else {
+              originalValue = newValue;
+            }
+
+            // idk yet if thats needed
+            // if (originalSetter) {
+            //   originalSetter.call(current, v);
+            // } else {
+            //   // Avoid infinite recursion by directly setting the property on the target.
+            //   Object.defineProperty(current, propName, {
+            //     configurable: true,
+            //     enumerable: true,
+            //     writable: true,
+            //     value: v,
+            //   });
+            // }
+          },
+        });
+      } else {
+        // intermediate property in chain
+        const isConfigurable = isPropertyConfigurable(current, part);
+        const propExists = Object.prototype.hasOwnProperty.call(current, part);
+
+        if (isConfigurable && !propExists) {
+          let internalValue: any;
+          Object.defineProperty(current, part, {
+            configurable: true,
+            enumerable: true,
+            get() {
+              if (internalValue === undefined) {
+                internalValue = createProxy(chainSoFar);
+              }
+              return internalValue;
+            },
+            set(newValue) {
+              internalValue = newValue;
+            },
+          });
         }
-      },
-    });
-    return;
+
+        // Move into the next level of the chain.
+        current = current[part];
+      }
+    }
   }
 
-  const path = property.split('.');
-  const rootProp = path.shift() as string;
-
-  const get = (chain: string[]) => (target: any, key: any) => {
-    const link = target[key];
-    if (link == undefined) {
-      return link;
-    }
-
-    if (chain.length === 1 && chain[0] === key) {
-      abort();
-      return link;
-    }
-    if (chain[0] !== key || typeof link !== 'object') {
-      if (
-        typeof link === 'function' &&
-        // Prevent rebinding if the function is already bound.
-        // Bound functions can be identified by the "bound " prefix in their name. See:
-        // https://262.ecma-international.org/6.0/index.html#sec-function.prototype.bind
-        !link.name.startsWith('bound ')
-      ) {
-        // Fixes https://github.com/anfragment/zen/issues/201
-        return link.bind(target);
-      }
-      return link;
-    }
-
-    const newChain = chain.slice(1);
-    const handler: ProxyHandler<typeof link> = {
-      get: get(newChain),
-    };
-    if (newChain.length === 1) {
-      handler.set = (target, prop, value) => {
-        if (prop === newChain[0]) {
-          abort();
-        }
-        target[prop] = value;
-
-        return true;
-      };
-    }
-
-    return new Proxy(link ?? {}, handler);
-  };
-
-  let currentValue = window[rootProp as any];
-
-  Object.defineProperty(window, rootProp as any, {
-    configurable: true,
-    get: () => {
-      return new Proxy(currentValue, {
-        get: get(path),
-      });
-    },
-    set: (v) => {
-      currentValue = v;
-    },
-  });
+  defineProxyChain(window, property);
 
   // Enhance error handling for the thrown ReferenceError
   window.addEventListener('error', (event) => {
@@ -123,11 +145,6 @@ export function abortCurrentInlineScript(property: string, search?: string | nul
   });
 }
 
-/**
- * Generates a random unique ID.
- *
- * @returns {string} - A random string ID.
- */
 function generateRandomId(): string {
   return Math.random().toString(36).substring(2, 15);
 }
