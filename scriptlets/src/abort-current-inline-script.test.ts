@@ -12,6 +12,8 @@ describe('abort-current-inline-script', () => {
   test('test1', () => {
     abortCurrentInlineScript('prop1.prop2.prop3.prop4.prop5');
 
+    setNewScript();
+
     expect(() => {
       (window as any).prop1.prop2.prop3.prop4.prop5;
     }).toThrowError(ReferenceError);
@@ -22,6 +24,8 @@ describe('abort-current-inline-script', () => {
 
     abortCurrentInlineScript('prop1.prop2');
 
+    setNewScript();
+
     expect(() => {
       (window as any).prop1.prop2;
     }).toThrowError(ReferenceError);
@@ -29,6 +33,8 @@ describe('abort-current-inline-script', () => {
 
   test('test', () => {
     abortCurrentInlineScript('test');
+
+    setNewScript();
 
     expect(() => {
       window.test as any;
@@ -38,6 +44,8 @@ describe('abort-current-inline-script', () => {
   test('test.prop setter', () => {
     abortCurrentInlineScript('test.prop');
 
+    setNewScript();
+
     expect(() => {
       (window.test as any).prop = '456';
     }).toThrowError(ReferenceError);
@@ -45,6 +53,8 @@ describe('abort-current-inline-script', () => {
 
   test('test getter', () => {
     abortCurrentInlineScript('test');
+
+    setNewScript();
 
     expect(() => {
       (window as any).test;
@@ -60,6 +70,8 @@ describe('abort-current-inline-script', () => {
 
     abortCurrentInlineScript('test.prop.prop2');
 
+    setNewScript();
+
     expect(() => {
       (window as any).test.prop.prop2;
     }).toThrowError(ReferenceError);
@@ -68,23 +80,62 @@ describe('abort-current-inline-script', () => {
   test('test.prop.prop2 setter', () => {
     abortCurrentInlineScript('test.prop.prop2');
 
+    setNewScript();
+
     expect(() => {
       (window as any).test.prop.prop2 = '456';
     }).toThrowError(ReferenceError);
   });
 
-  test.only('document.querySelectorAll', () => {
+  test('document.querySelectorAll', () => {
     abortCurrentInlineScript('document.querySelectorAll');
+
+    setNewScript();
 
     expect(() => {
       window.document.querySelectorAll('test');
     }).toThrowError(ReferenceError);
   });
 
-  // Think how to test this if currentScript is always jest
-  test('getter does not abort non-regex values', () => {
-    abortCurrentInlineScript('document.querySelectorAll', 'puHref');
+  test('lolxd', () => {
+    abortCurrentInlineScript('prop1.prop2.prop3');
 
-    window.document.querySelectorAll('123');
+    expect((window as any).prop1).toBeUndefined();
+
+    (window as any).prop1 = {};
+
+    expect((window as any).prop1.prop2).toBeUndefined();
+
+    (window as any).prop1.prop2 = {};
+
+    expect((window as any).prop1.prop2.prop3).toBeUndefined();
+
+    (window as any).prop1.prop2.prop3 = 123;
+
+    setNewScript();
+    expect(() => {
+      // (window as any).prop1.prop2.prop3;
+      throw new Error();
+    }).toThrowError(ReferenceError);
   });
+
+  // Think how to test this if currentScript is always jest
+  // test('getter does not abort non-regex values', () => {
+  //   abortCurrentInlineScript('document.querySelectorAll', 'puHref');
+
+  //   setNewScript();
+
+  //   window.document.querySelectorAll('123');
+  // });
 });
+
+function setNewScript(textContent?: string) {
+  const newScript = document.createElement('script');
+  if (textContent) {
+    newScript.textContent = textContent;
+  }
+  Object.defineProperty(document, 'currentScript', {
+    configurable: true,
+    get: () => newScript,
+  });
+}

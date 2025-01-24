@@ -18,22 +18,6 @@ function isPropertyConfigurable(o: AnyObject, prop: string): boolean {
   return Boolean(descriptor.configurable);
 }
 
-function createProxy(chainParts: string[] = []): any {
-  const backingStore: AnyObject = {};
-  return new Proxy(backingStore, {
-    get(target, prop: string) {
-      if (!(prop in target)) {
-        target[prop] = createProxy([...chainParts, prop]);
-      }
-      return target[prop];
-    },
-    set(target, prop: string, value) {
-      target[prop] = value;
-      return true;
-    },
-  });
-}
-
 export function abortCurrentInlineScript(property: string, search?: string | null): void {
   if (typeof property !== 'string' || property.length === 0) {
     logger.warn('property should be a non-empty string');
@@ -54,7 +38,7 @@ export function abortCurrentInlineScript(property: string, search?: string | nul
       element !== currentScript &&
       (!searchRe || searchRe.test(element.textContent || ''))
     ) {
-      logger.info(`Blocked ${property} in, currentScript`);
+      logger.info(`Blocked ${property} in currentScript`);
       throw new ReferenceError(`Aborted script with ID: ${rid}`);
     }
   };
@@ -92,41 +76,57 @@ export function abortCurrentInlineScript(property: string, search?: string | nul
             } else {
               originalValue = newValue;
             }
-
-            // idk yet if thats needed
-            // if (originalSetter) {
-            //   originalSetter.call(current, v);
-            // } else {
-            //   // Avoid infinite recursion by directly setting the property on the target.
-            //   Object.defineProperty(current, propName, {
-            //     configurable: true,
-            //     enumerable: true,
-            //     writable: true,
-            //     value: v,
-            //   });
-            // }
           },
         });
       } else {
-        // intermediate property in chain
         const isConfigurable = isPropertyConfigurable(current, part);
         const propExists = Object.prototype.hasOwnProperty.call(current, part);
 
         if (isConfigurable && !propExists) {
           let internalValue: any;
+
+          const createProxy = (target: AnyObject, chainParts: string[]) => {
+            return new Proxy(target, {
+              get(target, prop) {
+                if (!(prop in target)) {
+                  return undefined;
+                }
+                const value = Reflect.get(target, prop);
+                if (chainParts.length === 1 && prop === chainParts[0]) {
+                  abort();
+                  return value;
+                }
+                if (prop === chainParts[0] && value instanceof Object) {
+                  return createProxy(value, chainParts.slice(1));
+                }
+                return value;
+              },
+              set(target, prop, value) {
+                if (chainParts.length === 1 && prop === chainParts[0]) {
+                  abort();
+                }
+                return Reflect.set(target, prop, value);
+              },
+            });
+          };
+
           Object.defineProperty(current, part, {
             configurable: true,
             enumerable: true,
             get() {
-              if (internalValue === undefined) {
-                internalValue = createProxy(chainSoFar);
+              if (internalValue == undefined) {
+                return internalValue;
+              } else if (internalValue instanceof Object) {
+                return createProxy(internalValue, parts.slice(i + 1));
+              } else {
+                return internalValue;
               }
-              return internalValue;
             },
             set(newValue) {
               internalValue = newValue;
             },
           });
+          return;
         }
 
         // Move into the next level of the chain.
