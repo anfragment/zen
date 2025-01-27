@@ -11,6 +11,9 @@ function defineProxyChain(root: AnyObject, chain: string, callbackFn: () => void
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
+    if (part === '__proto__' || part === 'constructor') {
+      continue;
+    }
     const isLast = i === parts.length - 1;
     const chainSoFar = parts.slice(0, i + 1);
 
