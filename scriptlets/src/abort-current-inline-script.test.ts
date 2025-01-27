@@ -9,17 +9,27 @@ describe('abort-current-inline-script', () => {
     delete (window as any).prop1;
   });
 
-  test('test1', () => {
-    abortCurrentInlineScript('prop1.prop2.prop3.prop4.prop5');
+  test('single prop getter', () => {
+    abortCurrentInlineScript('test');
 
     setNewScript();
 
     expect(() => {
-      (window as any).prop1.prop2.prop3.prop4.prop5;
-    }).toThrowError(ReferenceError);
+      (window as any).test;
+    }).toThrow(ReferenceError);
   });
 
-  test('existing prop', () => {
+  test('single prop setter', () => {
+    abortCurrentInlineScript('test');
+
+    setNewScript();
+
+    expect(() => {
+      (window as any).test = 123;
+    }).toThrow(ReferenceError);
+  });
+
+  test('property on existing object', () => {
     (window as any).prop1 = {};
 
     abortCurrentInlineScript('prop1.prop2');
@@ -28,37 +38,7 @@ describe('abort-current-inline-script', () => {
 
     expect(() => {
       (window as any).prop1.prop2;
-    }).toThrowError(ReferenceError);
-  });
-
-  test('test', () => {
-    abortCurrentInlineScript('test');
-
-    setNewScript();
-
-    expect(() => {
-      window.test as any;
-    }).toThrowError(ReferenceError);
-  });
-
-  test('test.prop setter', () => {
-    abortCurrentInlineScript('test.prop');
-
-    setNewScript();
-
-    expect(() => {
-      (window.test as any).prop = '456';
-    }).toThrowError(ReferenceError);
-  });
-
-  test('test getter', () => {
-    abortCurrentInlineScript('test');
-
-    setNewScript();
-
-    expect(() => {
-      (window as any).test;
-    }).toThrowError(ReferenceError);
+    }).toThrow(ReferenceError);
   });
 
   test('test.prop.prop2 getter', () => {
@@ -74,17 +54,7 @@ describe('abort-current-inline-script', () => {
 
     expect(() => {
       (window as any).test.prop.prop2;
-    }).toThrowError(ReferenceError);
-  });
-
-  test('test.prop.prop2 setter', () => {
-    abortCurrentInlineScript('test.prop.prop2');
-
-    setNewScript();
-
-    expect(() => {
-      (window as any).test.prop.prop2 = '456';
-    }).toThrowError(ReferenceError);
+    }).toThrow(ReferenceError);
   });
 
   test('document.querySelectorAll', () => {
@@ -94,10 +64,10 @@ describe('abort-current-inline-script', () => {
 
     expect(() => {
       window.document.querySelectorAll('test');
-    }).toThrowError(ReferenceError);
+    }).toThrow(ReferenceError);
   });
 
-  test('lolxd', () => {
+  test('properties inside chain are not initilized by scriptlet', () => {
     abortCurrentInlineScript('prop1.prop2.prop3');
 
     expect((window as any).prop1).toBeUndefined();
@@ -114,19 +84,45 @@ describe('abort-current-inline-script', () => {
 
     setNewScript();
     expect(() => {
-      // (window as any).prop1.prop2.prop3;
-      throw new Error();
-    }).toThrowError(ReferenceError);
+      (window as any).prop1.prop2.prop3;
+    }).toThrow(ReferenceError);
   });
 
-  // Think how to test this if currentScript is always jest
-  // test('getter does not abort non-regex values', () => {
-  //   abortCurrentInlineScript('document.querySelectorAll', 'puHref');
+  test('matching substring throws an error', () => {
+    abortCurrentInlineScript('prop1', 'test');
+    setNewScript('test');
 
-  //   setNewScript();
+    expect(() => {
+      (window as any).prop1;
+    }).toThrow(ReferenceError);
+  });
 
-  //   window.document.querySelectorAll('123');
-  // });
+  test('non-matching substring does not throw an error', () => {
+    abortCurrentInlineScript('prop1', 'test');
+    setNewScript('xdd');
+
+    expect(() => {
+      (window as any).prop1;
+    }).not.toThrow(ReferenceError);
+  });
+
+  test('matching regex throws an error', () => {
+    abortCurrentInlineScript('prop1', '/(?<!^)test(?!$)/');
+    setNewScript('some__test__some');
+
+    expect(() => {
+      (window as any).prop1;
+    }).toThrow(ReferenceError);
+  });
+
+  test('non-matching regex does not throw an error', () => {
+    abortCurrentInlineScript('prop1', '/(?<!^)test(?!$)/');
+    setNewScript('test');
+
+    expect(() => {
+      (window as any).prop1;
+    }).not.toThrow(ReferenceError);
+  });
 });
 
 function setNewScript(textContent?: string) {
