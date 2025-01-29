@@ -114,7 +114,7 @@ func hasScriptTag(t *testing.T, body io.ReadCloser) bool {
 
 func newBlankHTTPResponse(t *testing.T) *http.Response {
 	t.Helper()
-	body := io.NopCloser(strings.NewReader(`<html><body></body></html>`))
+	body := io.NopCloser(strings.NewReader(`<html><head></head></html>`))
 	header := http.Header{
 		"Content-Type": []string{"text/html; charset=UTF-8"},
 	}
