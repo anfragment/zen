@@ -1,32 +1,17 @@
 import { createLogger } from './helpers/logger';
-import { parseRegexpFromString, parseRegexpLiteral } from './helpers/parseRegexp';
 import { generateRandomId } from './helpers/randomId';
 
-const logger = createLogger('abort-current-inline-script');
+const logger = createLogger('abort-on-property-read');
 
-export function abortCurrentInlineScript(property: string, search?: string | null): void {
+export function abortOnPropertyRead(property: string): void {
   if (typeof property !== 'string' || property.length === 0) {
     logger.warn('property should be a non-empty string');
     return;
   }
 
-  let searchRe: RegExp | null;
-  if (typeof search === 'string' && search.length > 0) {
-    searchRe = parseRegexpLiteral(search) || parseRegexpFromString(search);
-  }
   const rid = generateRandomId();
-  const currentScript = document.currentScript;
-
   const abort = () => {
-    const element = document.currentScript;
-    if (
-      element instanceof HTMLScriptElement &&
-      element !== currentScript &&
-      (!searchRe || searchRe.test(element.textContent || ''))
-    ) {
-      logger.info(`Blocked ${property} in currentScript`);
-      throw new ReferenceError(`Aborted script with ID: ${rid}`);
-    }
+    throw new ReferenceError(`Aborted script with ID: ${rid}`);
   };
 
   defineProxyChain(window, property, abort);
@@ -67,8 +52,6 @@ function defineProxyChain(root: AnyObject, chain: string, callbackFn: () => void
           return originalGetter ? originalGetter.call(this) : originalValue;
         },
         set(newValue) {
-          callbackFn();
-
           if (originalSetter) {
             originalSetter.call(this, newValue);
           } else {
@@ -100,9 +83,6 @@ function defineProxyChain(root: AnyObject, chain: string, callbackFn: () => void
               return value;
             },
             set(target, prop, value) {
-              if (chainParts.length === 1 && prop === chainParts[0]) {
-                callbackFn();
-              }
               return Reflect.set(target, prop, value);
             },
           });
@@ -127,7 +107,6 @@ function defineProxyChain(root: AnyObject, chain: string, callbackFn: () => void
         return;
       }
 
-      // Move into the next level of the chain.
       current = current[part];
     }
   }

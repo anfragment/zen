@@ -23,6 +23,7 @@ var (
 		"json-prune-fetch-response":   "jsonPruneFetchResponse",
 		"json-prune-xhr-response":     "jsonPruneXHRResponse",
 		"abort-current-inline-script": "abortCurrentInlineScript",
+		"abort-on-property-read":      "abortOnPropertyRead",
 	}
 	// reUblockScriptlet detects and extracts key data from uBlock Origin-style scriptlets.
 	reUblockScriptlet = regexp.MustCompile(`(.*)##\+js\((.+)\)`)
