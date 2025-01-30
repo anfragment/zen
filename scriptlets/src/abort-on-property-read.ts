@@ -11,6 +11,7 @@ export function abortOnPropertyRead(property: string): void {
 
   const rid = generateRandomId();
   const abort = () => {
+    logger.info(`Blocked ${property} read`);
     throw new ReferenceError(`Aborted script with ID: ${rid}`);
   };
 
