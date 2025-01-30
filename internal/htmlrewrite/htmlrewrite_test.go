@@ -209,7 +209,7 @@ func genAlphanumByteArray(length int) []byte {
 	result := make([]byte, length)
 
 	for i := 0; i < length; i++ {
-		result[i] = alphanumerics[rand.Intn(alphanumLen)]
+		result[i] = alphanumerics[rand.Intn(alphanumLen)] // #nosec G404 -- not used for security purposes
 	}
 
 	return result
