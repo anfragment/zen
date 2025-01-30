@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/anfragment/zen/internal/htmlrewrite"
 	"github.com/anfragment/zen/internal/logger"
 )
 
@@ -76,12 +77,9 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	ruleInjection.WriteString("})();\n")
 	ruleInjection.Write(scriptClosingTag)
 
-	// if err := htmlrewrite.PrependBodyContents(res, bytes.Join([][]byte{inj.bundle, ruleInjection.Bytes()}, nil)); err != nil {
-	// 	return fmt.Errorf("prepend body contents: %w", err)
-	// }
-	// htmlrewrite.ReplaceHeadContents(res, func(match []byte) []byte {
-	// 	return bytes.Join([][]byte{inj.bundle, ruleInjection.Bytes(), match}, nil)
-	// })
+	if err := htmlrewrite.PrependHeadContents(res, bytes.Join([][]byte{inj.bundle, ruleInjection.Bytes()}, nil)); err != nil {
+		return fmt.Errorf("prepend head contents: %w", err)
+	}
 
 	return nil
 }
