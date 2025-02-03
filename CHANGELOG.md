@@ -1,5 +1,13 @@
 # Changelog
 
+## What's New
+
+- **Character Encoding Fix**: Improved character encoding detection to handle websites with non-standard encodings more gracefully. Many thanks to @2372281891 for reporting the issue.
+
+Thank you for using Zen!
+
+**Full Changelog**: <https://github.com/anfragment/zen/compare/v0.7.1...v0.7.2>
+
 ## v0.7.1
 
 ## What's New
