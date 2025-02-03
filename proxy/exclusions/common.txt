@@ -2,12 +2,3 @@
 # This may be due to certificate pinning, other security measures or bugs in servers/Zen itself.
 # The proxy will not attempt to MITM hosts in this file.
 # If you find a host that doesn't work, add it here and submit a pull request.
-
-discord.com
-discord.gg
-discord.media
-
-chat.openai.com
-
-# https://github.com/anfragment/zen/issues/132
-reddit.com

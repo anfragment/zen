@@ -1,7 +1,6 @@
 package jsrule
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/anfragment/zen/internal/hostmatch"
 	"github.com/anfragment/zen/internal/htmlrewrite"
+	"github.com/anfragment/zen/internal/logger"
 )
 
 type store interface {
@@ -58,7 +58,7 @@ func (inj *Injector) AddRule(rule string) error {
 func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	hostname := req.URL.Hostname()
 	scripts := inj.store.Get(hostname)
-	log.Printf("got %d js rules for %q", len(scripts), hostname)
+	log.Printf("got %d js rules for %q", len(scripts), logger.Redacted(hostname))
 	if len(scripts) == 0 {
 		return nil
 	}
@@ -73,9 +73,9 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	}
 	injection = append(injection, injectionEnd...)
 
-	htmlrewrite.ReplaceBodyContents(res, func(match []byte) []byte {
-		return bytes.Join([][]byte{injection, match}, nil)
-	})
+	if err := htmlrewrite.PrependBodyContents(res, injection); err != nil {
+		return fmt.Errorf("prepend body contents: %w", err)
+	}
 
 	return nil
 }

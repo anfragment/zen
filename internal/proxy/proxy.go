@@ -208,7 +208,6 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 
 	r.RequestURI = ""
 
-	removeConnectionHeaders(r.Header)
 	removeHopHeaders(r.Header)
 
 	resp, err := p.requestClient.Do(r)
@@ -219,7 +218,6 @@ func (p *Proxy) proxyHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	removeConnectionHeaders(resp.Header)
 	removeHopHeaders(resp.Header)
 
 	if err := p.filter.HandleResponse(r, resp); err != nil {
@@ -252,9 +250,6 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 		return
 	}
 	defer clientConn.Close()
-
-	removeHopHeaders(connReq.Header)
-	removeConnectionHeaders(connReq.Header)
 
 	if filterResp := p.filter.HandleRequest(connReq); filterResp != nil {
 		filterResp.Write(clientConn)
@@ -294,6 +289,8 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 	defer tlsConn.Close()
 	connReader := bufio.NewReader(tlsConn)
 
+	// Read requests in a loop to allow for HTTP connection reuse.
+	// https://en.wikipedia.org/wiki/HTTP_persistent_connection
 	for {
 		req, err := http.ReadRequest(connReader)
 		if err != nil {
@@ -309,14 +306,18 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 			}
 			break
 		}
-
 		req.URL.Host = connReq.Host
 
 		if isWS(req) {
+			// Establish transparent flow, no hop-by-hop header removal required.
 			p.proxyWebsocketTLS(req, tlsConfig, tlsConn)
 			break
 		}
 
+		// A standard CONNECT proxy establishes a TCP connection to the requested destination and relays the stream between the client and server.
+		// Here, we are MITM-ing the traffic and handling the request-response flow ourselves.
+		// Since the client and server do not share a direct TCP connection in this setup, we must strip hop-by-hop headers.
+		removeHopHeaders(req.Header)
 		req.URL.Scheme = "https"
 
 		if filterResp := p.filter.HandleRequest(req); filterResp != nil {
@@ -340,6 +341,8 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 			break
 		}
 
+		removeHopHeaders(resp.Header)
+
 		if err := p.filter.HandleResponse(req, resp); err != nil {
 			log.Printf("error handling response by filter for %s, %v", logger.Redacted(req.URL), err)
 			response := fmt.Sprintf("HTTP/1.1 502 Bad Gateway\r\n\r\n%s", err.Error())
@@ -348,21 +351,19 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 		}
 
 		if err := resp.Write(tlsConn); err != nil {
-			log.Printf("writing response(%s): %v", logger.Redacted(connReq.Host), err)
-			resp.Body.Close()
+			log.Printf("writing response(%q): %v", logger.Redacted(connReq.Host), err)
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("closing body(%q): %v", logger.Redacted(connReq.Host), err)
+			}
 			break
 		}
-
-		if (resp.ContentLength == 0 || resp.ContentLength == -1) &&
-			!resp.Close &&
-			resp.ProtoAtLeast(1, 1) &&
-			!resp.Uncompressed &&
-			(len(resp.TransferEncoding) == 0 || resp.TransferEncoding[0] != "chunked") {
-			resp.Body.Close()
-			break
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("closing body(%q): %v", logger.Redacted(connReq.Host), err)
 		}
 
-		resp.Body.Close()
+		if req.Close || resp.Close {
+			break
+		}
 	}
 }
 
@@ -448,17 +449,5 @@ var hopHeaders = []string{
 func removeHopHeaders(header http.Header) {
 	for _, h := range hopHeaders {
 		header.Del(h)
-	}
-}
-
-// removeConnectionHeaders removes hop-by-hop headers listed in the "Connection"
-// header of h. See RFC 7230, section 6.1.
-func removeConnectionHeaders(h http.Header) {
-	for _, f := range h["Connection"] {
-		for _, sf := range strings.Split(f, ",") {
-			if sf = strings.TrimSpace(sf); sf != "" {
-				h.Del(sf)
-			}
-		}
 	}
 }

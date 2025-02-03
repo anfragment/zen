@@ -77,9 +77,9 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	ruleInjection.WriteString("})();\n")
 	ruleInjection.Write(scriptClosingTag)
 
-	htmlrewrite.ReplaceBodyContents(res, func(match []byte) []byte {
-		return bytes.Join([][]byte{inj.bundle, ruleInjection.Bytes(), match}, nil)
-	})
+	if err := htmlrewrite.PrependHeadContents(res, bytes.Join([][]byte{inj.bundle, ruleInjection.Bytes()}, nil)); err != nil {
+		return fmt.Errorf("prepend head contents: %w", err)
+	}
 
 	return nil
 }
