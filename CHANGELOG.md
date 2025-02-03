@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.8.2
+
+## What's New
+
+- **Performance Improvements**: We rewrote our proxy so that it no longer waits for the entire response before starting to pass data to the browser. Expect 1.5–2× improvements in page download times.
+- Minor enhancements to content blocking and privacy preservation.
+
+Thank you for using Zen!
+
+**Full Changelog**: <https://github.com/anfragment/zen/compare/v0.7.2...v0.8.0>
+
+## v0.7.2
+
 ## What's New
 
 - **Character Encoding Fix**: Improved character encoding detection to handle websites with non-standard encodings more gracefully. Many thanks to @2372281891 for reporting the issue.
