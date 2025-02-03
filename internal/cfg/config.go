@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 )
 
@@ -125,7 +125,7 @@ func init() {
 func NewConfig() (*Config, error) {
 	c := &Config{}
 
-	configFile := path.Join(ConfigDir, "config.json")
+	configFile := filepath.Join(ConfigDir, "config.json")
 	var configData []byte
 	if _, err := os.Stat(configFile); !os.IsNotExist(err) {
 		configData, err = os.ReadFile(configFile)
@@ -158,7 +158,7 @@ func (c *Config) Save() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	configFile := path.Join(ConfigDir, "config.json")
+	configFile := filepath.Join(ConfigDir, "config.json")
 	err = os.WriteFile(configFile, configData, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)

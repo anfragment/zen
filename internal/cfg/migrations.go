@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/blang/semver"
 )
@@ -64,7 +64,7 @@ func (c *Config) RunMigrations() {
 	}
 
 	var lastMigration string
-	lastMigrationFile := path.Join(ConfigDir, "last_migration")
+	lastMigrationFile := filepath.Join(ConfigDir, "last_migration")
 	if c.firstLaunch {
 		lastMigration = Version
 	} else {

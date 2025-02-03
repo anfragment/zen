@@ -2,7 +2,7 @@ package cfg
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 
 func getConfigDir() (string, error) {
 	if os.Getenv("XDG_CONFIG_HOME") != "" {
-		return path.Join(os.Getenv("XDG_CONFIG_HOME"), appFolderName), nil
+		return filepath.Join(os.Getenv("XDG_CONFIG_HOME"), appFolderName), nil
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -22,12 +22,12 @@ func getConfigDir() (string, error) {
 		return "", err
 	}
 
-	return path.Join(homeDir, ".config", appFolderName), nil
+	return filepath.Join(homeDir, ".config", appFolderName), nil
 }
 
 func getDataDir() (string, error) {
 	if os.Getenv("XDG_DATA_HOME") != "" {
-		return path.Join(os.Getenv("XDG_DATA_HOME"), appFolderName), nil
+		return filepath.Join(os.Getenv("XDG_DATA_HOME"), appFolderName), nil
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -35,5 +35,5 @@ func getDataDir() (string, error) {
 		return "", err
 	}
 
-	return path.Join(homeDir, ".local", "share", appFolderName), nil
+	return filepath.Join(homeDir, ".local", "share", appFolderName), nil
 }
