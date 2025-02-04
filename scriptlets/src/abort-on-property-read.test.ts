@@ -39,7 +39,7 @@ describe('abort-on-property-read', () => {
     }).toThrow(ReferenceError);
   });
 
-  test('dont abrot on long chain write', () => {
+  test('dont abort on long chain write', () => {
     (window as any).test = {
       prop: {
         prop2: () => {},
@@ -61,7 +61,7 @@ describe('abort-on-property-read', () => {
     }).toThrow(ReferenceError);
   });
 
-  test('properties inside chain are not initilized by scriptlet', () => {
+  test('properties inside chain are not initialized by scriptlet', () => {
     abortOnPropertyRead('prop1.prop2.prop3');
 
     expect((window as any).prop1).toBeUndefined();
