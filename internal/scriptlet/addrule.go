@@ -34,7 +34,6 @@ var (
 		"no-fetch-if":            "preventFetch",
 		"nowebrtc":               "nowebrtc",
 		"set-constant":           "setConstant",
-		"acis":                   "abortCurrentInlineScript",
 		"aopr":                   "abortOnPropertyRead",
 		// TODO: add prune-json and related scriptlets after checking their compatibility with AdGuard.
 	}
