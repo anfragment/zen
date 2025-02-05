@@ -2,9 +2,9 @@ import { defineProxyChain } from './helpers/defineProxyChain';
 import { createLogger } from './helpers/logger';
 import { generateRandomId } from './helpers/randomId';
 
-const logger = createLogger('abort-on-property-read');
+const logger = createLogger('abort-on-property-write');
 
-export function abortOnPropertyRead(property: string): void {
+export function abortOnPropertyWrite(property: string): void {
   if (typeof property !== 'string' || property.length === 0) {
     logger.warn('property should be a non-empty string');
     return;
@@ -12,12 +12,12 @@ export function abortOnPropertyRead(property: string): void {
 
   const rid = generateRandomId();
   const abort = () => {
-    logger.info(`Blocked ${property} read`);
+    logger.info(`Blocked ${property} write`);
     throw new ReferenceError(`Aborted script with ID: ${rid}`);
   };
 
   defineProxyChain(window, property, {
-    onGet: abort,
+    onSet: abort,
   });
 
   // Enhance error handling for the thrown ReferenceError
