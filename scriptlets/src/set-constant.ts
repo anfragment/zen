@@ -109,26 +109,23 @@ export function setConstant(
   }
   stackRe ??= null;
 
-  const localKey = Symbol() as any;
-
   if (!property.includes('.')) {
-    window[localKey] = window[property as any];
-    const thisScript = document.currentScript;
+    let localValue = window[property as any];
+    const odesc = Object.getOwnPropertyDescriptor(window, property);
     Object.defineProperty(window, property, {
       configurable: true,
       get: () => {
-        if (
-          // Allow value overwrite by later scriptlets.
-          (document.currentScript !== null && thisScript !== null && document.currentScript === thisScript) ||
-          (stackRe !== null && !matchStack(stackRe))
-        ) {
-          return window[localKey];
+        if (stackRe !== null && !matchStack(stackRe)) {
+          return typeof odesc?.get === 'function' ? odesc.get.apply(window) : localValue;
         }
         return fakeValue;
       },
-      set: (v) => {
-        window[localKey] = v;
-      },
+      set:
+        typeof odesc?.set === 'function'
+          ? odesc?.set
+          : (v) => {
+              localValue = v;
+            },
     });
     return;
   }
@@ -161,35 +158,41 @@ export function setConstant(
   const rootChain = property.split('.');
   const rootProp = rootChain.shift() as any;
   const odesc = Object.getOwnPropertyDescriptor(window, rootProp);
-  // Establish a chain of getters to ensure multiple set-constant rules cooperate
-  // and always return a correct value when getting the root property of the chain.
-  const prevGetter = odesc?.get;
-  window[localKey] = window[rootProp];
+  let localValue = window[rootProp];
+  let proxyCache: { capturedValue: any; proxy: any };
 
   Object.defineProperty(window, rootProp, {
     configurable: true,
     get: () => {
       let capturedValue;
-      if (typeof prevGetter === 'function') {
+      if (typeof odesc?.get === 'function') {
         // On certain properties, Safari wants window getters to be called with "window" as "this".
         // Therefore, we apply instead of doing a regular function call.
-        capturedValue = prevGetter.apply(window);
+        capturedValue = odesc.get.apply(window);
       } else {
-        capturedValue = window[localKey];
+        capturedValue = localValue;
       }
 
       if (typeof capturedValue !== 'object' || (stackRe !== null && !matchStack(stackRe))) {
         return capturedValue;
       }
-      return new Proxy(capturedValue, {
+      if (proxyCache?.capturedValue === capturedValue) {
+        return proxyCache.proxy;
+      }
+      const proxy = new Proxy(capturedValue, {
         get: get(rootChain),
       });
+      proxyCache = {
+        capturedValue,
+        proxy,
+      };
+      return proxy;
     },
     set:
       typeof odesc?.set === 'function'
         ? odesc?.set
         : (v) => {
-            window[localKey] = v;
+            localValue = v;
           },
   });
 }
