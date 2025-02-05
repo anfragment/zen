@@ -122,7 +122,7 @@ export function setConstant(
       },
       set:
         typeof odesc?.set === 'function'
-          ? odesc?.set
+          ? odesc?.set.bind(window)
           : (v) => {
               localValue = v;
             },
@@ -130,13 +130,19 @@ export function setConstant(
     return;
   }
 
-  const get = (chain: string[]) => (target: any, key: any) => {
-    const link = target[key];
+  const nativeObject = Object;
+  const get = (chain: string[]) => {
+    let proxyCache: { proxy: any; link: any };
+    return (target: any, key: any) => {
+      if (chain.length === 1 && chain[0] === key) {
+        return fakeValue;
+      }
+      let link = Reflect.get(target, key);
+      const desc = nativeObject.getOwnPropertyDescriptor(target, key);
+      if (desc && !desc.configurable && !desc.writable) {
+        return link;
+      }
 
-    if (chain.length === 1 && chain[0] === key) {
-      return fakeValue;
-    }
-    if (chain[0] !== key || (typeof link !== 'object' && link != undefined)) {
       if (
         typeof link === 'function' &&
         // Prevent rebinding if the function is already bound.
@@ -147,12 +153,19 @@ export function setConstant(
         // Fixes https://github.com/anfragment/zen/issues/201
         return link.bind(target);
       }
-      return link;
-    }
+      if (chain[0] !== key || typeof link !== 'object' || (stackRe !== null && !matchStack(stackRe))) {
+        return link;
+      }
 
-    return new Proxy(link ?? {}, {
-      get: get(chain.slice(1)),
-    });
+      if (proxyCache?.link === link) {
+        return proxyCache.proxy;
+      }
+      const proxy = new Proxy(link, {
+        get: get(chain.slice(1)),
+      });
+      proxyCache = { link, proxy };
+      return proxy;
+    };
   };
 
   const rootChain = property.split('.');
@@ -160,7 +173,6 @@ export function setConstant(
   const odesc = Object.getOwnPropertyDescriptor(window, rootProp);
   let localValue = window[rootProp];
   let proxyCache: { capturedValue: any; proxy: any };
-
   Object.defineProperty(window, rootProp, {
     configurable: true,
     get: () => {
@@ -182,15 +194,12 @@ export function setConstant(
       const proxy = new Proxy(capturedValue, {
         get: get(rootChain),
       });
-      proxyCache = {
-        capturedValue,
-        proxy,
-      };
+      proxyCache = { capturedValue, proxy };
       return proxy;
     },
     set:
       typeof odesc?.set === 'function'
-        ? odesc?.set
+        ? odesc?.set.bind(window)
         : (v) => {
             localValue = v;
           },
