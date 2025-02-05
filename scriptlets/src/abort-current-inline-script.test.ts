@@ -67,7 +67,7 @@ describe('abort-current-inline-script', () => {
     }).toThrow(ReferenceError);
   });
 
-  test('properties inside chain are not initilized by scriptlet', () => {
+  test('properties inside chain are not initialized by scriptlet', () => {
     abortCurrentInlineScript('prop1.prop2.prop3');
 
     expect((window as any).prop1).toBeUndefined();
