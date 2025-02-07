@@ -123,6 +123,42 @@ describe('abort-current-inline-script', () => {
       (window as any).prop1;
     }).not.toThrow(ReferenceError);
   });
+
+  test('getter retains this', () => {
+    const test = {
+      data: 123,
+    };
+    Object.defineProperty(test, 'dataGetter', {
+      configurable: true,
+      get() {
+        return this.data;
+      },
+    });
+
+    (window as any).test = test;
+    abortCurrentInlineScript('test.dataGetter', '🥸');
+
+    expect((window as any).test.dataGetter).toEqual(123);
+  });
+
+  test('setter retains this', () => {
+    const test = {
+      data: 0,
+    };
+    Object.defineProperty(test, 'dataSetter', {
+      configurable: true,
+      set(v) {
+        this.data = v;
+      },
+    });
+
+    (window as any).test = test;
+    abortCurrentInlineScript('test.dataSetter', '🥸');
+
+    (window as any).test.dataSetter = 123;
+
+    expect((window as any).test.data).toEqual(123);
+  });
 });
 
 function setNewScript(textContent?: string) {
