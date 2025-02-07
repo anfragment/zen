@@ -8,6 +8,7 @@ tasks:
       - npm run build
       - cp dist/bundle.js ../internal/scriptlet
       - du -sh ../internal/scriptlet/bundle.js
+      - echo -n "" >> ../main.go
 
   lint:
     desc: Lints the code.
