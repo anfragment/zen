@@ -24,6 +24,7 @@ var (
 		"json-prune-xhr-response":     "jsonPruneXHRResponse",
 		"abort-current-inline-script": "abortCurrentInlineScript",
 		"abort-on-property-read":      "abortOnPropertyRead",
+		"abort-on-property-write":     "abortOnPropertyWrite",
 	}
 	// reUblockScriptlet detects and extracts key data from uBlock Origin-style scriptlets.
 	reUblockScriptlet = regexp.MustCompile(`(.*)##\+js\((.+)\)`)
@@ -35,6 +36,7 @@ var (
 		"nowebrtc":               "nowebrtc",
 		"set-constant":           "setConstant",
 		"aopr":                   "abortOnPropertyRead",
+		"aopw":                   "abortOnPropertyWrite",
 		// TODO: add prune-json and related scriptlets after checking their compatibility with AdGuard.
 	}
 	trustedOnlyScriptlets              = []string{}
