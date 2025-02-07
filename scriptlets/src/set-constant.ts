@@ -118,6 +118,7 @@ export function setConstant(
         if (stackRe !== null && !matchStack(stackRe)) {
           return typeof odesc?.get === 'function' ? odesc.get.apply(window) : localValue;
         }
+        logger.debug(`Returning fake value for property window.${property}`, { value });
         return fakeValue;
       },
       set:
@@ -135,6 +136,7 @@ export function setConstant(
     let proxyCache: { proxy: any; link: any };
     return (target: any, key: any) => {
       if (chain.length === 1 && chain[0] === key) {
+        logger.debug(`Returning fake value for property window.${property}`, { value });
         return fakeValue;
       }
       let link = Reflect.get(target, key);
