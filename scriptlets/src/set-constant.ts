@@ -130,7 +130,7 @@ export function setConstant(
     return;
   }
 
-  const nativeObject = Object;
+  const nativeObject = Object; // Avoid infinite recursion in case we overwrite Object itself.
   const get = (chain: string[]) => {
     let proxyCache: { proxy: any; link: any };
     return (target: any, key: any) => {
@@ -160,6 +160,7 @@ export function setConstant(
       }
 
       if (proxyCache?.link === link) {
+        // Fixes https://github.com/anfragment/zen/issues/224
         return proxyCache.proxy;
       }
       const proxy = new Proxy(link, {
@@ -191,6 +192,7 @@ export function setConstant(
         return capturedValue;
       }
       if (proxyCache?.capturedValue === capturedValue) {
+        // Fixes https://github.com/anfragment/zen/issues/224
         return proxyCache.proxy;
       }
       const proxy = new Proxy(capturedValue, {
