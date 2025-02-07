@@ -139,7 +139,9 @@ export function setConstant(
       }
       let link = Reflect.get(target, key);
       const desc = nativeObject.getOwnPropertyDescriptor(target, key);
-      if (desc && !desc.configurable && !desc.writable) {
+      if (desc && 'value' in desc && !desc.configurable && !desc.writable) {
+        // Get should return the original value for non-configurable, non-writable data properties.
+        // https://tc39.es/ecma262/multipage/ordinary-and-exotic-objects-behaviours.html#sec-proxy-object-internal-methods-and-internal-slots-get-p-receiver
         return link;
       }
 
@@ -153,7 +155,7 @@ export function setConstant(
         // Fixes https://github.com/anfragment/zen/issues/201
         return link.bind(target);
       }
-      if (chain[0] !== key || typeof link !== 'object' || (stackRe !== null && !matchStack(stackRe))) {
+      if (chain[0] !== key || !isObject(link) || (stackRe !== null && !matchStack(stackRe))) {
         return link;
       }
 
@@ -185,7 +187,7 @@ export function setConstant(
         capturedValue = localValue;
       }
 
-      if (typeof capturedValue !== 'object' || (stackRe !== null && !matchStack(stackRe))) {
+      if (!isObject(capturedValue) || (stackRe !== null && !matchStack(stackRe))) {
         return capturedValue;
       }
       if (proxyCache?.capturedValue === capturedValue) {
@@ -204,4 +206,8 @@ export function setConstant(
             localValue = v;
           },
   });
+}
+
+function isObject(o: any): boolean {
+  return o !== null && (typeof o === 'function' || typeof o === 'object');
 }
