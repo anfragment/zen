@@ -4,25 +4,91 @@ import { parseValidInt } from './helpers/parseValidInt';
 
 const logger = createLogger('prevent-window-open');
 
-export function preventWindowOpen() {}
+type Handler = ProxyHandler<typeof window.open>['apply'];
 
-function newSyntaxHandler(
-  match?: string,
-  delay?: string,
-  replacement?: string,
-): ProxyHandler<typeof window.open>['apply'] {
-  let invertMatch: boolean;
-  let matchRe: RegExp;
+export function preventWindowOpen(match?: string, delayOrSearch?: string, replacement?: string) {
+  let handler: Handler;
+
+  try {
+    if (match === '1' || match === '0') {
+      handler = makeOldSyntaxHandler(match, delayOrSearch, replacement);
+    } else {
+      handler = makeNewSyntaxHandler(match, delayOrSearch, replacement);
+    }
+  } catch (error) {
+    logger.warn('Error while making handler', { ex: error });
+    return;
+  }
+
+  window.open = new Proxy(window.open, { apply: handler });
+}
+
+function makeOldSyntaxHandler(match?: string, search?: string, replacement?: string): Handler {
+  let invertMatch = false;
+  if (match === '0') {
+    invertMatch = true;
+  }
+
+  let matchRe: RegExp | undefined;
+  if (typeof search === 'string' && search.length > 0) {
+    matchRe = (parseRegexpLiteral(search) || parseRegexpFromString(search)) ?? undefined;
+    if (matchRe === undefined) {
+      throw new Error('Could not parse search');
+    }
+  }
+
+  let returnValue: (() => void) | (() => true) | Record<string, () => void> = () => {};
+  if (replacement === 'trueFunc') {
+    returnValue = () => true;
+  } else if (typeof replacement === 'string' && replacement.length > 0) {
+    const match = replacement.match(/\{([^}]+)=([^}]+)\}/);
+    if (match === null || match[2] !== 'noopFunc') {
+      throw new Error(`Invalid replacement ${replacement}`);
+    }
+    returnValue = { [match[1]]: () => {} };
+  }
+
+  return (target, thisArg, args: Parameters<typeof window.open>) => {
+    if (args.length === 0 || args[0] === undefined) {
+      return Reflect.apply(target, thisArg, args);
+    }
+
+    let url: string;
+    if (typeof args[0] === 'string') {
+      url = args[0];
+    } else if (args[0] instanceof URL) {
+      url = args[0].toString();
+    } else {
+      // Bad input, let the original function handle it.
+      return Reflect.apply(target, thisArg, args);
+    }
+
+    if (matchRe !== undefined) {
+      let prevent = matchRe.test(url);
+      if (invertMatch) {
+        prevent != prevent;
+      }
+      if (!prevent) {
+        return Reflect.apply(target, thisArg, args);
+      }
+    }
+
+    return returnValue;
+  };
+}
+
+function makeNewSyntaxHandler(match?: string, delay?: string, replacement?: string): Handler {
+  let invertMatch = false;
+  let matchRe: RegExp | undefined;
   if (typeof match === 'string' && match.length > 0) {
     invertMatch = match[0] === '!';
     if (invertMatch) {
       match = match.slice(1);
     }
 
-    matchRe = parseRegexpLiteral(match) || parseRegexpFromString(match);
-    if (matchRe === null) {
-      logger.warn('could not parse match');
-      return;
+    matchRe = (parseRegexpLiteral(match) || parseRegexpFromString(match)) ?? undefined;
+    if (matchRe === undefined) {
+      throw new Error('Could not parse match');
     }
   }
 
@@ -32,8 +98,7 @@ function newSyntaxHandler(
   }
 
   if (typeof replacement === 'string' && replacement !== 'obj' && replacement !== 'blank') {
-    logger.warn(`replacement type ${replacement} not supported`);
-    return;
+    throw new Error(`Replacement type ${replacement} not supported`);
   }
 
   return (target, thisArg, args: Parameters<typeof window.open>) => {
@@ -87,6 +152,9 @@ function newSyntaxHandler(
     switch (replacement) {
       case 'obj':
         fakeWindow = decoy.contentWindow;
+        if (fakeWindow === null) {
+          return null;
+        }
         Object.defineProperties(fakeWindow, {
           closed: { value: false },
           opener: { value: window },
@@ -94,19 +162,28 @@ function newSyntaxHandler(
         });
         break;
       default:
-        fakeWindow = new Proxy(self, {
-          get: function (target, prop, ...args) {
+        // We do not end up using the decoy here, which replicates the behavior of uBo and AdGuard.
+        // Creating an iframe is likely still essential, either because triggering the URL
+        // has some significance in the application's logic or because it helps bypass anti-adblock detections.
+        //
+        // Below we follow uBo's approach of creating a fake WindowProxy, with a slight modification
+        // to ignore property assignments:
+        // - https://github.com/gorhill/uBlock/blob/8629f07138749e7c6088fbfda84a381f2cd3bc66/src/js/resources/scriptlets.js#L2048-L2058
+        // Also, for reference, see AdGuard's implementation:
+        // - https://github.com/AdguardTeam/Scriptlets/blob/1324cfab78b9366010e1d9bfe8070dd11dd8421b/src/scriptlets/prevent-window-open.js#L161
+        fakeWindow = new Proxy(window, {
+          get: (target, prop, receiver) => {
             if (prop === 'closed') {
               return false;
             }
-            const r = Reflect.get(target, prop, ...args);
+            const r = Reflect.get(target, prop, receiver);
             if (typeof r === 'function') {
               return () => {};
             }
             return r;
           },
-          set: function (...args) {
-            return Reflect.set(...args);
+          set: () => {
+            return true;
           },
         });
     }
