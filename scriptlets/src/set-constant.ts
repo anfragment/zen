@@ -157,7 +157,7 @@ export function setConstant(
         // Fixes https://github.com/anfragment/zen/issues/201
         return link.bind(target);
       }
-      if (chain[0] !== key || !isObject(link) || (stackRe !== null && !matchStack(stackRe))) {
+      if (chain[0] !== key || !isProxyable(link) || (stackRe !== null && !matchStack(stackRe))) {
         return link;
       }
 
@@ -190,7 +190,7 @@ export function setConstant(
         capturedValue = localValue;
       }
 
-      if (!isObject(capturedValue) || (stackRe !== null && !matchStack(stackRe))) {
+      if (!isProxyable(capturedValue) || (stackRe !== null && !matchStack(stackRe))) {
         return capturedValue;
       }
       if (proxyCache?.capturedValue === capturedValue) {
@@ -212,6 +212,6 @@ export function setConstant(
   });
 }
 
-function isObject(o: any): boolean {
+function isProxyable(o: any): boolean {
   return o !== null && (typeof o === 'function' || typeof o === 'object');
 }
