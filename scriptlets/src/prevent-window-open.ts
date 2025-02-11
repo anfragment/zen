@@ -66,7 +66,7 @@ function makeOldSyntaxHandler(match?: string, search?: string, replacement?: str
     if (matchRe !== undefined) {
       let prevent = matchRe.test(url);
       if (invertMatch) {
-        prevent != prevent;
+        prevent = !prevent;
       }
       if (!prevent) {
         return Reflect.apply(target, thisArg, args);
@@ -119,7 +119,7 @@ function makeNewSyntaxHandler(match?: string, delay?: string, replacement?: stri
     if (matchRe !== undefined) {
       let prevent = matchRe.test(url);
       if (invertMatch) {
-        prevent != prevent;
+        prevent = !prevent;
       }
       if (!prevent) {
         return Reflect.apply(target, thisArg, args);
