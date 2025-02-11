@@ -2,7 +2,7 @@ package cfg
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const (
@@ -20,7 +20,7 @@ func getConfigDir() (string, error) {
 		return "", err
 	}
 
-	dir := path.Join(homeDir, "Library", "Application Support", appFolderName, configDirName)
+	dir := filepath.Join(homeDir, "Library", "Application Support", appFolderName, configDirName)
 	return dir, nil
 }
 
@@ -30,6 +30,6 @@ func getDataDir() (string, error) {
 		return "", err
 	}
 
-	dir := path.Join(homeDir, "Library", "Application Support", appFolderName)
+	dir := filepath.Join(homeDir, "Library", "Application Support", appFolderName)
 	return dir, nil
 }

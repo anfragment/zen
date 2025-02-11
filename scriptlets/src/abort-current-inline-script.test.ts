@@ -67,7 +67,7 @@ describe('abort-current-inline-script', () => {
     }).toThrow(ReferenceError);
   });
 
-  test('properties inside chain are not initilized by scriptlet', () => {
+  test('properties inside chain are not initialized by scriptlet', () => {
     abortCurrentInlineScript('prop1.prop2.prop3');
 
     expect((window as any).prop1).toBeUndefined();
@@ -122,6 +122,42 @@ describe('abort-current-inline-script', () => {
     expect(() => {
       (window as any).prop1;
     }).not.toThrow(ReferenceError);
+  });
+
+  test('getter retains this', () => {
+    const test = {
+      data: 123,
+    };
+    Object.defineProperty(test, 'dataGetter', {
+      configurable: true,
+      get() {
+        return this.data;
+      },
+    });
+
+    (window as any).test = test;
+    abortCurrentInlineScript('test.dataGetter', '🥸');
+
+    expect((window as any).test.dataGetter).toEqual(123);
+  });
+
+  test('setter retains this', () => {
+    const test = {
+      data: 0,
+    };
+    Object.defineProperty(test, 'dataSetter', {
+      configurable: true,
+      set(v) {
+        this.data = v;
+      },
+    });
+
+    (window as any).test = test;
+    abortCurrentInlineScript('test.dataSetter', '🥸');
+
+    (window as any).test.dataSetter = 123;
+
+    expect((window as any).test.data).toEqual(123);
   });
 });
 

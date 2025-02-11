@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -61,9 +61,9 @@ func NewDiskCertStore(config config) (*DiskCertStore, error) {
 
 	cs := &DiskCertStore{}
 	cs.config = config
-	cs.folderPath = path.Join(cfg.DataDir, caFolderName)
-	cs.certPath = path.Join(cs.folderPath, certFilename)
-	cs.keyPath = path.Join(cs.folderPath, keyFilename)
+	cs.folderPath = filepath.Join(cfg.DataDir, caFolderName)
+	cs.certPath = filepath.Join(cs.folderPath, certFilename)
+	cs.keyPath = filepath.Join(cs.folderPath, keyFilename)
 
 	return cs, nil
 }

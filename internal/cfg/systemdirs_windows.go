@@ -2,7 +2,7 @@ package cfg
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const (
@@ -14,7 +14,7 @@ func getConfigDir() (string, error) {
 	// use LOCALAPPDATA instead of APPDATA because the config includes some machine-specific data
 	// e.g. whether the CA has been installed
 	if os.Getenv("LOCALAPPDATA") != "" {
-		return path.Join(os.Getenv("LOCALAPPDATA"), appFolderName, configDirName), nil
+		return filepath.Join(os.Getenv("LOCALAPPDATA"), appFolderName, configDirName), nil
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -22,12 +22,12 @@ func getConfigDir() (string, error) {
 		return "", err
 	}
 
-	return path.Join(homeDir, "AppData", "Local", appFolderName, configDirName), nil
+	return filepath.Join(homeDir, "AppData", "Local", appFolderName, configDirName), nil
 }
 
 func getDataDir() (string, error) {
 	if os.Getenv("LOCALAPPDATA") != "" {
-		return path.Join(os.Getenv("LOCALAPPDATA"), appFolderName), nil
+		return filepath.Join(os.Getenv("LOCALAPPDATA"), appFolderName), nil
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -35,5 +35,5 @@ func getDataDir() (string, error) {
 		return "", err
 	}
 
-	return path.Join(homeDir, "AppData", "Local", appFolderName), nil
+	return filepath.Join(homeDir, "AppData", "Local", appFolderName), nil
 }
