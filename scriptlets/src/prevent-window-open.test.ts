@@ -72,6 +72,13 @@ describe('prevent-window-open', () => {
     expect(w!.document).toBeInstanceOf(Document);
   });
 
+  test('new syntax: calls window.open with "about:blank" when "replacement" is "blank"', () => {
+    preventWindowOpen('', '', 'blank');
+
+    window.open('https://test.com', '_self');
+    expect(openRepl).toHaveBeenCalledWith('about:blank', '_self');
+  });
+
   test('old syntax: prevents all calls to window.open when called only with "match"', () => {
     preventWindowOpen('1');
 

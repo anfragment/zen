@@ -130,6 +130,10 @@ function makeNewSyntaxHandler(match?: string, delay?: string, replacement?: stri
 
     logger.info('Preventing window.open', { args });
 
+    if (replacement === 'blank') {
+      return Reflect.apply(target, thisArg, ['about:blank', ...args.slice(1)]);
+    }
+
     let decoy: HTMLObjectElement | HTMLIFrameElement;
     switch (replacement) {
       case 'obj':
