@@ -49,12 +49,12 @@ function makeOldSyntaxHandler(match?: string, search?: string, replacement?: str
   }
 
   return (target, thisArg, args: Parameters<typeof window.open>) => {
-    if (args.length === 0 || args[0] === undefined) {
-      return Reflect.apply(target, thisArg, args);
-    }
-
     let url: string;
-    if (typeof args[0] === 'string') {
+    if (args.length === 0 || args[0] == undefined) {
+      // This is a valid case.
+      // https://developer.mozilla.org/en-US/docs/Web/API/Window/open#url
+      url = '';
+    } else if (typeof args[0] === 'string') {
       url = args[0];
     } else if (args[0] instanceof URL) {
       url = args[0].toString();
@@ -72,6 +72,8 @@ function makeOldSyntaxHandler(match?: string, search?: string, replacement?: str
         return Reflect.apply(target, thisArg, args);
       }
     }
+
+    logger.info('Preventing window.open', { args });
 
     return returnValue;
   };
@@ -126,6 +128,8 @@ function makeNewSyntaxHandler(match?: string, delay?: string, replacement?: stri
       }
     }
 
+    logger.info('Preventing window.open', { args });
+
     let decoy: HTMLObjectElement | HTMLIFrameElement;
     switch (replacement) {
       case 'obj':
@@ -152,7 +156,7 @@ function makeNewSyntaxHandler(match?: string, delay?: string, replacement?: stri
     switch (replacement) {
       case 'obj':
         fakeWindow = decoy.contentWindow;
-        if (fakeWindow === null) {
+        if (fakeWindow === null || typeof fakeWindow !== 'object') {
           return null;
         }
         Object.defineProperties(fakeWindow, {
@@ -188,6 +192,6 @@ function makeNewSyntaxHandler(match?: string, delay?: string, replacement?: stri
         });
     }
 
-    return decoy;
+    return fakeWindow;
   };
 }
