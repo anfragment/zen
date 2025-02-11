@@ -8,6 +8,7 @@ export { jsonPrune } from './json-prune';
 export { jsonPruneFetchResponse } from './json-prune-fetch-response';
 export { jsonPruneXHRResponse } from './json-prune-xhr-response';
 export { abortCurrentInlineScript } from './abort-current-inline-script';
+export { preventWindowOpen } from './prevent-window-open';
 export { abortOnPropertyRead } from './abort-on-property-read';
 export { abortOnPropertyWrite } from './abort-on-property-write';
 export { abortOnStackTrace } from './abort-on-stack-trace';
