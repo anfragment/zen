@@ -41,7 +41,7 @@ function makeOldSyntaxHandler(match?: string, search?: string, replacement?: str
   if (replacement === 'trueFunc') {
     returnValue = () => true;
   } else if (typeof replacement === 'string' && replacement.length > 0) {
-    const match = replacement.match(/\{([^}]+)=([^}]+)\}/);
+    const match = replacement.match(/^\{([^}]+)=([^}]+)\}$/);
     if (match === null || match[2] !== 'noopFunc') {
       throw new Error(`Invalid replacement ${replacement}`);
     }
