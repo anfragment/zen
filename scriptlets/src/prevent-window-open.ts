@@ -41,11 +41,15 @@ function makeOldSyntaxHandler(match?: string, search?: string, replacement?: str
   if (replacement === 'trueFunc') {
     returnValue = () => true;
   } else if (typeof replacement === 'string' && replacement.length > 0) {
-    const match = replacement.match(/^\{([^}]+)=([^}]+)\}$/);
-    if (match === null || match[2] !== 'noopFunc') {
+    if (!replacement.startsWith('{') || !replacement.endsWith('}')) {
       throw new Error(`Invalid replacement ${replacement}`);
     }
-    returnValue = { [match[1]]: () => {} };
+    const content = replacement.slice(1, -1);
+    const parts = content.split('=');
+    if (parts.length !== 2 || parts[0].length === 0 || parts[1] !== 'noopFunc') {
+      throw new Error(`Invalid replacement ${replacement}`);
+    }
+    returnValue = { [parts[0]]: () => {} };
   }
 
   return (target, thisArg, args: Parameters<typeof window.open>) => {
