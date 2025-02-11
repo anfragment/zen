@@ -102,12 +102,12 @@ function makeNewSyntaxHandler(match?: string, delay?: string, replacement?: stri
   }
 
   return (target, thisArg, args: Parameters<typeof window.open>) => {
-    if (args.length === 0 || args[0] === undefined) {
-      return Reflect.apply(target, thisArg, args);
-    }
-
     let url: string;
-    if (typeof args[0] === 'string') {
+    if (args.length === 0 || args[0] == undefined) {
+      // This is a valid case.
+      // https://developer.mozilla.org/en-US/docs/Web/API/Window/open#url
+      url = '';
+    } else if (typeof args[0] === 'string') {
       url = args[0];
     } else if (args[0] instanceof URL) {
       url = args[0].toString();
