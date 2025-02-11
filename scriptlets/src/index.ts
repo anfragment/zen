@@ -10,3 +10,4 @@ export { jsonPruneXHRResponse } from './json-prune-xhr-response';
 export { abortCurrentInlineScript } from './abort-current-inline-script';
 export { abortOnPropertyRead } from './abort-on-property-read';
 export { abortOnPropertyWrite } from './abort-on-property-write';
+export { abortOnStackTrace } from './abort-on-stack-trace';
