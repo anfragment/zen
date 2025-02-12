@@ -22,7 +22,7 @@ describe('set-constant', () => {
   });
 
   test('sets multiple nested properties', () => {
-    (window as any).test = {};
+    (window as any).test = { prop3: {} };
     setConstant('test.prop1', '123');
     setConstant('test.prop2', '321');
     setConstant('test.prop3.prop4', '56');
@@ -30,12 +30,12 @@ describe('set-constant', () => {
 
     expect((window as any).test.prop1).toBe('123');
     expect((window as any).test.prop2).toBe('321');
-    expect((window as any).test.prop3.prop5).toBe('516');
     expect((window as any).test.prop3.prop4).toBe('56');
+    expect((window as any).test.prop3.prop5).toBe('516');
   });
 
   test('nested properties survive an overwrite', () => {
-    (window as any).test = {};
+    (window as any).test = { prop3: {} };
     setConstant('test.prop1', '123');
     setConstant('test.prop2', '321');
     setConstant('test.prop3.prop4', '4');
@@ -57,7 +57,7 @@ describe('set-constant', () => {
     setConstant('test.prop2', '321');
     setConstant('test.prop3.prop4', '516');
 
-    (window as any).test = {};
+    (window as any).test = { prop3: {} };
 
     expect((window as any).test).toBeDefined();
     expect((window as any).test.prop1).toBe('123');
@@ -72,7 +72,7 @@ describe('set-constant', () => {
 
     expect((window as any).test).toBeUndefined();
 
-    (window as any).test = {};
+    (window as any).test = { prop3: {} };
 
     expect((window as any).test).toBeDefined();
     expect((window as any).test.prop1).toBe('123');
@@ -110,5 +110,21 @@ describe('set-constant', () => {
     expect(() => {
       setConstant('PROPERTY', 'invalid');
     }).toThrow();
+  });
+
+  test('overwritten root property is equal to itself', () => {
+    (window as any).test = {};
+    setConstant('test.prop1', '123');
+
+    expect((window as any).test === (window as any).test).toBe(true);
+  });
+
+  test('intermediate property in the chain is equal to itself', () => {
+    (window as any).test = {
+      prop1: {},
+    };
+    setConstant('test.prop1.prop2', '123');
+
+    expect((window as any).test.prop1 === (window as any).test.prop1).toBe(true);
   });
 });
