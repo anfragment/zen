@@ -21,11 +21,6 @@ jobs:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
         arch: [amd64, arm64]
-        exclude:
-          # Cross-compilation to arm64 on x86 Linux is broken due to a bug in Go/Wails.
-          # Until that is fixed, only build x86 Linux binaries.
-          - os: ubuntu-latest
-            arch: arm64
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
