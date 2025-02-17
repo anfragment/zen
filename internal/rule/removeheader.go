@@ -72,11 +72,25 @@ var (
 )
 
 type removeHeaderModifier struct {
-	kind       removeHeaderKind
-	headerName string
+	Kind       removeHeaderKind
+	HeaderName string
 }
 
 var _ modifyingModifier = (*removeHeaderModifier)(nil)
+
+type removeHeaderExceptionModifier struct {
+	Kind       removeHeaderKind
+	HeaderName string
+}
+
+func (rme *removeHeaderExceptionModifier) Cancels(m modifier) bool {
+	rm, ok := m.(*removeHeaderModifier)
+	if !ok {
+		return false
+	}
+
+	return rm.Kind == rme.Kind && rm.HeaderName == rme.HeaderName
+}
 
 func (rm *removeHeaderModifier) Parse(modifier string) error {
 	if !strings.HasPrefix(modifier, "removeheader=") {
@@ -86,17 +100,17 @@ func (rm *removeHeaderModifier) Parse(modifier string) error {
 
 	switch {
 	case strings.HasPrefix(modifier, "request:"):
-		rm.kind = removeHeaderKindRequest
-		rm.headerName = strings.TrimPrefix(modifier, "request:")
+		rm.Kind = removeHeaderKindRequest
+		rm.HeaderName = strings.TrimPrefix(modifier, "request:")
 	default:
-		rm.kind = removeHeaderKindResponse
-		rm.headerName = modifier
+		rm.Kind = removeHeaderKindResponse
+		rm.HeaderName = modifier
 	}
 
-	rm.headerName = http.CanonicalHeaderKey(rm.headerName)
+	rm.HeaderName = http.CanonicalHeaderKey(rm.HeaderName)
 
 	for _, forbiddenHeader := range forbiddenHeaders {
-		if rm.headerName == forbiddenHeader {
+		if rm.HeaderName == forbiddenHeader {
 			log.Printf("WARNING: FOUND FORBIDDEN $removeheader %s", forbiddenHeader)
 			return ErrForbiddenHeader
 		}
@@ -106,27 +120,27 @@ func (rm *removeHeaderModifier) Parse(modifier string) error {
 }
 
 func (rm *removeHeaderModifier) ModifyReq(req *http.Request) (modified bool) {
-	if rm.kind != removeHeaderKindRequest {
+	if rm.Kind != removeHeaderKindRequest {
 		return false
 	}
 	// Since rm.headerName is already in canonical form, we can use the map directly instead of the Get/Del API.
-	if len(req.Header[rm.headerName]) == 0 {
+	if len(req.Header[rm.HeaderName]) == 0 {
 		return false
 	}
 
-	delete(req.Header, rm.headerName)
+	delete(req.Header, rm.HeaderName)
 	return true
 }
 
 func (rm *removeHeaderModifier) ModifyRes(res *http.Response) (modified bool) {
-	if rm.kind != removeHeaderKindResponse {
+	if rm.Kind != removeHeaderKindResponse {
 		return false
 	}
 	// Since rm.headerName is already in canonical form, we can use the map directly instead of the Get/Del API.
-	if len(res.Header[rm.headerName]) == 0 {
+	if len(res.Header[rm.HeaderName]) == 0 {
 		return false
 	}
 
-	delete(res.Header, rm.headerName)
+	delete(res.Header, rm.HeaderName)
 	return true
 }

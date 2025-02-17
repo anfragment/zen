@@ -12,13 +12,17 @@ import (
 	"github.com/anfragment/zen/internal/rule"
 )
 
+type IRule interface {
+	Cancels() bool
+}
+
 // RuleTree is a trie-based filter that is capable of parsing
 // Adblock-style and hosts rules and matching URLs against them.
 //
 // The filter is safe for concurrent use.
-type RuleTree struct {
+type RuleTree[T any] struct {
 	// root is the root node of the trie that stores the rules.
-	root node
+	root node[T]
 	// hosts maps hostnames to filter names.
 	hosts   map[string]*string
 	hostsMu sync.RWMutex
@@ -41,14 +45,14 @@ var (
 	reGeneric = regexp.MustCompile(fmt.Sprintf(`^%s+$`, modifiersCG))
 )
 
-func NewRuleTree() *RuleTree {
-	return &RuleTree{
-		root:  node{},
+func NewRuleTree[T any]() *RuleTree[T] {
+	return &RuleTree[T]{
+		root:  node[T]{},
 		hosts: make(map[string]*string),
 	}
 }
 
-func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
+func (rt *RuleTree[T]) AddRule(rawRule string, filterName *string) error {
 	if reHosts.MatchString(rawRule) {
 		// Strip the # and any characters after it
 		if commentIndex := strings.IndexByte(rawRule, '#'); commentIndex != -1 {
@@ -105,7 +109,7 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 		return fmt.Errorf("parse modifiers: %w", err)
 	}
 
-	var node *node
+	var node *node[T]
 	if rootKeyKind == nodeKindExactMatch {
 		node = &rt.root
 	} else {
@@ -125,20 +129,20 @@ func (rt *RuleTree) AddRule(rawRule string, filterName *string) error {
 		log.Printf("failed to add rule %q: no node found", rawRule)
 		return fmt.Errorf("no node found")
 	}
-	node.rules = append(node.rules, rule)
+	node.data = append(node.data, rule)
 
 	return nil
 }
 
 // FindMatchingRulesReq finds all rules that match the given request.
-func (rt *RuleTree) FindMatchingRulesReq(req *http.Request) (rules []rule.Rule) {
+func (rt *RuleTree[T]) FindMatchingRulesReq(req *http.Request) (data []T) {
 	host := req.URL.Hostname()
 	rt.hostsMu.RLock()
 	if filterName, ok := rt.hosts[host]; ok {
 		rt.hostsMu.RUnlock()
 		// 0.0.0.0 may not be the actual IP defined in the hosts file,
 		// but storing the actual one feels wasteful.
-		return []rule.Rule{
+		return []T{
 			{
 				RawRule:    fmt.Sprintf("0.0.0.0 %s", host),
 				FilterName: filterName,
@@ -160,21 +164,21 @@ func (rt *RuleTree) FindMatchingRulesReq(req *http.Request) (rules []rule.Rule) 
 
 	// generic rules
 	if genericNode := rt.root.FindChild(nodeKey{kind: nodeKindGeneric}); genericNode != nil {
-		rules = append(rules, genericNode.FindMatchingRulesReq(req)...)
+		data = append(data, genericNode.FindMatchingRulesReq(req)...)
 	}
 
 	// address root
-	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRulesReq(req, tokens, func(_ *node, t []string) bool {
+	data = append(data, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRulesReq(req, tokens, func(_ *node[T], t []string) bool {
 		// address root rules have to match the entire URL
 		// TODO: look into whether we can match the rule if the remaining tokens only contain the query
 		return len(t) == 0
 	})...)
 
-	rules = append(rules, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
+	data = append(data, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
 	tokens = tokens[1:]
 
 	// protocol separator
-	rules = append(rules, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
+	data = append(data, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
 	tokens = tokens[1:]
 
 	// domain segments
@@ -183,25 +187,25 @@ func (rt *RuleTree) FindMatchingRulesReq(req *http.Request) (rules []rule.Rule) 
 			break
 		}
 		if tokens[0] != "." {
-			rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseFindMatchingRulesReq(req, tokens, nil)...)
+			data = append(data, rt.root.FindChild(nodeKey{kind: nodeKindDomain}).TraverseFindMatchingRulesReq(req, tokens, nil)...)
 		}
-		rules = append(rules, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
+		data = append(data, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
 		tokens = tokens[1:]
 	}
 
 	// rest of the URL
 	// TODO: handle query parameters
 	for len(tokens) > 0 {
-		rules = append(rules, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
+		data = append(data, rt.root.TraverseFindMatchingRulesReq(req, tokens, nil)...)
 		tokens = tokens[1:]
 	}
 
-	return rules
+	return data
 }
 
 // FindMatchingRulesRes finds all rules that match the given response.
 // It assumes that the request that generated the response has already been matched by FindMatchingRulesReq.
-func (rt *RuleTree) FindMatchingRulesRes(req *http.Request, res *http.Response) (rules []rule.Rule) {
+func (rt *RuleTree[T]) FindMatchingRulesRes(req *http.Request, res *http.Response) (rules []rule.Rule) {
 	urlWithoutPort := url.URL{
 		Scheme:   req.URL.Scheme,
 		Host:     req.URL.Hostname(),
@@ -219,7 +223,7 @@ func (rt *RuleTree) FindMatchingRulesRes(req *http.Request, res *http.Response) 
 	}
 
 	// address root
-	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRulesRes(res, tokens, func(_ *node, t []string) bool {
+	rules = append(rules, rt.root.FindChild(nodeKey{kind: nodeKindAddressRoot}).TraverseFindMatchingRulesRes(res, tokens, func(_ *node[T], t []string) bool {
 		return len(t) == 0
 	})...)
 

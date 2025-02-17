@@ -31,9 +31,9 @@ type nodeKey struct {
 }
 
 // arrNode is a node in the trie that is stored in an array.
-type arrNode struct {
+type arrNode[T any] struct {
 	key  nodeKey
-	node *node
+	node *node[T]
 }
 
 // nodeChildrenMaxArrSize specifies the maximum size for the array of child nodes.
@@ -45,17 +45,16 @@ const nodeChildrenMaxArrSize = 8
 
 // node represents a node in the rule trie.
 // Nodes can be both vertices that only represent a subtree and leaves that represent a rule.
-type node struct {
-	childrenArr []arrNode
-	childrenMap map[nodeKey]*node
+type node[T any] struct {
+	childrenArr []arrNode[T]
+	childrenMap map[nodeKey]*node[T]
 	childrenMu  sync.RWMutex
-	// rules is the list of rules that match the node's subtree.
-	// The list is empty for nodes that do not represent a rule.
-	rules []rule.Rule
+	// data is the list of data that match the node's subtree.
+	data []T
 }
 
 // findOrAddChild finds or adds a child node with the given key.
-func (n *node) findOrAddChild(key nodeKey) *node {
+func (n *node[T]) findOrAddChild(key nodeKey) *node[T] {
 	n.childrenMu.Lock()
 	defer n.childrenMu.Unlock()
 
@@ -66,11 +65,11 @@ func (n *node) findOrAddChild(key nodeKey) *node {
 			}
 		}
 		if len(n.childrenArr) < nodeChildrenMaxArrSize {
-			newNode := &node{}
-			n.childrenArr = append(n.childrenArr, arrNode{key: key, node: newNode})
+			newNode := &node[T]{}
+			n.childrenArr = append(n.childrenArr, arrNode[T]{key: key, node: newNode})
 			return newNode
 		}
-		n.childrenMap = make(map[nodeKey]*node)
+		n.childrenMap = make(map[nodeKey]*node[T])
 		for _, arrNode := range n.childrenArr {
 			n.childrenMap[arrNode.key] = arrNode.node
 		}
@@ -81,13 +80,13 @@ func (n *node) findOrAddChild(key nodeKey) *node {
 		return child
 	}
 
-	newNode := &node{}
+	newNode := &node[T]{}
 	n.childrenMap[key] = newNode
 	return newNode
 }
 
 // FindChild returns the child node with the given key.
-func (n *node) FindChild(key nodeKey) *node {
+func (n *node[T]) FindChild(key nodeKey) *node[T] {
 	n.childrenMu.RLock()
 	defer n.childrenMu.RUnlock()
 
@@ -110,12 +109,12 @@ var (
 )
 
 // TraverseFindMatchingRulesReq traverses the trie and returns the rules that match the given request.
-func (n *node) TraverseFindMatchingRulesReq(req *http.Request, tokens []string, shouldUseNode func(*node, []string) bool) (rules []rule.Rule) {
+func (n *node[T]) TraverseFindMatchingRulesReq(req *http.Request, tokens []string, shouldUseNode func(*node[T], []string) bool) (rules []rule.Rule) {
 	if n == nil {
 		return rules
 	}
 	if shouldUseNode == nil {
-		shouldUseNode = func(*node, []string) bool {
+		shouldUseNode = func(*node[T], []string) bool {
 			return true
 		}
 	}
@@ -141,12 +140,12 @@ func (n *node) TraverseFindMatchingRulesReq(req *http.Request, tokens []string, 
 }
 
 // TraverseFindMatchingRulesRes traverses the trie and returns the rules that match the given response.
-func (n *node) TraverseFindMatchingRulesRes(res *http.Response, tokens []string, shouldUseNode func(*node, []string) bool) (rules []rule.Rule) {
+func (n *node[T]) TraverseFindMatchingRulesRes(res *http.Response, tokens []string, shouldUseNode func(*node[T], []string) bool) (rules []rule.Rule) {
 	if n == nil {
 		return rules
 	}
 	if shouldUseNode == nil {
-		shouldUseNode = func(*node, []string) bool {
+		shouldUseNode = func(*node[T], []string) bool {
 			return true
 		}
 	}
@@ -172,18 +171,19 @@ func (n *node) TraverseFindMatchingRulesRes(res *http.Response, tokens []string,
 }
 
 // FindMatchingRulesReq returns the rules that match the given request.
-func (n *node) FindMatchingRulesReq(req *http.Request) (rules []rule.Rule) {
-	for _, r := range n.rules {
+func (n *node[T]) FindMatchingRulesReq(req *http.Request) []rule.Rule {
+	var matchingRules []rule.Rule
+	for _, r := range n.data {
 		if r.ShouldMatchReq(req) {
-			rules = append(rules, r)
+			matchingRules = append(matchingRules, r)
 		}
 	}
-	return rules
+	return matchingRules
 }
 
 // FindMatchingRulesRes returns the rules that match the given response.
-func (n *node) FindMatchingRulesRes(res *http.Response) (rules []rule.Rule) {
-	for _, r := range n.rules {
+func (n *node[T]) FindMatchingRulesRes(res *http.Response) (rules []rule.Rule) {
+	for _, r := range n.data {
 		if r.ShouldMatchRes(res) {
 			rules = append(rules, r)
 		}

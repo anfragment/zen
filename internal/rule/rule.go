@@ -16,6 +16,21 @@ type Rule struct {
 	modifyingModifiers []modifyingModifier
 }
 
+type ExRule struct {
+	// string representation
+	RawRule string
+	// FilterName is the name of the filter that the rule belongs to.
+	FilterName *string
+
+	// mb remove or "modifiers"
+	// matchingModifiers  []matchingModifier
+	// modifyingModifiers []modifyingModifier
+}
+
+func (ee *ExRule) Cancels() bool {
+	return true
+}
+
 // modifier is a modifier of a rule.
 type modifier interface {
 	Parse(modifier string) error

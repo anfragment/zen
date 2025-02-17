@@ -234,15 +234,19 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 // HandleRequest handles the given request by matching it against the filter rules.
 // If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
 func (f *Filter) HandleRequest(req *http.Request) *http.Response {
-	if len(f.exceptionRuleMatcher.FindMatchingRulesReq(req)) > 0 {
-		// TODO: implement precise exception handling
-		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#removeheader-modifier (see "Negating $removeheader")
-		return nil
-	}
-
 	matchingRules := f.ruleMatcher.FindMatchingRulesReq(req)
 	if len(matchingRules) == 0 {
 		return nil
+	}
+
+	exceptionRules := f.exceptionRuleMatcher.FindMatchingRulesReq(req)
+
+	for _, exceptionRule := range exceptionRules {
+		for _, matchingRule := range matchingRules {
+			if exceptionRule.Cancels(matchingRule) {
+				fmt.Printf("exception rule %s cancel matching rule %s\n", exceptionRule, matchingRule)
+			}
+		}
 	}
 
 	var appliedRules []rule.Rule

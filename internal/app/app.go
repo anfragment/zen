@@ -20,6 +20,7 @@ import (
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/proxy"
+	"github.com/anfragment/zen/internal/rule"
 	"github.com/anfragment/zen/internal/ruletree"
 	"github.com/anfragment/zen/internal/scriptlet"
 	"github.com/anfragment/zen/internal/scriptlet/triestore"
@@ -134,6 +135,13 @@ func (a *App) BeforeClose(ctx context.Context) bool {
 	return false
 }
 
+type MatchingRule struct{}
+type ExcepionRule struct{}
+
+func (r ExcepionRule) Cancels() bool {
+	return false
+}
+
 // StartProxy starts the proxy.
 func (a *App) StartProxy() (err error) {
 	<-a.startupDone
@@ -165,8 +173,11 @@ func (a *App) StartProxy() (err error) {
 		}
 	}()
 
-	ruleMatcher := ruletree.NewRuleTree()
-	exceptionRuleMatcher := ruletree.NewRuleTree()
+	ruleMatcher := ruletree.NewRuleTree[rule.Rule]()
+	exceptionRuleMatcher := ruletree.NewRuleTree[ExcepionRule]()
+
+	// ruleMatcher.FindMatchingRulesReq()
+	// exceptionRuleMatcher.FindMatchingRulesReq()
 
 	scriptletStore := triestore.NewTrieStore()
 	scriptletInjector, err := scriptlet.NewInjector(scriptletStore)
