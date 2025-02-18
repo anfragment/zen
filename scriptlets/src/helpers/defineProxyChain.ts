@@ -1,3 +1,5 @@
+import { isProxyable } from './isProxyable';
+
 type AnyObject = { [key: string]: any };
 
 interface ProxyCallbacks {
@@ -18,8 +20,8 @@ export function defineProxyChain(root: AnyObject, chain: string, callbacks: Prox
     if (isLast) {
       const propName = chainSoFar[chainSoFar.length - 1];
       const originalDescriptor = Object.getOwnPropertyDescriptor(current, propName) || {};
-      let originalGetter = originalDescriptor.get;
-      let originalSetter = originalDescriptor.set;
+      const originalGetter = originalDescriptor.get;
+      const originalSetter = originalDescriptor.set;
       let originalValue = originalDescriptor.value;
 
       Object.defineProperty(current, parts[parts.length - 1], {
@@ -54,10 +56,7 @@ export function defineProxyChain(root: AnyObject, chain: string, callbacks: Prox
         const createProxy = (target: AnyObject, chainParts: string[]) => {
           return new Proxy(target, {
             get(target, prop) {
-              if (!(prop in target)) {
-                return undefined;
-              }
-              const value = Reflect.get(target, prop);
+              const value = Reflect.get(target, prop, target);
               if (chainParts.length === 1 && prop === chainParts[0]) {
                 if (callbacks.onGet) {
                   callbacks.onGet();
@@ -65,7 +64,7 @@ export function defineProxyChain(root: AnyObject, chain: string, callbacks: Prox
 
                 return value;
               }
-              if (prop === chainParts[0] && value instanceof Object) {
+              if (prop === chainParts[0] && isProxyable(value)) {
                 return createProxy(value, chainParts.slice(1));
               }
               return value;
@@ -85,9 +84,7 @@ export function defineProxyChain(root: AnyObject, chain: string, callbacks: Prox
           configurable: true,
           enumerable: true,
           get() {
-            if (internalValue == undefined) {
-              return internalValue;
-            } else if (internalValue instanceof Object) {
+            if (isProxyable(internalValue)) {
               return createProxy(internalValue, parts.slice(i + 1));
             } else {
               return internalValue;
