@@ -1,3 +1,4 @@
+import { isProxyable } from './helpers/isProxyable';
 import { createLogger } from './helpers/logger';
 import { matchStack } from './helpers/matchStack';
 import { parseRegexpFromString, parseRegexpLiteral } from './helpers/parseRegexp';
@@ -150,9 +151,18 @@ export function setConstant(
         return link;
       }
 
-      if (typeof link === 'function' && /\{\s+\[native code\]/.test(nativeFunction.prototype.toString.call(link))) {
+      if (
+        typeof link === 'function' &&
+        // This checks for native functions. The regex helps avoid false positives from functions containing the string "[native code]".
+        // Function.prototype.toString is used to handle edge cases where a function has its toString method overridden.
+        // Credit: https://stackoverflow.com/a/6599105
+        /\{\s*\[native code\]/.test(nativeFunction.prototype.toString.call(link))
+      ) {
+        // Native functions frequently expect to be bounded to their original, **unproxied** object.
+        // See https://stackoverflow.com/a/57580096 for more details.
         // Fixes https://github.com/anfragment/zen/issues/201
         if (boundFnCache !== undefined && boundFnCache[key]) {
+          // Like with proxyCache, store the bound function to ensure object equality between different access operations.
           link = boundFnCache[key];
         } else {
           link = link.bind(target);
@@ -167,6 +177,7 @@ export function setConstant(
       }
 
       if (proxyCache?.link === link) {
+        // Ensure object equality between different access operations.
         // Fixes https://github.com/anfragment/zen/issues/224
         return proxyCache.proxy;
       }
@@ -199,6 +210,7 @@ export function setConstant(
         return capturedValue;
       }
       if (proxyCache?.capturedValue === capturedValue) {
+        // Ensure object equality between different access operations.
         // Fixes https://github.com/anfragment/zen/issues/224
         return proxyCache.proxy;
       }
@@ -215,8 +227,4 @@ export function setConstant(
             localValue = v;
           },
   });
-}
-
-function isProxyable(o: any): boolean {
-  return o !== null && (typeof o === 'function' || typeof o === 'object');
 }
