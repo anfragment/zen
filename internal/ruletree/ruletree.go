@@ -13,14 +13,16 @@ import (
 )
 
 type IRule interface {
-	Cancels() bool
+	ShouldMatchRes(res *http.Response) bool
+	ShouldMatchReq(req *http.Request) bool
+	ParseModifiers(modifiers string) error
 }
 
 // RuleTree is a trie-based filter that is capable of parsing
 // Adblock-style and hosts rules and matching URLs against them.
 //
 // The filter is safe for concurrent use.
-type RuleTree[T any] struct {
+type RuleTree[T IRule] struct {
 	// root is the root node of the trie that stores the rules.
 	root node[T]
 	// hosts maps hostnames to filter names.
@@ -45,7 +47,7 @@ var (
 	reGeneric = regexp.MustCompile(fmt.Sprintf(`^%s+$`, modifiersCG))
 )
 
-func NewRuleTree[T any]() *RuleTree[T] {
+func NewRuleTree[T IRule]() *RuleTree[T] {
 	return &RuleTree[T]{
 		root:  node[T]{},
 		hosts: make(map[string]*string),
@@ -100,11 +102,20 @@ func (rt *RuleTree[T]) AddRule(rawRule string, filterName *string) error {
 		return fmt.Errorf("unknown rule format")
 	}
 
-	rule := rule.Rule{
-		RawRule:    rawRule,
-		FilterName: filterName,
+	var myRule T
+
+	switch v := any(&myRule).(type) {
+	case *rule.Rule:
+		v.RawRule = rawRule
+		v.FilterName = filterName
+	case *rule.ExRule:
+		v.RawRule = rawRule
+		v.FilterName = filterName
+	default:
+		return fmt.Errorf("unsupported rule type")
 	}
-	if err := rule.ParseModifiers(modifiers); err != nil {
+
+	if err := myRule.ParseModifiers(modifiers); err != nil {
 		// log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
 		return fmt.Errorf("parse modifiers: %w", err)
 	}
@@ -129,7 +140,7 @@ func (rt *RuleTree[T]) AddRule(rawRule string, filterName *string) error {
 		log.Printf("failed to add rule %q: no node found", rawRule)
 		return fmt.Errorf("no node found")
 	}
-	node.data = append(node.data, rule)
+	node.data = append(node.data, myRule)
 
 	return nil
 }
@@ -137,19 +148,17 @@ func (rt *RuleTree[T]) AddRule(rawRule string, filterName *string) error {
 // FindMatchingRulesReq finds all rules that match the given request.
 func (rt *RuleTree[T]) FindMatchingRulesReq(req *http.Request) (data []T) {
 	host := req.URL.Hostname()
-	rt.hostsMu.RLock()
-	if filterName, ok := rt.hosts[host]; ok {
-		rt.hostsMu.RUnlock()
-		// 0.0.0.0 may not be the actual IP defined in the hosts file,
-		// but storing the actual one feels wasteful.
-		return []T{
-			{
-				RawRule:    fmt.Sprintf("0.0.0.0 %s", host),
-				FilterName: filterName,
-			},
-		}
-	}
-	rt.hostsMu.RUnlock()
+	// rt.hostsMu.RLock()
+	// if filterName, ok := rt.hosts[host]; ok {
+	// 	rt.hostsMu.RUnlock()
+	// 	// 0.0.0.0 may not be the actual IP defined in the hosts file,
+	// 	// but storing the actual one feels wasteful.
+	// 	return []T{
+	// 		RawRule:    rawRule,
+	// 		FilterName: filterName,
+	// 	}
+	// }
+	// rt.hostsMu.RUnlock()
 
 	urlWithoutPort := url.URL{
 		Scheme:   req.URL.Scheme,
@@ -205,7 +214,7 @@ func (rt *RuleTree[T]) FindMatchingRulesReq(req *http.Request) (data []T) {
 
 // FindMatchingRulesRes finds all rules that match the given response.
 // It assumes that the request that generated the response has already been matched by FindMatchingRulesReq.
-func (rt *RuleTree[T]) FindMatchingRulesRes(req *http.Request, res *http.Response) (rules []rule.Rule) {
+func (rt *RuleTree[T]) FindMatchingRulesRes(req *http.Request, res *http.Response) (rules []T) {
 	urlWithoutPort := url.URL{
 		Scheme:   req.URL.Scheme,
 		Host:     req.URL.Hostname(),

@@ -30,10 +30,22 @@ type filterEventsEmitter interface {
 }
 
 // ruleMatcher matches requests against rules.
+//
+//	type ruleMatcher interface {
+//		AddRule(rule string, filterName *string) error
+//		FindMatchingRulesReq(*http.Request) []rule.Rule
+//		FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
+//	}
 type ruleMatcher interface {
 	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(*http.Request) []rule.Rule
-	FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
+	FindMatchingRulesReq(*http.Request) []*rule.Rule
+	FindMatchingRulesRes(*http.Request, *http.Response) []*rule.Rule
+}
+
+type exceptionRuleMatcher interface {
+	AddRule(rule string, filterName *string) error
+	FindMatchingRulesReq(*http.Request) []*rule.ExRule
+	FindMatchingRulesRes(*http.Request, *http.Response) []*rule.ExRule
 }
 
 // config provides filter configuration.
@@ -69,7 +81,7 @@ type jsRuleInjector interface {
 type Filter struct {
 	config                config
 	ruleMatcher           ruleMatcher
-	exceptionRuleMatcher  ruleMatcher
+	exceptionRuleMatcher  exceptionRuleMatcher
 	scriptletsInjector    scriptletsInjector
 	cosmeticRulesInjector cosmeticRulesInjector
 	cssRulesInjector      cssRulesInjector
@@ -87,7 +99,7 @@ var (
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher exceptionRuleMatcher, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -243,7 +255,7 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 
 	for _, exceptionRule := range exceptionRules {
 		for _, matchingRule := range matchingRules {
-			if exceptionRule.Cancels(matchingRule) {
+			if exceptionRule.Cancels(*matchingRule) {
 				fmt.Printf("exception rule %s cancel matching rule %s\n", exceptionRule, matchingRule)
 			}
 		}
@@ -254,11 +266,11 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 
 	for _, r := range matchingRules {
 		if r.ShouldBlockReq(req) {
-			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []rule.Rule{r})
+			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []rule.Rule{*r})
 			return f.createBlockResponse(req)
 		}
 		if r.ModifyReq(req) {
-			appliedRules = append(appliedRules, r)
+			appliedRules = append(appliedRules, *r)
 		}
 	}
 
@@ -311,7 +323,7 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 
 	for _, r := range matchingRules {
 		if r.ModifyRes(res) {
-			appliedRules = append(appliedRules, r)
+			appliedRules = append(appliedRules, *r)
 		}
 	}
 

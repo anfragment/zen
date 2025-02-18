@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"regexp"
 	"sync"
-
-	"github.com/anfragment/zen/internal/rule"
 )
 
 // nodeKind defines the type of a node in the trie.
@@ -31,7 +29,7 @@ type nodeKey struct {
 }
 
 // arrNode is a node in the trie that is stored in an array.
-type arrNode[T any] struct {
+type arrNode[T IRule] struct {
 	key  nodeKey
 	node *node[T]
 }
@@ -45,7 +43,7 @@ const nodeChildrenMaxArrSize = 8
 
 // node represents a node in the rule trie.
 // Nodes can be both vertices that only represent a subtree and leaves that represent a rule.
-type node[T any] struct {
+type node[T IRule] struct {
 	childrenArr []arrNode[T]
 	childrenMap map[nodeKey]*node[T]
 	childrenMu  sync.RWMutex
@@ -109,7 +107,7 @@ var (
 )
 
 // TraverseFindMatchingRulesReq traverses the trie and returns the rules that match the given request.
-func (n *node[T]) TraverseFindMatchingRulesReq(req *http.Request, tokens []string, shouldUseNode func(*node[T], []string) bool) (rules []rule.Rule) {
+func (n *node[T]) TraverseFindMatchingRulesReq(req *http.Request, tokens []string, shouldUseNode func(*node[T], []string) bool) (rules []T) {
 	if n == nil {
 		return rules
 	}
@@ -140,7 +138,7 @@ func (n *node[T]) TraverseFindMatchingRulesReq(req *http.Request, tokens []strin
 }
 
 // TraverseFindMatchingRulesRes traverses the trie and returns the rules that match the given response.
-func (n *node[T]) TraverseFindMatchingRulesRes(res *http.Response, tokens []string, shouldUseNode func(*node[T], []string) bool) (rules []rule.Rule) {
+func (n *node[T]) TraverseFindMatchingRulesRes(res *http.Response, tokens []string, shouldUseNode func(*node[T], []string) bool) (rules []T) {
 	if n == nil {
 		return rules
 	}
@@ -171,8 +169,8 @@ func (n *node[T]) TraverseFindMatchingRulesRes(res *http.Response, tokens []stri
 }
 
 // FindMatchingRulesReq returns the rules that match the given request.
-func (n *node[T]) FindMatchingRulesReq(req *http.Request) []rule.Rule {
-	var matchingRules []rule.Rule
+func (n *node[T]) FindMatchingRulesReq(req *http.Request) []T {
+	var matchingRules []T
 	for _, r := range n.data {
 		if r.ShouldMatchReq(req) {
 			matchingRules = append(matchingRules, r)
@@ -182,7 +180,7 @@ func (n *node[T]) FindMatchingRulesReq(req *http.Request) []rule.Rule {
 }
 
 // FindMatchingRulesRes returns the rules that match the given response.
-func (n *node[T]) FindMatchingRulesRes(res *http.Response) (rules []rule.Rule) {
+func (n *node[T]) FindMatchingRulesRes(res *http.Response) (rules []T) {
 	for _, r := range n.data {
 		if r.ShouldMatchRes(res) {
 			rules = append(rules, r)

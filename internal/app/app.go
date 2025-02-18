@@ -135,13 +135,6 @@ func (a *App) BeforeClose(ctx context.Context) bool {
 	return false
 }
 
-type MatchingRule struct{}
-type ExcepionRule struct{}
-
-func (r ExcepionRule) Cancels() bool {
-	return false
-}
-
 // StartProxy starts the proxy.
 func (a *App) StartProxy() (err error) {
 	<-a.startupDone
@@ -173,11 +166,8 @@ func (a *App) StartProxy() (err error) {
 		}
 	}()
 
-	ruleMatcher := ruletree.NewRuleTree[rule.Rule]()
-	exceptionRuleMatcher := ruletree.NewRuleTree[ExcepionRule]()
-
-	// ruleMatcher.FindMatchingRulesReq()
-	// exceptionRuleMatcher.FindMatchingRulesReq()
+	ruleMatcher := ruletree.NewRuleTree[*rule.Rule]()
+	exceptionRuleMatcher := ruletree.NewRuleTree[*rule.ExRule]()
 
 	scriptletStore := triestore.NewTrieStore()
 	scriptletInjector, err := scriptlet.NewInjector(scriptletStore)

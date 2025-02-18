@@ -22,13 +22,27 @@ type ExRule struct {
 	// FilterName is the name of the filter that the rule belongs to.
 	FilterName *string
 
-	// mb remove or "modifiers"
-	// matchingModifiers  []matchingModifier
-	// modifyingModifiers []modifyingModifier
+	modifiers []exceptionModifier
 }
 
-func (ee *ExRule) Cancels() bool {
+func (ee *ExRule) Cancels(r Rule) bool {
 	return true
+}
+
+func (ee *ExRule) ParseModifiers(modifiers string) error {
+	return nil
+}
+
+func (ee *ExRule) ShouldMatchReq(req *http.Request) bool {
+	return true
+}
+
+func (ee *ExRule) ShouldMatchRes(req *http.Response) bool {
+	return true
+}
+
+type exceptionModifier interface {
+	Cancels(modifier) bool
 }
 
 // modifier is a modifier of a rule.
