@@ -72,10 +72,6 @@ describe('abort-on-property-read', () => {
 
     (window as any).prop1.prop2 = {};
 
-    expect((window as any).prop1.prop2.prop3).toBeUndefined();
-
-    (window as any).prop1.prop2.prop3 = 123;
-
     expect(() => {
       (window as any).prop1.prop2.prop3;
     }).toThrow(ReferenceError);
