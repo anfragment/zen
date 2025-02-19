@@ -19,13 +19,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, ubuntu-latest, windows-latest]
+        os: [macOS-latest, ubuntu-latest, ubuntu-24.04-arm, windows-latest]
         arch: [amd64, arm64]
         exclude:
-          # Cross-compilation to arm64 on x86 Linux is broken due to a bug in Go/Wails.
-          # Until that is fixed, only build x86 Linux binaries.
+          # Cross-compilation to arm64 on x86 Linux is broken (or at least hard to figure out).
+          # For this reason, we build the arm64 binary on an arm64 runner.
           - os: ubuntu-latest
             arch: arm64
+          - os: ubuntu-24.04-arm
+            arch: amd64
       fail-fast: false
     steps:
       - uses: actions/checkout@v4

@@ -1,3 +1,4 @@
+import { isProxyable } from './helpers/isProxyable';
 import { createLogger } from './helpers/logger';
 import { matchStack } from './helpers/matchStack';
 import { parseRegexpFromString, parseRegexpLiteral } from './helpers/parseRegexp';
@@ -109,87 +110,121 @@ export function setConstant(
   }
   stackRe ??= null;
 
-  const localKey = Symbol() as any;
-
   if (!property.includes('.')) {
-    window[localKey] = window[property as any];
-    const thisScript = document.currentScript;
+    let localValue = window[property as any];
+    const odesc = Object.getOwnPropertyDescriptor(window, property);
     Object.defineProperty(window, property, {
       configurable: true,
       get: () => {
-        if (
-          // Allow value overwrite by later scriptlets.
-          (document.currentScript !== null && thisScript !== null && document.currentScript === thisScript) ||
-          (stackRe !== null && !matchStack(stackRe))
-        ) {
-          return window[localKey];
+        if (stackRe !== null && !matchStack(stackRe)) {
+          return typeof odesc?.get === 'function' ? odesc.get.apply(window) : localValue;
         }
+        logger.debug(`Returning fake value for property window.${property}`, { value });
         return fakeValue;
       },
-      set: (v) => {
-        window[localKey] = v;
-      },
+      set:
+        typeof odesc?.set === 'function'
+          ? odesc?.set.bind(window)
+          : (v) => {
+              localValue = v;
+            },
     });
     return;
   }
 
-  const get = (chain: string[]) => (target: any, key: any) => {
-    const link = target[key];
+  // Avoid infinite recursion in case we overwrite some sub-property of Object or Function.
+  const nativeObject = Object;
+  const nativeFunction = Function;
+  const get = (chain: string[]) => {
+    let proxyCache: { proxy: any; link: any };
+    let boundFnCache: Record<any, any>;
+    return (target: any, key: any) => {
+      if (chain.length === 1 && chain[0] === key) {
+        logger.debug(`Returning fake value for property window.${property}`, { value });
+        return fakeValue;
+      }
+      let link = Reflect.get(target, key, target);
+      const desc = nativeObject.getOwnPropertyDescriptor(target, key);
+      if (desc && 'value' in desc && !desc.configurable && !desc.writable) {
+        // Get should return the original value for non-configurable, non-writable data properties.
+        // https://tc39.es/ecma262/multipage/ordinary-and-exotic-objects-behaviours.html#sec-proxy-object-internal-methods-and-internal-slots-get-p-receiver
+        return link;
+      }
 
-    if (chain.length === 1 && chain[0] === key) {
-      return fakeValue;
-    }
-    if (chain[0] !== key || (typeof link !== 'object' && link != undefined)) {
       if (
         typeof link === 'function' &&
-        // Prevent rebinding if the function is already bound.
-        // Bound functions can be identified by the "bound " prefix in their name. See:
-        // https://262.ecma-international.org/6.0/index.html#sec-function.prototype.bind
-        !link.name.startsWith('bound ')
+        // This checks for native functions. The regex helps avoid false positives from functions containing the string "[native code]".
+        // Function.prototype.toString is used to handle edge cases where a function has its toString method overridden.
+        // Credit: https://stackoverflow.com/a/6599105
+        /\{\s*\[native code\]/.test(nativeFunction.prototype.toString.call(link))
       ) {
+        // Native functions frequently expect to be bounded to their original, **unproxied** object.
+        // See https://stackoverflow.com/a/57580096 for more details.
         // Fixes https://github.com/anfragment/zen/issues/201
-        return link.bind(target);
+        if (boundFnCache !== undefined && boundFnCache[key]) {
+          // Like with proxyCache, store the bound function to ensure object equality between different access operations.
+          link = boundFnCache[key];
+        } else {
+          link = link.bind(target);
+          if (boundFnCache === undefined) {
+            boundFnCache = {};
+          }
+          boundFnCache[key] = link;
+        }
       }
-      return link;
-    }
+      if (chain[0] !== key || !isProxyable(link) || (stackRe !== null && !matchStack(stackRe))) {
+        return link;
+      }
 
-    return new Proxy(link ?? {}, {
-      get: get(chain.slice(1)),
-    });
+      if (proxyCache?.link === link) {
+        // Ensure object equality between different access operations.
+        // Fixes https://github.com/anfragment/zen/issues/224
+        return proxyCache.proxy;
+      }
+      const proxy = new Proxy(link, {
+        get: get(chain.slice(1)),
+      });
+      proxyCache = { link, proxy };
+      return proxy;
+    };
   };
 
   const rootChain = property.split('.');
   const rootProp = rootChain.shift() as any;
   const odesc = Object.getOwnPropertyDescriptor(window, rootProp);
-  // Establish a chain of getters to ensure multiple set-constant rules cooperate
-  // and always return a correct value when getting the root property of the chain.
-  const prevGetter = odesc?.get;
-  window[localKey] = window[rootProp];
-
+  let localValue = window[rootProp];
+  let proxyCache: { capturedValue: any; proxy: any };
   Object.defineProperty(window, rootProp, {
     configurable: true,
     get: () => {
       let capturedValue;
-      if (typeof prevGetter === 'function') {
+      if (typeof odesc?.get === 'function') {
         // On certain properties, Safari wants window getters to be called with "window" as "this".
         // Therefore, we apply instead of doing a regular function call.
-        capturedValue = prevGetter.apply(window);
+        capturedValue = odesc.get.apply(window);
       } else {
-        capturedValue = window[localKey];
+        capturedValue = localValue;
       }
 
-      if (typeof capturedValue !== 'object' || (stackRe !== null && !matchStack(stackRe))) {
+      if (!isProxyable(capturedValue) || (stackRe !== null && !matchStack(stackRe))) {
         return capturedValue;
       }
-      return new Proxy(capturedValue, {
+      if (proxyCache?.capturedValue === capturedValue) {
+        // Ensure object equality between different access operations.
+        // Fixes https://github.com/anfragment/zen/issues/224
+        return proxyCache.proxy;
+      }
+      const proxy = new Proxy(capturedValue, {
         get: get(rootChain),
       });
+      proxyCache = { capturedValue, proxy };
+      return proxy;
     },
     set:
       typeof odesc?.set === 'function'
-        ? odesc?.set
+        ? odesc?.set.bind(window)
         : (v) => {
-            window[localKey] = v;
+            localValue = v;
           },
   });
 }
