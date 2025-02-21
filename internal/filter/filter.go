@@ -20,6 +20,7 @@ import (
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/rule"
+	"github.com/anfragment/zen/internal/scriptlet"
 )
 
 // filterEventsEmitter emits filter events.
@@ -82,8 +83,6 @@ var (
 	ignoreLineRegex = regexp.MustCompile(`^(?:!|\[|#([^#%]|$))`)
 	// exceptionRegex matches exception rules.
 	exceptionRegex = regexp.MustCompile(`^@@`)
-	// scriptletRegex matches scriptlet rules.
-	scriptletRegex = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
 )
 
 // NewFilter creates and initializes a new filter.
@@ -193,7 +192,7 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		jsRule.RuleRegex also matches scriptlet rules.
 		Therefore, we must first check for a scriptlet rule match before checking for a JS rule match.
 	*/
-	if scriptletRegex.MatchString(rule) {
+	if scriptlet.RuleRegex.MatchString(rule) {
 		if err := f.scriptletsInjector.AddRule(rule, filterListTrusted); err != nil {
 			return false, fmt.Errorf("add scriptlet: %w", err)
 		}

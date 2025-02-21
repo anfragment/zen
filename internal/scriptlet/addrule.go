@@ -7,6 +7,8 @@ import (
 )
 
 var (
+	// RuleRegex matches scriptlet rules.
+	RuleRegex             = regexp.MustCompile(`(?:#@?%#\/\/scriptlet)|(?:#@?#\+js)`)
 	adguardPrimaryRegex   = regexp.MustCompile(`(.*)#%#\/\/scriptlet\((.+)\)`)
 	adguardExceptionRegex = regexp.MustCompile(`(.*)#@%#\/\/scriptlet\((.+)\)`)
 	ublockPrimaryRegex    = regexp.MustCompile(`(.*)##\+js\((.+)\)`)
