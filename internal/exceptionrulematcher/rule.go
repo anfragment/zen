@@ -1,22 +1,17 @@
-package rule
+package exceptionrulematcher
 
 import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
+
+	"github.com/anfragment/zen/internal/rule"
+	"github.com/anfragment/zen/internal/rulematcher"
 )
 
 // Rule represents modifiers of a rule.
 type Rule struct {
-	// string representation
-	RawRule string
-	// FilterName is the name of the filter that the rule belongs to.
-	FilterName         *string
-	matchingModifiers  []matchingModifier
-	modifyingModifiers []modifyingModifier
-}
-
-type ExRule struct {
 	// string representation
 	RawRule string
 	// FilterName is the name of the filter that the rule belongs to.
@@ -25,24 +20,36 @@ type ExRule struct {
 	modifiers []exceptionModifier
 }
 
-func (ee *ExRule) Cancels(r Rule) bool {
-	return true
-}
-
-func (ee *ExRule) ParseModifiers(modifiers string) error {
-	return nil
-}
-
-func (ee *ExRule) ShouldMatchReq(req *http.Request) bool {
-	return true
-}
-
-func (ee *ExRule) ShouldMatchRes(req *http.Response) bool {
-	return true
-}
+var (
+	once sync.Once
+)
 
 type exceptionModifier interface {
 	Cancels(modifier) bool
+	ShouldMatchReq(req *http.Request) bool
+	ShouldMatchRes(res *http.Response) bool
+}
+
+func (ee *Rule) Cancels(r rulematcher.Rule) bool {
+	if len(ee.modifiers) == 0 {
+		return true
+	}
+
+	for _, m := range ee.modifiers {
+		for _, match := range r.MatchingModifiers {
+			if !m.Cancels(match) {
+				return false
+			}
+		}
+
+		for _, match := range r.ModifyingModifiers {
+			if !m.Cancels(match) {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 // modifier is a modifier of a rule.
@@ -83,9 +90,9 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		var modifier modifier
 		switch {
 		case isKind("domain"):
-			modifier = &DomainModifier{}
+			modifier = &rule.DomainModifier{}
 		case isKind("method"):
-			modifier = &MethodModifier{}
+			modifier = &rule.MethodModifier{}
 		case isKind("document"),
 			isKind("doc"),
 			isKind("xmlhttprequest"),
@@ -98,15 +105,15 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			isKind("stylesheet"),
 			isKind("media"),
 			isKind("other"):
-			modifier = &ContentTypeModifier{}
+			modifier = &rule.ContentTypeModifier{}
 		case isKind("third-party"):
-			modifier = &ThirdPartyModifier{}
+			modifier = &rule.ThirdPartyModifier{}
 		case isKind("removeparam"):
-			modifier = &RemoveParamModifier{}
+			modifier = &rule.RemoveParamModifier{}
 		case isKind("header"):
-			modifier = &HeaderModifier{}
+			modifier = &rule.HeaderModifier{}
 		case isKind("removeheader"):
-			modifier = &RemoveHeaderModifier{}
+			modifier = &rule.RemoveHeaderModifier{}
 		case isKind("all"):
 			// TODO: should act as "popup" modifier once it gets implemented
 			continue
@@ -118,13 +125,16 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			return err
 		}
 
-		if matchingModifier, ok := modifier.(matchingModifier); ok {
-			rm.matchingModifiers = append(rm.matchingModifiers, matchingModifier)
-		} else if modifyingModifier, ok := modifier.(modifyingModifier); ok {
-			rm.modifyingModifiers = append(rm.modifyingModifiers, modifyingModifier)
+		if matchingModifier, ok := modifier.(exceptionModifier); ok {
+			once.Do(func() {
+				fmt.Println(matchingModifier, modifier)
+			})
+
+			rm.modifiers = append(rm.modifiers, matchingModifier)
 		} else {
-			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
+			// panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
+
 	}
 
 	return nil
@@ -132,7 +142,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 
 // ShouldMatchReq returns true if the rule should match the request.
 func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
-	for _, modifier := range rm.matchingModifiers {
+	for _, modifier := range rm.modifiers {
 		if !modifier.ShouldMatchReq(req) {
 			return false
 		}
@@ -143,38 +153,11 @@ func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
 
 // ShouldMatchRes returns true if the rule should match the response.
 func (rm *Rule) ShouldMatchRes(res *http.Response) bool {
-	for _, modifier := range rm.matchingModifiers {
+	for _, modifier := range rm.modifiers {
 		if !modifier.ShouldMatchRes(res) {
 			return false
 		}
 	}
 
 	return true
-}
-
-// ShouldBlockReq returns true if the request should be blocked.
-func (rm *Rule) ShouldBlockReq(*http.Request) bool {
-	return len(rm.modifyingModifiers) == 0
-}
-
-// ModifyReq modifies a request. Returns true if the request was modified.
-func (rm *Rule) ModifyReq(req *http.Request) (modified bool) {
-	for _, modifier := range rm.modifyingModifiers {
-		if modifier.ModifyReq(req) {
-			modified = true
-		}
-	}
-
-	return modified
-}
-
-// ModifyRes modifies a response. Returns true if the response was modified.
-func (rm *Rule) ModifyRes(res *http.Response) (modified bool) {
-	for _, modifier := range rm.modifyingModifiers {
-		if modifier.ModifyRes(res) {
-			modified = true
-		}
-	}
-
-	return modified
 }

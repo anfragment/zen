@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/anfragment/zen/internal/rule"
+	"github.com/anfragment/zen/internal/rulematcher"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -26,12 +26,12 @@ const (
 )
 
 type filterAction struct {
-	Kind    filterActionKind `json:"kind"`
-	Method  string           `json:"method"`
-	URL     string           `json:"url"`
-	To      string           `json:"to,omitempty"`
-	Referer string           `json:"referer,omitempty"`
-	Rules   []rule.Rule      `json:"rules"`
+	Kind    filterActionKind   `json:"kind"`
+	Method  string             `json:"method"`
+	URL     string             `json:"url"`
+	To      string             `json:"to,omitempty"`
+	Referer string             `json:"referer,omitempty"`
+	Rules   []rulematcher.Rule `json:"rules"`
 }
 
 type proxyState string
@@ -53,7 +53,7 @@ type proxyAction struct {
 	Error string     `json:"error"`
 }
 
-func (e *eventsHandler) OnFilterBlock(method, url, referer string, rules []rule.Rule) {
+func (e *eventsHandler) OnFilterBlock(method, url, referer string, rules []rulematcher.Rule) {
 	runtime.EventsEmit(e.ctx, filterChannel, filterAction{
 		Kind:    filterActionBlock,
 		Method:  method,
@@ -63,7 +63,7 @@ func (e *eventsHandler) OnFilterBlock(method, url, referer string, rules []rule.
 	})
 }
 
-func (e *eventsHandler) OnFilterRedirect(method, url, to, referer string, rules []rule.Rule) {
+func (e *eventsHandler) OnFilterRedirect(method, url, to, referer string, rules []rulematcher.Rule) {
 	runtime.EventsEmit(e.ctx, filterChannel, filterAction{
 		Kind:    filterActionRedirect,
 		Method:  method,
@@ -74,7 +74,7 @@ func (e *eventsHandler) OnFilterRedirect(method, url, to, referer string, rules 
 	})
 }
 
-func (e *eventsHandler) OnFilterModify(method, url, referer string, rules []rule.Rule) {
+func (e *eventsHandler) OnFilterModify(method, url, referer string, rules []rulematcher.Rule) {
 	runtime.EventsEmit(e.ctx, filterChannel, filterAction{
 		Kind:    filterActionModify,
 		Method:  method,

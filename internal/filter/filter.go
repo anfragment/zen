@@ -17,16 +17,17 @@ import (
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/cosmetic"
 	"github.com/anfragment/zen/internal/cssrule"
+	"github.com/anfragment/zen/internal/exceptionrulematcher"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
-	"github.com/anfragment/zen/internal/rule"
+	normalRuleMatcher "github.com/anfragment/zen/internal/rulematcher"
 )
 
 // filterEventsEmitter emits filter events.
 type filterEventsEmitter interface {
-	OnFilterBlock(method, url, referer string, rules []rule.Rule)
-	OnFilterRedirect(method, url, to, referer string, rules []rule.Rule)
-	OnFilterModify(method, url, referer string, rules []rule.Rule)
+	OnFilterBlock(method, url, referer string, rules []normalRuleMatcher.Rule)
+	OnFilterRedirect(method, url, to, referer string, rules []normalRuleMatcher.Rule)
+	OnFilterModify(method, url, referer string, rules []normalRuleMatcher.Rule)
 }
 
 // ruleMatcher matches requests against rules.
@@ -38,14 +39,14 @@ type filterEventsEmitter interface {
 //	}
 type ruleMatcher interface {
 	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(*http.Request) []*rule.Rule
-	FindMatchingRulesRes(*http.Request, *http.Response) []*rule.Rule
+	FindMatchingRulesReq(*http.Request) []normalRuleMatcher.Rule
+	FindMatchingRulesRes(*http.Request, *http.Response) []normalRuleMatcher.Rule
 }
 
 type exceptionRuleMatcher interface {
 	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(*http.Request) []*rule.ExRule
-	FindMatchingRulesRes(*http.Request, *http.Response) []*rule.ExRule
+	FindMatchingRulesReq(*http.Request) []exceptionrulematcher.Rule
+	FindMatchingRulesRes(*http.Request, *http.Response) []exceptionrulematcher.Rule
 }
 
 // config provides filter configuration.
@@ -255,18 +256,18 @@ func (f *Filter) HandleRequest(req *http.Request) *http.Response {
 
 	for _, exceptionRule := range exceptionRules {
 		for _, matchingRule := range matchingRules {
-			if exceptionRule.Cancels(*matchingRule) {
-				fmt.Printf("exception rule %s cancel matching rule %s\n", exceptionRule, matchingRule)
+			if exceptionRule.Cancels(matchingRule) {
+				// fmt.Printf("exception rule %s cancel matching rule %s\n", exceptionRule, matchingRule)
 			}
 		}
 	}
 
-	var appliedRules []rule.Rule
+	var appliedRules []normalRuleMatcher.Rule
 	initialURL := req.URL.String()
 
 	for _, r := range matchingRules {
 		if r.ShouldBlockReq(req) {
-			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []rule.Rule{*r})
+			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []normalRuleMatcher.Rule{r})
 			return f.createBlockResponse(req)
 		}
 		if r.ModifyReq(req) {
@@ -319,7 +320,7 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 		return nil
 	}
 
-	var appliedRules []rule.Rule
+	var appliedRules []normalRuleMatcher.Rule
 
 	for _, r := range matchingRules {
 		if r.ModifyRes(res) {

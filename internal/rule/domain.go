@@ -17,14 +17,14 @@ var (
 	domainModifierRegex = regexp.MustCompile(`~?((/.*/)|[^|]+)+`)
 )
 
-type domainModifier struct {
+type DomainModifier struct {
 	entries  []domainModifierEntry
 	inverted bool
 }
 
-var _ matchingModifier = (*domainModifier)(nil)
+var _ matchingModifier = (*DomainModifier)(nil)
 
-func (m *domainModifier) Parse(modifier string) error {
+func (m *DomainModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
 	if eqIndex == -1 || eqIndex == len(modifier)-1 {
 		return errors.New("invalid domain modifier")
@@ -51,7 +51,7 @@ func (m *domainModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *domainModifier) ShouldMatchReq(req *http.Request) bool {
+func (m *DomainModifier) ShouldMatchReq(req *http.Request) bool {
 	if referer := req.Header.Get("Referer"); referer == "" {
 		return false
 	}
@@ -74,7 +74,7 @@ func (m *domainModifier) ShouldMatchReq(req *http.Request) bool {
 	return matches
 }
 
-func (m *domainModifier) ShouldMatchRes(_ *http.Response) bool {
+func (m *DomainModifier) ShouldMatchRes(_ *http.Response) bool {
 	return false
 }
 

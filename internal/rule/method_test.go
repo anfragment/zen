@@ -8,7 +8,7 @@ import (
 func TestSingleMethod(t *testing.T) {
 	t.Parallel()
 
-	m := methodModifier{}
+	m := MethodModifier{}
 	m.Parse("method=GET")
 	req := http.Request{
 		Method: "GET",
@@ -21,7 +21,7 @@ func TestSingleMethod(t *testing.T) {
 func TestSingleInvertedMethod(t *testing.T) {
 	t.Parallel()
 
-	m := methodModifier{}
+	m := MethodModifier{}
 	m.Parse("method=~GET")
 	req := http.Request{
 		Method: "GET",
@@ -34,7 +34,7 @@ func TestSingleInvertedMethod(t *testing.T) {
 func TestLowercaseMethod(t *testing.T) {
 	t.Parallel()
 
-	m := methodModifier{}
+	m := MethodModifier{}
 	m.Parse("method=get")
 	req := http.Request{
 		Method: "GET",
@@ -47,7 +47,7 @@ func TestLowercaseMethod(t *testing.T) {
 func TestMultipleMethods(t *testing.T) {
 	t.Parallel()
 
-	m := methodModifier{}
+	m := MethodModifier{}
 	m.Parse("method=GET|POST")
 
 	req := http.Request{
@@ -71,7 +71,7 @@ func TestMultipleMethods(t *testing.T) {
 func TestMultipleInvertedMethods(t *testing.T) {
 	t.Parallel()
 
-	m := methodModifier{}
+	m := MethodModifier{}
 	m.Parse("method=~GET|~POST")
 
 	req := http.Request{
@@ -100,12 +100,12 @@ func TestMultipleInvertedMethods(t *testing.T) {
 func TestMixedInvertedAndNonInvertedMethods(t *testing.T) {
 	t.Parallel()
 
-	m := methodModifier{}
+	m := MethodModifier{}
 	if err := m.Parse("method=GET|~POST"); err == nil {
 		t.Error("method=GET|~POST should return an error")
 	}
 
-	m = methodModifier{}
+	m = MethodModifier{}
 	if err := m.Parse("method=~GET|POST"); err == nil {
 		t.Error("method=~GET|POST should return an error")
 	}

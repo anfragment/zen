@@ -50,7 +50,7 @@ func TestDomainModifierParse(t *testing.T) {
 
 	t.Run("Should fail on empty modifier", func(t *testing.T) {
 		t.Parallel()
-		m := domainModifier{}
+		m := DomainModifier{}
 		if err := m.Parse("domain="); err == nil {
 			t.Error("domainModifier.Parse(\"domain=\") = nil, want error")
 		}
@@ -58,16 +58,16 @@ func TestDomainModifierParse(t *testing.T) {
 
 	t.Run("Should fail on inverted and non-inverted domains", func(t *testing.T) {
 		t.Parallel()
-		m := domainModifier{}
+		m := DomainModifier{}
 		if err := m.Parse("domain=example.com|~example.org"); err == nil {
 			t.Error("domainModifier.Parse(\"domain=example.com|~example.org\") = nil, want error")
 		}
 	})
 }
 
-func newDomainModifier(t *testing.T, domain string) domainModifier {
+func newDomainModifier(t *testing.T, domain string) DomainModifier {
 	t.Helper()
-	m := domainModifier{}
+	m := DomainModifier{}
 	if err := m.Parse(domain); err != nil {
 		t.Fatal(err)
 	}

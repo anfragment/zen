@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-type methodModifier struct {
+type MethodModifier struct {
 	entries  []methodModifierEntry
 	inverted bool
 }
 
-var _ matchingModifier = (*methodModifier)(nil)
+var _ matchingModifier = (*MethodModifier)(nil)
 
-func (m *methodModifier) Parse(modifier string) error {
+func (m *MethodModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
 	if eqIndex == -1 {
 		return fmt.Errorf("invalid method modifier")
@@ -42,7 +42,7 @@ func (m *methodModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *methodModifier) ShouldMatchReq(req *http.Request) bool {
+func (m *MethodModifier) ShouldMatchReq(req *http.Request) bool {
 	matches := false
 	for _, entry := range m.entries {
 		if entry.MatchesMethod(req.Method) {
@@ -56,7 +56,7 @@ func (m *methodModifier) ShouldMatchReq(req *http.Request) bool {
 	return matches
 }
 
-func (m *methodModifier) ShouldMatchRes(_ *http.Response) bool {
+func (m *MethodModifier) ShouldMatchRes(_ *http.Response) bool {
 	return false
 }
 

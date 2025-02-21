@@ -16,12 +16,12 @@ import (
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/cosmetic"
 	"github.com/anfragment/zen/internal/cssrule"
+	"github.com/anfragment/zen/internal/exceptionrulematcher"
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/proxy"
-	"github.com/anfragment/zen/internal/rule"
-	"github.com/anfragment/zen/internal/ruletree"
+	"github.com/anfragment/zen/internal/rulematcher"
 	"github.com/anfragment/zen/internal/scriptlet"
 	"github.com/anfragment/zen/internal/scriptlet/triestore"
 	"github.com/anfragment/zen/internal/selfupdate"
@@ -166,8 +166,8 @@ func (a *App) StartProxy() (err error) {
 		}
 	}()
 
-	ruleMatcher := ruletree.NewRuleTree[*rule.Rule]()
-	exceptionRuleMatcher := ruletree.NewRuleTree[*rule.ExRule]()
+	ruleMatcher := rulematcher.NewRuleTree()
+	exceptionRuleMatcher := exceptionrulematcher.NewRuleTree()
 
 	scriptletStore := triestore.NewTrieStore()
 	scriptletInjector, err := scriptlet.NewInjector(scriptletStore)

@@ -71,12 +71,12 @@ var (
 	ErrInvalidRemoveheaderModifier = errors.New("invalid removeheader modifier")
 )
 
-type removeHeaderModifier struct {
+type RemoveHeaderModifier struct {
 	Kind       removeHeaderKind
 	HeaderName string
 }
 
-var _ modifyingModifier = (*removeHeaderModifier)(nil)
+var _ modifyingModifier = (*RemoveHeaderModifier)(nil)
 
 type removeHeaderExceptionModifier struct {
 	Kind       removeHeaderKind
@@ -84,7 +84,7 @@ type removeHeaderExceptionModifier struct {
 }
 
 func (rme *removeHeaderExceptionModifier) Cancels(m modifier) bool {
-	rm, ok := m.(*removeHeaderModifier)
+	rm, ok := m.(*RemoveHeaderModifier)
 	if !ok {
 		return false
 	}
@@ -92,7 +92,7 @@ func (rme *removeHeaderExceptionModifier) Cancels(m modifier) bool {
 	return rm.Kind == rme.Kind && rm.HeaderName == rme.HeaderName
 }
 
-func (rm *removeHeaderModifier) Parse(modifier string) error {
+func (rm *RemoveHeaderModifier) Parse(modifier string) error {
 	if !strings.HasPrefix(modifier, "removeheader=") {
 		return ErrInvalidRemoveheaderModifier
 	}
@@ -119,7 +119,7 @@ func (rm *removeHeaderModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (rm *removeHeaderModifier) ModifyReq(req *http.Request) (modified bool) {
+func (rm *RemoveHeaderModifier) ModifyReq(req *http.Request) (modified bool) {
 	if rm.Kind != removeHeaderKindRequest {
 		return false
 	}
@@ -132,7 +132,7 @@ func (rm *removeHeaderModifier) ModifyReq(req *http.Request) (modified bool) {
 	return true
 }
 
-func (rm *removeHeaderModifier) ModifyRes(res *http.Response) (modified bool) {
+func (rm *RemoveHeaderModifier) ModifyRes(res *http.Response) (modified bool) {
 	if rm.Kind != removeHeaderKindResponse {
 		return false
 	}

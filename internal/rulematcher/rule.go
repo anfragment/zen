@@ -1,9 +1,11 @@
-package rule
+package rulematcher
 
 import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/anfragment/zen/internal/rule"
 )
 
 // Rule represents modifiers of a rule.
@@ -12,37 +14,8 @@ type Rule struct {
 	RawRule string
 	// FilterName is the name of the filter that the rule belongs to.
 	FilterName         *string
-	matchingModifiers  []matchingModifier
-	modifyingModifiers []modifyingModifier
-}
-
-type ExRule struct {
-	// string representation
-	RawRule string
-	// FilterName is the name of the filter that the rule belongs to.
-	FilterName *string
-
-	modifiers []exceptionModifier
-}
-
-func (ee *ExRule) Cancels(r Rule) bool {
-	return true
-}
-
-func (ee *ExRule) ParseModifiers(modifiers string) error {
-	return nil
-}
-
-func (ee *ExRule) ShouldMatchReq(req *http.Request) bool {
-	return true
-}
-
-func (ee *ExRule) ShouldMatchRes(req *http.Response) bool {
-	return true
-}
-
-type exceptionModifier interface {
-	Cancels(modifier) bool
+	MatchingModifiers  []matchingModifier
+	ModifyingModifiers []modifyingModifier
 }
 
 // modifier is a modifier of a rule.
@@ -83,9 +56,9 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		var modifier modifier
 		switch {
 		case isKind("domain"):
-			modifier = &DomainModifier{}
+			modifier = &rule.DomainModifier{}
 		case isKind("method"):
-			modifier = &MethodModifier{}
+			modifier = &rule.MethodModifier{}
 		case isKind("document"),
 			isKind("doc"),
 			isKind("xmlhttprequest"),
@@ -98,15 +71,15 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			isKind("stylesheet"),
 			isKind("media"),
 			isKind("other"):
-			modifier = &ContentTypeModifier{}
+			modifier = &rule.ContentTypeModifier{}
 		case isKind("third-party"):
-			modifier = &ThirdPartyModifier{}
+			modifier = &rule.ThirdPartyModifier{}
 		case isKind("removeparam"):
-			modifier = &RemoveParamModifier{}
+			modifier = &rule.RemoveParamModifier{}
 		case isKind("header"):
-			modifier = &HeaderModifier{}
+			modifier = &rule.HeaderModifier{}
 		case isKind("removeheader"):
-			modifier = &RemoveHeaderModifier{}
+			modifier = &rule.RemoveHeaderModifier{}
 		case isKind("all"):
 			// TODO: should act as "popup" modifier once it gets implemented
 			continue
@@ -119,9 +92,9 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		}
 
 		if matchingModifier, ok := modifier.(matchingModifier); ok {
-			rm.matchingModifiers = append(rm.matchingModifiers, matchingModifier)
+			rm.MatchingModifiers = append(rm.MatchingModifiers, matchingModifier)
 		} else if modifyingModifier, ok := modifier.(modifyingModifier); ok {
-			rm.modifyingModifiers = append(rm.modifyingModifiers, modifyingModifier)
+			rm.ModifyingModifiers = append(rm.ModifyingModifiers, modifyingModifier)
 		} else {
 			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
@@ -132,7 +105,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 
 // ShouldMatchReq returns true if the rule should match the request.
 func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
-	for _, modifier := range rm.matchingModifiers {
+	for _, modifier := range rm.MatchingModifiers {
 		if !modifier.ShouldMatchReq(req) {
 			return false
 		}
@@ -143,7 +116,7 @@ func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
 
 // ShouldMatchRes returns true if the rule should match the response.
 func (rm *Rule) ShouldMatchRes(res *http.Response) bool {
-	for _, modifier := range rm.matchingModifiers {
+	for _, modifier := range rm.MatchingModifiers {
 		if !modifier.ShouldMatchRes(res) {
 			return false
 		}
@@ -154,12 +127,12 @@ func (rm *Rule) ShouldMatchRes(res *http.Response) bool {
 
 // ShouldBlockReq returns true if the request should be blocked.
 func (rm *Rule) ShouldBlockReq(*http.Request) bool {
-	return len(rm.modifyingModifiers) == 0
+	return len(rm.ModifyingModifiers) == 0
 }
 
 // ModifyReq modifies a request. Returns true if the request was modified.
 func (rm *Rule) ModifyReq(req *http.Request) (modified bool) {
-	for _, modifier := range rm.modifyingModifiers {
+	for _, modifier := range rm.ModifyingModifiers {
 		if modifier.ModifyReq(req) {
 			modified = true
 		}
@@ -170,7 +143,7 @@ func (rm *Rule) ModifyReq(req *http.Request) (modified bool) {
 
 // ModifyRes modifies a response. Returns true if the response was modified.
 func (rm *Rule) ModifyRes(res *http.Response) (modified bool) {
-	for _, modifier := range rm.modifyingModifiers {
+	for _, modifier := range rm.ModifyingModifiers {
 		if modifier.ModifyRes(res) {
 			modified = true
 		}
