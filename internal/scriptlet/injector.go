@@ -3,11 +3,11 @@ package scriptlet
 import (
 	"bytes"
 	"embed"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/anfragment/zen/internal/hostmatch"
 	"github.com/anfragment/zen/internal/htmlrewrite"
 	"github.com/anfragment/zen/internal/logger"
 )
@@ -19,9 +19,10 @@ var (
 	scriptClosingTag   = []byte("</script>")
 )
 
-type Store interface {
-	Add(hostnames []string, scriptlet *Scriptlet)
-	Get(hostname string) []*Scriptlet
+type store interface {
+	AddPrimaryRule(hostnamePatterns string, body argList) error
+	AddExceptionRule(hostnamePatterns string, body argList) error
+	Get(hostname string) []argList
 }
 
 // Injector injects scriptlets into HTML HTTP responses.
@@ -29,13 +30,18 @@ type Injector struct {
 	// bundle contains the <script> element for the scriptlets bundle, which is to be inserted into HTML documents.
 	bundle []byte
 	// store stores and retrieves scriptlets by hostname.
-	store Store
+	store store
 }
 
-// NewInjector creates a new Injector with the embedded scriptlets.
-func NewInjector(store Store) (*Injector, error) {
+func NewInjectorWithHostmatchStore() (*Injector, error) {
+	store := hostmatch.NewHostMatcher[argList]()
+	return newInjector(store)
+}
+
+// newInjector creates a new Injector with the embedded scriptlets.
+func newInjector(store store) (*Injector, error) {
 	if store == nil {
-		return nil, errors.New("store is nil")
+		return nil, fmt.Errorf("store is nil")
 	}
 
 	bundleData, err := scriptletsBundleFS.ReadFile("bundle.js")
@@ -59,18 +65,18 @@ func NewInjector(store Store) (*Injector, error) {
 // On error, the caller may proceed as if the function had not been called.
 func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	hostname := req.URL.Hostname()
-	scriptlets := inj.store.Get(hostname)
-	log.Printf("got %d scriptlets for %q", len(scriptlets), logger.Redacted(hostname))
-	if len(scriptlets) == 0 {
+	argLists := inj.store.Get(hostname)
+	log.Printf("got %d scriptlets for %q", len(argLists), logger.Redacted(hostname))
+	if len(argLists) == 0 {
 		return nil
 	}
 	var ruleInjection bytes.Buffer
 	ruleInjection.Write(scriptOpeningTag)
 	ruleInjection.WriteString("\n(function() {\n")
 	var err error
-	for _, scriptlet := range scriptlets {
-		if err = scriptlet.GenerateInjection(&ruleInjection); err != nil {
-			return fmt.Errorf("generate injection for scriptlet %q: %w", scriptlet.Name, err)
+	for _, argList := range argLists {
+		if err = argList.GenerateInjection(&ruleInjection); err != nil {
+			return fmt.Errorf("generate injection for scriptlet %q: %w", argList, err)
 		}
 		ruleInjection.WriteByte('\n')
 	}

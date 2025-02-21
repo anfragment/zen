@@ -22,7 +22,6 @@ import (
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/ruletree"
 	"github.com/anfragment/zen/internal/scriptlet"
-	"github.com/anfragment/zen/internal/scriptlet/triestore"
 	"github.com/anfragment/zen/internal/selfupdate"
 	"github.com/anfragment/zen/internal/systray"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -168,12 +167,10 @@ func (a *App) StartProxy() (err error) {
 	ruleMatcher := ruletree.NewRuleTree()
 	exceptionRuleMatcher := ruletree.NewRuleTree()
 
-	scriptletStore := triestore.NewTrieStore()
-	scriptletInjector, err := scriptlet.NewInjector(scriptletStore)
+	scriptletInjector, err := scriptlet.NewInjectorWithHostmatchStore()
 	if err != nil {
 		return fmt.Errorf("create scriptlets injector: %v", err)
 	}
-
 	cosmeticRulesInjector := cosmetic.NewInjector()
 	cssRulesInjector := cssrule.NewInjector()
 	jsRuleInjector := jsrule.NewInjector()
