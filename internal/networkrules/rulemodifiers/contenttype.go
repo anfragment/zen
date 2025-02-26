@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"net/http"
@@ -9,7 +9,8 @@ type ContentTypeModifier struct {
 	inverted    bool
 }
 
-var _ matchingModifier = (*ContentTypeModifier)(nil)
+// Q: how do i import "matchingModifier" from rule.go without causing import cycle?
+var _ MatchingModifier = (*ContentTypeModifier)(nil)
 
 var (
 	// secFetchDestMap maps Sec-Fetch-Dest header values to corresponding content type modifiers.

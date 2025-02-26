@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ type RemoveParamModifier struct {
 	regexp *regexp.Regexp
 }
 
-var _ modifyingModifier = (*RemoveParamModifier)(nil)
+var _ ModifyingModifier = (*RemoveParamModifier)(nil)
 
 func (rm *RemoveParamModifier) Parse(modifier string) error {
 	if modifier == "removeparam" {

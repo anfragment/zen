@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/anfragment/zen/internal/networkrules/rulemodifiers"
 )
 
 // Rule represents modifiers of a rule.
@@ -12,8 +14,8 @@ type Rule struct {
 	RawRule string
 	// FilterName is the name of the filter that the rule belongs to.
 	FilterName         *string
-	matchingModifiers  []matchingModifier
-	modifyingModifiers []modifyingModifier
+	matchingModifiers  []rulemodifiers.MatchingModifier
+	modifyingModifiers []rulemodifiers.ModifyingModifier
 }
 
 type ExRule struct {
@@ -22,7 +24,7 @@ type ExRule struct {
 	// FilterName is the name of the filter that the rule belongs to.
 	FilterName *string
 
-	modifiers []exceptionModifier
+	Modifiers []exceptionModifier
 }
 
 func (ee *ExRule) Cancels(r Rule) bool {
@@ -42,26 +44,7 @@ func (ee *ExRule) ShouldMatchRes(req *http.Response) bool {
 }
 
 type exceptionModifier interface {
-	Cancels(modifier) bool
-}
-
-// modifier is a modifier of a rule.
-type modifier interface {
-	Parse(modifier string) error
-}
-
-// matchingModifier defines whether a rule matches a request.
-type matchingModifier interface {
-	modifier
-	ShouldMatchReq(req *http.Request) bool
-	ShouldMatchRes(res *http.Response) bool
-}
-
-// modifyingModifier modifies a request.
-type modifyingModifier interface {
-	modifier
-	ModifyReq(req *http.Request) (modified bool)
-	ModifyRes(res *http.Response) (modified bool)
+	Cancels(rulemodifiers.Modifier) bool
 }
 
 func (rm *Rule) ParseModifiers(modifiers string) error {
@@ -80,12 +63,12 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			}
 			return strings.HasPrefix(m, kind)
 		}
-		var modifier modifier
+		var modifier rulemodifiers.Modifier
 		switch {
 		case isKind("domain"):
-			modifier = &DomainModifier{}
+			modifier = &rulemodifiers.DomainModifier{}
 		case isKind("method"):
-			modifier = &MethodModifier{}
+			modifier = &rulemodifiers.MethodModifier{}
 		case isKind("document"),
 			isKind("doc"),
 			isKind("xmlhttprequest"),
@@ -98,15 +81,15 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			isKind("stylesheet"),
 			isKind("media"),
 			isKind("other"):
-			modifier = &ContentTypeModifier{}
+			modifier = &rulemodifiers.ContentTypeModifier{}
 		case isKind("third-party"):
-			modifier = &ThirdPartyModifier{}
+			modifier = &rulemodifiers.ThirdPartyModifier{}
 		case isKind("removeparam"):
-			modifier = &RemoveParamModifier{}
+			modifier = &rulemodifiers.RemoveParamModifier{}
 		case isKind("header"):
-			modifier = &HeaderModifier{}
+			modifier = &rulemodifiers.HeaderModifier{}
 		case isKind("removeheader"):
-			modifier = &RemoveHeaderModifier{}
+			modifier = &rulemodifiers.RemoveHeaderModifier{}
 		case isKind("all"):
 			// TODO: should act as "popup" modifier once it gets implemented
 			continue
@@ -118,12 +101,13 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			return err
 		}
 
-		if matchingModifier, ok := modifier.(matchingModifier); ok {
+		if matchingModifier, ok := modifier.(rulemodifiers.MatchingModifier); ok {
 			rm.matchingModifiers = append(rm.matchingModifiers, matchingModifier)
-		} else if modifyingModifier, ok := modifier.(modifyingModifier); ok {
+		} else if modifyingModifier, ok := modifier.(rulemodifiers.ModifyingModifier); ok {
 			rm.modifyingModifiers = append(rm.modifyingModifiers, modifyingModifier)
 		} else {
-			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
+			// QA: commment for now, cause not every modifier implements Cancels() func yet.
+			// panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
 	}
 

@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"errors"
@@ -22,7 +22,7 @@ type DomainModifier struct {
 	inverted bool
 }
 
-var _ matchingModifier = (*DomainModifier)(nil)
+var _ MatchingModifier = (*DomainModifier)(nil)
 
 func (m *DomainModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')

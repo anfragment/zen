@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ type MethodModifier struct {
 	inverted bool
 }
 
-var _ matchingModifier = (*MethodModifier)(nil)
+var _ MatchingModifier = (*MethodModifier)(nil)
 
 func (m *MethodModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')

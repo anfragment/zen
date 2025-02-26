@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"errors"
@@ -15,8 +15,7 @@ const (
 )
 
 var forbiddenHeaders = []string{
-	"Access-Control-Allow-Origin",
-	"Access-Control-Allow-Credentials",
+	"Access-Control-Allow-Origin", "Access-Control-Allow-Credentials",
 	"Access-Control-Allow-Headers",
 	"Access-Control-Allow-Methods",
 	"Access-Control-Expose-Headers",
@@ -76,14 +75,14 @@ type RemoveHeaderModifier struct {
 	HeaderName string
 }
 
-var _ modifyingModifier = (*RemoveHeaderModifier)(nil)
+var _ ModifyingModifier = (*RemoveHeaderModifier)(nil)
 
 type removeHeaderExceptionModifier struct {
 	Kind       removeHeaderKind
 	HeaderName string
 }
 
-func (rme *removeHeaderExceptionModifier) Cancels(m modifier) bool {
+func (rme *removeHeaderExceptionModifier) Cancels(m Modifier) bool {
 	rm, ok := m.(*RemoveHeaderModifier)
 	if !ok {
 		return false

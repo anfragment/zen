@@ -17,36 +17,35 @@ import (
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/cosmetic"
 	"github.com/anfragment/zen/internal/cssrule"
-	"github.com/anfragment/zen/internal/exceptionrulematcher"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
-	normalRuleMatcher "github.com/anfragment/zen/internal/rulematcher"
+	"github.com/anfragment/zen/internal/networkrules/exceptionrule"
+	"github.com/anfragment/zen/internal/networkrules/rule"
 )
 
 // filterEventsEmitter emits filter events.
 type filterEventsEmitter interface {
-	OnFilterBlock(method, url, referer string, rules []normalRuleMatcher.Rule)
-	OnFilterRedirect(method, url, to, referer string, rules []normalRuleMatcher.Rule)
-	OnFilterModify(method, url, referer string, rules []normalRuleMatcher.Rule)
+	OnFilterBlock(method, url, referer string, rules []rule.Rule)
+	OnFilterRedirect(method, url, to, referer string, rules []rule.Rule)
+	OnFilterModify(method, url, referer string, rules []rule.Rule)
 }
 
-// ruleMatcher matches requests against rules.
-//
-//	type ruleMatcher interface {
-//		AddRule(rule string, filterName *string) error
-//		FindMatchingRulesReq(*http.Request) []rule.Rule
-//		FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
-//	}
+type networkRules interface {
+	ModifyReq(req *http.Request)
+	ModifyRes(req *http.Request, res *http.Response) []rule.Rule
+	ParseRule(rule string, filterName *string) error
+}
+
 type ruleMatcher interface {
 	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(*http.Request) []normalRuleMatcher.Rule
-	FindMatchingRulesRes(*http.Request, *http.Response) []normalRuleMatcher.Rule
+	FindMatchingRulesReq(*http.Request) []rule.Rule
+	FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
 }
 
 type exceptionRuleMatcher interface {
 	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(*http.Request) []exceptionrulematcher.Rule
-	FindMatchingRulesRes(*http.Request, *http.Response) []exceptionrulematcher.Rule
+	FindMatchingRulesReq(*http.Request) []exceptionrule.ExceptionRule
+	FindMatchingRulesRes(*http.Request, *http.Response) []exceptionrule.ExceptionRule
 }
 
 // config provides filter configuration.
@@ -81,8 +80,7 @@ type jsRuleInjector interface {
 // Safe for concurrent use.
 type Filter struct {
 	config                config
-	ruleMatcher           ruleMatcher
-	exceptionRuleMatcher  exceptionRuleMatcher
+	networkRules          networkRules
 	scriptletsInjector    scriptletsInjector
 	cosmeticRulesInjector cosmeticRulesInjector
 	cssRulesInjector      cssRulesInjector
@@ -93,22 +91,20 @@ type Filter struct {
 var (
 	// ignoreLineRegex matches comments and [Adblock Plus 2.0]-style headers.
 	ignoreLineRegex = regexp.MustCompile(`^(?:!|\[|#([^#%]|$))`)
-	// exceptionRegex matches exception rules.
-	exceptionRegex = regexp.MustCompile(`^@@`)
 	// scriptletRegex matches scriptlet rules.
 	scriptletRegex = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher exceptionRuleMatcher, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, networkRules networkRules, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
 	if eventsEmitter == nil {
 		return nil, errors.New("eventsEmitter is nil")
 	}
-	if ruleMatcher == nil {
-		return nil, errors.New("ruleMatcher is nil")
+	if networkRules == nil {
+		return nil, errors.New("networkRules is nil")
 	}
 	if scriptletsInjector == nil {
 		return nil, errors.New("scriptletsInjector is nil")
@@ -122,14 +118,10 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher exce
 	if jsRuleInjector == nil {
 		return nil, errors.New("jsRuleInjector is nil")
 	}
-	if exceptionRuleMatcher == nil {
-		return nil, errors.New("exceptionRuleMatcher is nil")
-	}
 
 	f := &Filter{
 		config:                config,
-		ruleMatcher:           ruleMatcher,
-		exceptionRuleMatcher:  exceptionRuleMatcher,
+		networkRules:          networkRules,
 		scriptletsInjector:    scriptletsInjector,
 		cosmeticRulesInjector: cosmeticRulesInjector,
 		cssRulesInjector:      cssRulesInjector,
@@ -232,59 +224,18 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		}
 		return false, nil
 	}
-	if exceptionRegex.MatchString(rule) {
-		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterListName); err != nil {
-			return true, fmt.Errorf("add exception: %w", err)
-		}
-		return true, nil
+
+	if err = f.networkRules.ParseRule(rule, filterListName); err != nil {
+		return true, fmt.Errorf("parse network rule: %w", err)
 	}
-	if err := f.ruleMatcher.AddRule(rule, filterListName); err != nil {
-		return false, fmt.Errorf("add rule: %w", err)
-	}
+
 	return false, nil
 }
 
 // HandleRequest handles the given request by matching it against the filter rules.
 // If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
 func (f *Filter) HandleRequest(req *http.Request) *http.Response {
-	matchingRules := f.ruleMatcher.FindMatchingRulesReq(req)
-	if len(matchingRules) == 0 {
-		return nil
-	}
-
-	exceptionRules := f.exceptionRuleMatcher.FindMatchingRulesReq(req)
-
-	for _, exceptionRule := range exceptionRules {
-		for _, matchingRule := range matchingRules {
-			if exceptionRule.Cancels(matchingRule) {
-				// fmt.Printf("exception rule %s cancel matching rule %s\n", exceptionRule, matchingRule)
-			}
-		}
-	}
-
-	var appliedRules []normalRuleMatcher.Rule
-	initialURL := req.URL.String()
-
-	for _, r := range matchingRules {
-		if r.ShouldBlockReq(req) {
-			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []normalRuleMatcher.Rule{r})
-			return f.createBlockResponse(req)
-		}
-		if r.ModifyReq(req) {
-			appliedRules = append(appliedRules, *r)
-		}
-	}
-
-	finalURL := req.URL.String()
-	if initialURL != finalURL {
-		f.eventsEmitter.OnFilterRedirect(req.Method, initialURL, finalURL, req.Header.Get("Referer"), appliedRules)
-		return f.createRedirectResponse(req, finalURL)
-	}
-
-	if len(appliedRules) > 0 {
-		f.eventsEmitter.OnFilterModify(req.Method, initialURL, req.Header.Get("Referer"), appliedRules)
-	}
-
+	// QA: All this should be inside NetworkRules
 	return nil
 }
 
@@ -311,23 +262,7 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 		}
 	}
 
-	if len(f.exceptionRuleMatcher.FindMatchingRulesRes(req, res)) > 0 {
-		return nil
-	}
-
-	matchingRules := f.ruleMatcher.FindMatchingRulesRes(req, res)
-	if len(matchingRules) == 0 {
-		return nil
-	}
-
-	var appliedRules []normalRuleMatcher.Rule
-
-	for _, r := range matchingRules {
-		if r.ModifyRes(res) {
-			appliedRules = append(appliedRules, *r)
-		}
-	}
-
+	appliedRules := f.networkRules.ModifyRes(req, res)
 	if len(appliedRules) > 0 {
 		f.eventsEmitter.OnFilterModify(req.Method, req.URL.String(), req.Header.Get("Referer"), appliedRules)
 	}

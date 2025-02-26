@@ -8,11 +8,9 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-
-	"github.com/anfragment/zen/internal/rule"
 )
 
-type IRule interface {
+type Data interface {
 	ShouldMatchRes(res *http.Response) bool
 	ShouldMatchReq(req *http.Request) bool
 	ParseModifiers(modifiers string) error
@@ -22,7 +20,7 @@ type IRule interface {
 // Adblock-style and hosts rules and matching URLs against them.
 //
 // The filter is safe for concurrent use.
-type RuleTree[T IRule] struct {
+type RuleTree[T Data] struct {
 	// root is the root node of the trie that stores the rules.
 	root node[T]
 	// hosts maps hostnames to filter names.
@@ -47,54 +45,54 @@ var (
 	reGeneric = regexp.MustCompile(fmt.Sprintf(`^%s+$`, modifiersCG))
 )
 
-func NewRuleTree[T IRule]() *RuleTree[T] {
+func NewRuleTree[T Data]() *RuleTree[T] {
 	return &RuleTree[T]{
 		root:  node[T]{},
 		hosts: make(map[string]*string),
 	}
 }
 
-func (rt *RuleTree[T]) AddRule(rawRule string, filterName *string) error {
-	if reHosts.MatchString(rawRule) {
-		// Strip the # and any characters after it
-		if commentIndex := strings.IndexByte(rawRule, '#'); commentIndex != -1 {
-			rawRule = rawRule[:commentIndex]
-		}
+func (rt *RuleTree[T]) AddHost(rawRule string, filterName *string, data T) error {
+	// Strip the # and any characters after it
+	if commentIndex := strings.IndexByte(rawRule, '#'); commentIndex != -1 {
+		rawRule = rawRule[:commentIndex]
+	}
 
-		host := reHosts.FindStringSubmatch(rawRule)[1]
-		if strings.ContainsRune(host, ' ') {
-			for _, host := range strings.Split(host, " ") {
-				rt.AddRule(fmt.Sprintf("127.0.0.1 %s", host), filterName)
-			}
-			return nil
+	host := reHosts.FindStringSubmatch(rawRule)[1]
+	if strings.ContainsRune(host, ' ') {
+		for _, host := range strings.Split(host, " ") {
+			rt.Add(fmt.Sprintf("127.0.0.1 %s", host), filterName, data)
 		}
-		if reHostsIgnore.MatchString(host) {
-			return nil
-		}
-
-		rt.hostsMu.Lock()
-		rt.hosts[host] = filterName
-		rt.hostsMu.Unlock()
-
+		return nil
+	}
+	if reHostsIgnore.MatchString(host) {
 		return nil
 	}
 
+	rt.hostsMu.Lock()
+	rt.hosts[host] = filterName
+	rt.hostsMu.Unlock()
+
+	return nil
+}
+
+func (rt *RuleTree[T]) Add(urlPattern string, filterName *string, data T) error {
 	var tokens []string
 	var modifiers string
 	var rootKeyKind nodeKind
-	if match := reDomainName.FindStringSubmatch(rawRule); match != nil {
+	if match := reDomainName.FindStringSubmatch(urlPattern); match != nil {
 		rootKeyKind = nodeKindDomain
 		tokens = tokenize(match[1])
 		modifiers = match[2]
-	} else if match := reExactAddress.FindStringSubmatch(rawRule); match != nil {
+	} else if match := reExactAddress.FindStringSubmatch(urlPattern); match != nil {
 		rootKeyKind = nodeKindAddressRoot
 		tokens = tokenize(match[1])
 		modifiers = match[2]
-	} else if match := reAddressParts.FindStringSubmatch(rawRule); match != nil {
+	} else if match := reAddressParts.FindStringSubmatch(urlPattern); match != nil {
 		rootKeyKind = nodeKindExactMatch
 		tokens = tokenize(match[1])
 		modifiers = match[2]
-	} else if match := reGeneric.FindStringSubmatch(rawRule); match != nil {
+	} else if match := reGeneric.FindStringSubmatch(urlPattern); match != nil {
 		rootKeyKind = nodeKindGeneric
 		tokens = []string{}
 		modifiers = match[1]
@@ -102,20 +100,7 @@ func (rt *RuleTree[T]) AddRule(rawRule string, filterName *string) error {
 		return fmt.Errorf("unknown rule format")
 	}
 
-	var myRule T
-
-	switch v := any(&myRule).(type) {
-	case *rule.Rule:
-		v.RawRule = rawRule
-		v.FilterName = filterName
-	case *rule.ExRule:
-		v.RawRule = rawRule
-		v.FilterName = filterName
-	default:
-		return fmt.Errorf("unsupported rule type")
-	}
-
-	if err := myRule.ParseModifiers(modifiers); err != nil {
+	if err := data.ParseModifiers(modifiers); err != nil {
 		// log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
 		return fmt.Errorf("parse modifiers: %w", err)
 	}
@@ -137,12 +122,17 @@ func (rt *RuleTree[T]) AddRule(rawRule string, filterName *string) error {
 		}
 	}
 	if node == nil {
-		log.Printf("failed to add rule %q: no node found", rawRule)
+		log.Printf("failed to add rule %q: no node found", urlPattern)
 		return fmt.Errorf("no node found")
 	}
-	node.data = append(node.data, myRule)
+	node.data = append(node.data, data)
 
 	return nil
+}
+
+// probably will need something like "type" here, because we dont know if its for req or res
+func (rt *RuleTree[T]) Get() (urlPattern string) {
+	return urlPattern
 }
 
 // FindMatchingRulesReq finds all rules that match the given request.

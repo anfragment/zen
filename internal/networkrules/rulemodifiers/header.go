@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"errors"
@@ -17,7 +17,7 @@ type HeaderModifier struct {
 	regexp *regexp.Regexp
 }
 
-var _ matchingModifier = (*HeaderModifier)(nil)
+var _ MatchingModifier = (*HeaderModifier)(nil)
 
 func (h *HeaderModifier) Parse(modifier string) error {
 	if len(modifier) == 0 {

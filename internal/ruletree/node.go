@@ -29,7 +29,7 @@ type nodeKey struct {
 }
 
 // arrNode is a node in the trie that is stored in an array.
-type arrNode[T IRule] struct {
+type arrNode[T Data] struct {
 	key  nodeKey
 	node *node[T]
 }
@@ -43,7 +43,7 @@ const nodeChildrenMaxArrSize = 8
 
 // node represents a node in the rule trie.
 // Nodes can be both vertices that only represent a subtree and leaves that represent a rule.
-type node[T IRule] struct {
+type node[T Data] struct {
 	childrenArr []arrNode[T]
 	childrenMap map[nodeKey]*node[T]
 	childrenMu  sync.RWMutex

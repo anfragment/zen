@@ -16,12 +16,11 @@ import (
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/cosmetic"
 	"github.com/anfragment/zen/internal/cssrule"
-	"github.com/anfragment/zen/internal/exceptionrulematcher"
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
+	"github.com/anfragment/zen/internal/networkrules"
 	"github.com/anfragment/zen/internal/proxy"
-	"github.com/anfragment/zen/internal/rulematcher"
 	"github.com/anfragment/zen/internal/scriptlet"
 	"github.com/anfragment/zen/internal/scriptlet/triestore"
 	"github.com/anfragment/zen/internal/selfupdate"
@@ -166,9 +165,7 @@ func (a *App) StartProxy() (err error) {
 		}
 	}()
 
-	ruleMatcher := rulematcher.NewRuleTree()
-	exceptionRuleMatcher := exceptionrulematcher.NewRuleTree()
-
+	networkRules := networkrules.NewNetworkRules()
 	scriptletStore := triestore.NewTrieStore()
 	scriptletInjector, err := scriptlet.NewInjector(scriptletStore)
 	if err != nil {
@@ -179,7 +176,7 @@ func (a *App) StartProxy() (err error) {
 	cssRulesInjector := cssrule.NewInjector()
 	jsRuleInjector := jsrule.NewInjector()
 
-	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, scriptletInjector, cosmeticRulesInjector, cssRulesInjector, jsRuleInjector, a.eventsHandler)
+	filter, err := filter.NewFilter(a.config, networkRules, scriptletInjector, cosmeticRulesInjector, cssRulesInjector, jsRuleInjector, a.eventsHandler)
 	if err != nil {
 		return fmt.Errorf("create filter: %v", err)
 	}
