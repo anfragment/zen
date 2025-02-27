@@ -45,14 +45,6 @@ func (er *ExceptionRule) Cancels(r *rule.Rule) bool {
 	return true
 }
 
-func (er *ExceptionRule) ShouldMatchReq(req *http.Request) bool {
-	return false
-}
-
-func (er *ExceptionRule) ShouldMatchRes(req *http.Response) bool {
-	return false
-}
-
 func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 	if len(modifiers) == 0 {
 		return nil
@@ -128,23 +120,23 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 }
 
 // ShouldMatchReq returns true if the rule should match the request.
-// func (er *ExceptionRule) ShouldMatchReq(req *http.Request) bool {
-// 	for _, modifier := range er.modifiers {
-// 		if !modifier.ShouldMatchReq(req) {
-// 			return false
-// 		}
-// 	}
+func (er *ExceptionRule) ShouldMatchReq(req *http.Request) bool {
+	for _, modifier := range er.modifiers {
+		if !modifier.ShouldMatchReq(req) {
+			return false
+		}
+	}
 
-// 	return true
-// }
+	return true
+}
 
-// // ShouldMatchRes returns true if the rule should match the response.
-// func (er *ExceptionRule) ShouldMatchRes(res *http.Response) bool {
-// 	for _, modifier := range er.modifiers {
-// 		if !modifier.ShouldMatchRes(res) {
-// 			return false
-// 		}
-// 	}
+// ShouldMatchRes returns true if the rule should match the response.
+func (er *ExceptionRule) ShouldMatchRes(res *http.Response) bool {
+	for _, modifier := range er.modifiers {
+		if !modifier.ShouldMatchRes(res) {
+			return false
+		}
+	}
 
-// 	return true
-// }
+	return true
+}

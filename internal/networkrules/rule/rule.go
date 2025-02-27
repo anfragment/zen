@@ -18,35 +18,6 @@ type Rule struct {
 	ModifyingModifiers []rulemodifiers.ModifyingModifier
 }
 
-type ExRule struct {
-	// string representation
-	RawRule string
-	// FilterName is the name of the filter that the rule belongs to.
-	FilterName *string
-
-	Modifiers []exceptionModifier
-}
-
-func (ee *ExRule) Cancels(r Rule) bool {
-	return true
-}
-
-func (ee *ExRule) ParseModifiers(modifiers string) error {
-	return nil
-}
-
-func (ee *ExRule) ShouldMatchReq(req *http.Request) bool {
-	return true
-}
-
-func (ee *ExRule) ShouldMatchRes(req *http.Response) bool {
-	return true
-}
-
-type exceptionModifier interface {
-	Cancels(rulemodifiers.Modifier) bool
-}
-
 func (rm *Rule) ParseModifiers(modifiers string) error {
 	if len(modifiers) == 0 {
 		return nil
@@ -106,8 +77,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		} else if modifyingModifier, ok := modifier.(rulemodifiers.ModifyingModifier); ok {
 			rm.ModifyingModifiers = append(rm.ModifyingModifiers, modifyingModifier)
 		} else {
-			// QA: commment for now, cause not every modifier implements Cancels() func yet.
-			// panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
+			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
 	}
 

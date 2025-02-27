@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
-
-	"slices"
 
 	"github.com/anfragment/zen/internal/networkrules/exceptionrule"
 	"github.com/anfragment/zen/internal/networkrules/rule"
@@ -84,11 +83,13 @@ func (nr *NetworkRules) ParseRule(rawRule string, filterName *string) error {
 
 func (nr *NetworkRules) ModifyRes(req *http.Request, res *http.Response) []rule.Rule {
 	regularRules := nr.regularRuleTree.FindMatchingRulesRes(req, res)
+	fmt.Println("reg res", len(regularRules), req.URL.Hostname()) // TODO: remove after testing
 	if len(regularRules) == 0 {
 		return nil
 	}
 
 	exceptions := nr.exceptionRuleTree.FindMatchingRulesReq(req)
+	fmt.Println("exc res", len(exceptions), req.URL.Hostname()) // TODO: remove after testing
 	for _, ex := range exceptions {
 		if slices.ContainsFunc(regularRules, ex.Cancels) {
 			return nil
@@ -106,12 +107,30 @@ func (nr *NetworkRules) ModifyRes(req *http.Request, res *http.Response) []rule.
 }
 
 func (nr *NetworkRules) ModifyReq(req *http.Request) (appliedRules []rule.Rule, shouldBlock bool, redirectURL string) {
+	host := req.URL.Hostname()
+	nr.hostsMu.RLock()
+
+	if filterName, ok := nr.hosts[host]; ok {
+		nr.hostsMu.RUnlock()
+		// 0.0.0.0 may not be the actual IP defined in the hosts file,
+		// but storing the actual one feels wasteful.
+		return []rule.Rule{
+			{
+				RawRule:    fmt.Sprintf("0.0.0.0 %s", host),
+				FilterName: filterName,
+			},
+		}, false, ""
+	}
+	nr.hostsMu.RUnlock()
+
 	regularRules := nr.regularRuleTree.FindMatchingRulesReq(req)
+	fmt.Println("reg req", len(regularRules), req.URL.Hostname()) // TODO: remove after testing
 	if len(regularRules) == 0 {
 		return nil, false, ""
 	}
 
 	exceptions := nr.exceptionRuleTree.FindMatchingRulesReq(req)
+	fmt.Println("exc req", len(exceptions), req.URL.Hostname()) // TODO: remove after testing
 	for _, ex := range exceptions {
 		if slices.ContainsFunc(regularRules, ex.Cancels) {
 			return nil, false, ""

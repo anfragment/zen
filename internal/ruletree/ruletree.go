@@ -106,18 +106,6 @@ func (rt *RuleTree[T]) Get() (urlPattern string) {
 // FindMatchingRulesReq finds all rules that match the given request.
 func (rt *RuleTree[T]) FindMatchingRulesReq(req *http.Request) (data []T) {
 	host := req.URL.Hostname()
-	// rt.hostsMu.RLock()
-	// if filterName, ok := rt.hosts[host]; ok {
-	// 	rt.hostsMu.RUnlock()
-	// 	// 0.0.0.0 may not be the actual IP defined in the hosts file,
-	// 	// but storing the actual one feels wasteful.
-	// 	return []T{
-	// 		RawRule:    rawRule,
-	// 		FilterName: filterName,
-	// 	}
-	// }
-	// rt.hostsMu.RUnlock()
-
 	urlWithoutPort := url.URL{
 		Scheme:   req.URL.Scheme,
 		Host:     host,
