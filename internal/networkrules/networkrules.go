@@ -106,19 +106,19 @@ func (nr *NetworkRules) ModifyRes(req *http.Request, res *http.Response) []rule.
 }
 
 func (nr *NetworkRules) ModifyReq(req *http.Request) (appliedRules []rule.Rule, shouldBlock bool, redirectURL string) {
-	matchingRules := nr.regularRuleTree.FindMatchingRulesReq(req)
-	if len(matchingRules) == 0 {
+	regularRules := nr.regularRuleTree.FindMatchingRulesReq(req)
+	if len(regularRules) == 0 {
 		return nil, false, ""
 	}
 
 	exceptions := nr.exceptionRuleTree.FindMatchingRulesReq(req)
 	for _, ex := range exceptions {
-		if slices.ContainsFunc(matchingRules, ex.Cancels) {
+		if slices.ContainsFunc(regularRules, ex.Cancels) {
 			return nil, false, ""
 		}
 	}
 
-	for _, r := range matchingRules {
+	for _, r := range regularRules {
 		if r.ShouldBlockReq(req) {
 			return []rule.Rule{*r}, true, ""
 		}

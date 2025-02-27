@@ -115,3 +115,6 @@ func (rme *RemoveParamModifier) Cancels(m Modifier) bool {
 
 	return rm.kind == rme.kind && rm.param == rme.param && rme.regexp == rm.regexp
 }
+
+func (rm *RemoveParamModifier) ShouldMatchReq(req *http.Request) bool  { return false }
+func (rm *RemoveParamModifier) ShouldMatchRes(res *http.Response) bool { return false }

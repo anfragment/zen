@@ -16,12 +16,8 @@ type ExceptionRule struct {
 	modifiers []exceptionModifier
 }
 
-type modifier interface {
-	Parse(modifier string) error
-}
-
 type exceptionModifier interface {
-	Cancels(modifier) bool
+	Cancels(rulemodifiers.Modifier) bool
 	ShouldMatchReq(req *http.Request) bool
 	ShouldMatchRes(res *http.Response) bool
 }
@@ -73,7 +69,7 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 			}
 			return strings.HasPrefix(m, kind)
 		}
-		var modifier modifier
+		var modifier rulemodifiers.Modifier
 		switch {
 		case isKind("domain"):
 			modifier = &rulemodifiers.DomainModifier{}
