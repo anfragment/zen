@@ -75,3 +75,12 @@ func (h *HeaderModifier) ShouldMatchRes(res *http.Response) bool {
 
 	return true
 }
+
+func (h *HeaderModifier) Cancels(m Modifier) bool {
+	rm, ok := m.(*HeaderModifier)
+	if !ok {
+		return false
+	}
+
+	return rm.exact == h.exact && rm.name == h.name && rm.regexp == h.regexp
+}

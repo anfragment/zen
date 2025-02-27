@@ -106,3 +106,12 @@ func (rm *RemoveParamModifier) ModifyReq(req *http.Request) (modified bool) {
 func (rm *RemoveParamModifier) ModifyRes(*http.Response) (modified bool) {
 	return false
 }
+
+func (rme *RemoveParamModifier) Cancels(m Modifier) bool {
+	rm, ok := m.(*RemoveParamModifier)
+	if !ok {
+		return false
+	}
+
+	return rm.kind == rme.kind && rm.param == rme.param && rme.regexp == rm.regexp
+}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -73,4 +74,19 @@ func (m *methodModifierEntry) Parse(modifier string) {
 // The method is expected to be uppercase.
 func (m *methodModifierEntry) MatchesMethod(method string) bool {
 	return m.method == method
+}
+
+func (mm *MethodModifier) Cancels(m Modifier) bool {
+	rm, ok := m.(*MethodModifier)
+	if !ok {
+		return false
+	}
+
+	for _, v := range mm.entries {
+		if !slices.Contains(rm.entries, v) {
+			return false
+		}
+	}
+
+	return rm.inverted == mm.inverted
 }

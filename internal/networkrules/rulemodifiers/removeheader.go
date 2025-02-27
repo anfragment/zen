@@ -77,20 +77,6 @@ type RemoveHeaderModifier struct {
 
 var _ ModifyingModifier = (*RemoveHeaderModifier)(nil)
 
-type removeHeaderExceptionModifier struct {
-	Kind       removeHeaderKind
-	HeaderName string
-}
-
-func (rme *removeHeaderExceptionModifier) Cancels(m Modifier) bool {
-	rm, ok := m.(*RemoveHeaderModifier)
-	if !ok {
-		return false
-	}
-
-	return rm.Kind == rme.Kind && rm.HeaderName == rme.HeaderName
-}
-
 func (rm *RemoveHeaderModifier) Parse(modifier string) error {
 	if !strings.HasPrefix(modifier, "removeheader=") {
 		return ErrInvalidRemoveheaderModifier
@@ -142,4 +128,13 @@ func (rm *RemoveHeaderModifier) ModifyRes(res *http.Response) (modified bool) {
 
 	delete(res.Header, rm.HeaderName)
 	return true
+}
+
+func (rme *RemoveHeaderModifier) Cancels(m Modifier) bool {
+	rm, ok := m.(*RemoveHeaderModifier)
+	if !ok {
+		return false
+	}
+
+	return rm.Kind == rme.Kind && rm.HeaderName == rme.HeaderName
 }

@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
-	"sync"
 )
 
 type Data interface {
@@ -23,9 +21,6 @@ type Data interface {
 type RuleTree[T Data] struct {
 	// root is the root node of the trie that stores the rules.
 	root node[T]
-	// hosts maps hostnames to filter names.
-	hosts   map[string]*string
-	hostsMu sync.RWMutex
 }
 
 var (
@@ -36,8 +31,6 @@ var (
 	matchingPartCG = `([^$]+)`
 	// modifiersCG matches the modifiers part of a rule.
 	modifiersCG    = `(?:\$(.+))`
-	reHosts        = regexp.MustCompile(`^(?:0\.0\.0\.0|127\.0\.0\.1) (.+)`)
-	reHostsIgnore  = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
 	reDomainName   = regexp.MustCompile(fmt.Sprintf(`^\|\|%s%s?$`, matchingPartCG, modifiersCG))
 	reExactAddress = regexp.MustCompile(fmt.Sprintf(`^\|%s%s?$`, matchingPartCG, modifiersCG))
 	reAddressParts = regexp.MustCompile(fmt.Sprintf(`^%s%s?$`, matchingPartCG, modifiersCG))
@@ -47,33 +40,8 @@ var (
 
 func NewRuleTree[T Data]() *RuleTree[T] {
 	return &RuleTree[T]{
-		root:  node[T]{},
-		hosts: make(map[string]*string),
+		root: node[T]{},
 	}
-}
-
-func (rt *RuleTree[T]) AddHost(rawRule string, filterName *string, data T) error {
-	// Strip the # and any characters after it
-	if commentIndex := strings.IndexByte(rawRule, '#'); commentIndex != -1 {
-		rawRule = rawRule[:commentIndex]
-	}
-
-	host := reHosts.FindStringSubmatch(rawRule)[1]
-	if strings.ContainsRune(host, ' ') {
-		for _, host := range strings.Split(host, " ") {
-			rt.Add(fmt.Sprintf("127.0.0.1 %s", host), filterName, data)
-		}
-		return nil
-	}
-	if reHostsIgnore.MatchString(host) {
-		return nil
-	}
-
-	rt.hostsMu.Lock()
-	rt.hosts[host] = filterName
-	rt.hostsMu.Unlock()
-
-	return nil
 }
 
 func (rt *RuleTree[T]) Add(urlPattern string, filterName *string, data T) error {

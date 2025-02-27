@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -118,4 +119,23 @@ func (m *domainModifierEntry) MatchDomain(domain string) bool {
 	default:
 		return false
 	}
+}
+
+func (dm *DomainModifier) Cancels(m Modifier) bool {
+	rm, ok := m.(*DomainModifier)
+	if !ok {
+		return false
+	}
+
+	if len(dm.entries) != len(rm.entries) {
+		return false
+	}
+
+	for _, v := range dm.entries {
+		if !slices.Contains(rm.entries, v) {
+			return false
+		}
+	}
+
+	return dm.inverted == rm.inverted
 }

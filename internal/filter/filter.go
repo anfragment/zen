@@ -19,7 +19,6 @@ import (
 	"github.com/anfragment/zen/internal/cssrule"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
-	"github.com/anfragment/zen/internal/networkrules/exceptionrule"
 	"github.com/anfragment/zen/internal/networkrules/rule"
 )
 
@@ -31,21 +30,11 @@ type filterEventsEmitter interface {
 }
 
 type networkRules interface {
-	ModifyReq(req *http.Request)
-	ModifyRes(req *http.Request, res *http.Response) []rule.Rule
 	ParseRule(rule string, filterName *string) error
-}
-
-type ruleMatcher interface {
-	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(*http.Request) []rule.Rule
-	FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
-}
-
-type exceptionRuleMatcher interface {
-	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(*http.Request) []exceptionrule.ExceptionRule
-	FindMatchingRulesRes(*http.Request, *http.Response) []exceptionrule.ExceptionRule
+	ModifyReq(req *http.Request) (appliedRules []rule.Rule, shouldBlock bool, redirectURL string)
+	ModifyRes(req *http.Request, res *http.Response) []rule.Rule
+	CreateBlockResponse(req *http.Request) *http.Response
+	CreateRedirectResponse(req *http.Request, to string) *http.Response
 }
 
 // config provides filter configuration.
@@ -235,7 +224,23 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 // HandleRequest handles the given request by matching it against the filter rules.
 // If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
 func (f *Filter) HandleRequest(req *http.Request) *http.Response {
-	// QA: All this should be inside NetworkRules
+	initialURL := req.URL.String()
+
+	appliedRules, shouldBlock, redirectURL := f.networkRules.ModifyReq(req)
+	if shouldBlock {
+		f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), appliedRules)
+		return f.networkRules.CreateBlockResponse(req)
+	}
+
+	if redirectURL != "" {
+		f.eventsEmitter.OnFilterRedirect(req.Method, initialURL, redirectURL, req.Header.Get("Referer"), appliedRules)
+		return f.networkRules.CreateRedirectResponse(req, redirectURL)
+	}
+
+	if len(appliedRules) > 0 {
+		f.eventsEmitter.OnFilterModify(req.Method, initialURL, req.Header.Get("Referer"), appliedRules)
+	}
+
 	return nil
 }
 

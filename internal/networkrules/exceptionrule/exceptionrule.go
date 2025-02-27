@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/anfragment/zen/internal/networkrules/rule"
 	"github.com/anfragment/zen/internal/networkrules/rulemodifiers"
 )
 
@@ -20,9 +21,32 @@ type modifier interface {
 }
 
 type exceptionModifier interface {
-	Cancels(modifier)
+	Cancels(modifier) bool
 	ShouldMatchReq(req *http.Request) bool
 	ShouldMatchRes(res *http.Response) bool
+}
+
+func (er *ExceptionRule) Cancels(r *rule.Rule) bool {
+	if len(er.modifiers) == 0 {
+		return true
+	}
+
+	for _, m := range er.modifiers {
+		for _, match := range r.MatchingModifiers {
+			if !m.Cancels(match) {
+				return false
+			}
+		}
+
+		for _, match := range r.ModifyingModifiers {
+			if !m.Cancels(match) {
+				return false
+			}
+		}
+
+	}
+
+	return true
 }
 
 func (er *ExceptionRule) ShouldMatchReq(req *http.Request) bool {
@@ -99,8 +123,7 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 		if matchingModifier, ok := modifier.(exceptionModifier); ok {
 			er.modifiers = append(er.modifiers, matchingModifier)
 		} else {
-			// QA: commment for now, cause not every modifier implements Cancels() func yet.
-			// panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
+			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
 
 	}

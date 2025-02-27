@@ -14,8 +14,8 @@ type Rule struct {
 	RawRule string
 	// FilterName is the name of the filter that the rule belongs to.
 	FilterName         *string
-	matchingModifiers  []rulemodifiers.MatchingModifier
-	modifyingModifiers []rulemodifiers.ModifyingModifier
+	MatchingModifiers  []rulemodifiers.MatchingModifier
+	ModifyingModifiers []rulemodifiers.ModifyingModifier
 }
 
 type ExRule struct {
@@ -102,9 +102,9 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		}
 
 		if matchingModifier, ok := modifier.(rulemodifiers.MatchingModifier); ok {
-			rm.matchingModifiers = append(rm.matchingModifiers, matchingModifier)
+			rm.MatchingModifiers = append(rm.MatchingModifiers, matchingModifier)
 		} else if modifyingModifier, ok := modifier.(rulemodifiers.ModifyingModifier); ok {
-			rm.modifyingModifiers = append(rm.modifyingModifiers, modifyingModifier)
+			rm.ModifyingModifiers = append(rm.ModifyingModifiers, modifyingModifier)
 		} else {
 			// QA: commment for now, cause not every modifier implements Cancels() func yet.
 			// panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
@@ -116,7 +116,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 
 // ShouldMatchReq returns true if the rule should match the request.
 func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
-	for _, modifier := range rm.matchingModifiers {
+	for _, modifier := range rm.MatchingModifiers {
 		if !modifier.ShouldMatchReq(req) {
 			return false
 		}
@@ -127,7 +127,7 @@ func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
 
 // ShouldMatchRes returns true if the rule should match the response.
 func (rm *Rule) ShouldMatchRes(res *http.Response) bool {
-	for _, modifier := range rm.matchingModifiers {
+	for _, modifier := range rm.MatchingModifiers {
 		if !modifier.ShouldMatchRes(res) {
 			return false
 		}
@@ -138,12 +138,12 @@ func (rm *Rule) ShouldMatchRes(res *http.Response) bool {
 
 // ShouldBlockReq returns true if the request should be blocked.
 func (rm *Rule) ShouldBlockReq(*http.Request) bool {
-	return len(rm.modifyingModifiers) == 0
+	return len(rm.ModifyingModifiers) == 0
 }
 
 // ModifyReq modifies a request. Returns true if the request was modified.
 func (rm *Rule) ModifyReq(req *http.Request) (modified bool) {
-	for _, modifier := range rm.modifyingModifiers {
+	for _, modifier := range rm.ModifyingModifiers {
 		if modifier.ModifyReq(req) {
 			modified = true
 		}
@@ -154,7 +154,7 @@ func (rm *Rule) ModifyReq(req *http.Request) (modified bool) {
 
 // ModifyRes modifies a response. Returns true if the response was modified.
 func (rm *Rule) ModifyRes(res *http.Response) (modified bool) {
-	for _, modifier := range rm.modifyingModifiers {
+	for _, modifier := range rm.ModifyingModifiers {
 		if modifier.ModifyRes(res) {
 			modified = true
 		}
