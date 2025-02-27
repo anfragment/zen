@@ -1,15 +1,16 @@
-package rule
+package rulemodifiers
 
 import (
 	"net/http"
 )
 
-type contentTypeModifier struct {
+type ContentTypeModifier struct {
 	contentType string
 	inverted    bool
 }
 
-var _ matchingModifier = (*contentTypeModifier)(nil)
+// Q: how do i import "matchingModifier" from rule.go without causing import cycle?
+var _ MatchingModifier = (*ContentTypeModifier)(nil)
 
 var (
 	// secFetchDestMap maps Sec-Fetch-Dest header values to corresponding content type modifiers.
@@ -35,7 +36,7 @@ var (
 	}
 )
 
-func (m *contentTypeModifier) Parse(modifier string) error {
+func (m *ContentTypeModifier) Parse(modifier string) error {
 	if modifier[0] == '~' {
 		m.inverted = true
 		modifier = modifier[1:]
@@ -47,7 +48,7 @@ func (m *contentTypeModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *contentTypeModifier) ShouldMatchReq(req *http.Request) bool {
+func (m *ContentTypeModifier) ShouldMatchReq(req *http.Request) bool {
 	secFetchDest := req.Header.Get("Sec-Fetch-Dest")
 	if secFetchDest == "" {
 		return false
@@ -65,6 +66,15 @@ func (m *contentTypeModifier) ShouldMatchReq(req *http.Request) bool {
 	return contentType == m.contentType
 }
 
-func (m *contentTypeModifier) ShouldMatchRes(_ *http.Response) bool {
+func (m *ContentTypeModifier) ShouldMatchRes(_ *http.Response) bool {
 	return false
+}
+
+func (cm *ContentTypeModifier) Cancels(m Modifier) bool {
+	rm, ok := m.(*ContentTypeModifier)
+	if !ok {
+		return false
+	}
+
+	return rm.inverted == cm.inverted && rm.contentType == cm.contentType
 }

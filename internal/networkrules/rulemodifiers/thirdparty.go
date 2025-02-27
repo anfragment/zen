@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"net/http"
@@ -6,18 +6,18 @@ import (
 )
 
 // https://adguard.com/kb/general/ad-filtering/create-own-filters/#third-party-modifier
-type thirdPartyModifier struct {
+type ThirdPartyModifier struct {
 	inverted bool
 }
 
-func (m *thirdPartyModifier) Parse(modifier string) error {
+func (m *ThirdPartyModifier) Parse(modifier string) error {
 	if modifier[0] == '~' {
 		m.inverted = true
 	}
 	return nil
 }
 
-func (m *thirdPartyModifier) ShouldMatchReq(req *http.Request) bool {
+func (m *ThirdPartyModifier) ShouldMatchReq(req *http.Request) bool {
 	if req.Header.Get("Sec-Fetch-Site") == "cross-site" {
 		return !m.inverted
 	}
@@ -38,6 +38,15 @@ func (m *thirdPartyModifier) ShouldMatchReq(req *http.Request) bool {
 	return !m.inverted
 }
 
-func (m *thirdPartyModifier) ShouldMatchRes(_ *http.Response) bool {
+func (m *ThirdPartyModifier) ShouldMatchRes(_ *http.Response) bool {
 	return false
+}
+
+func (t *ThirdPartyModifier) Cancels(m Modifier) bool {
+	rm, ok := m.(*ThirdPartyModifier)
+	if !ok {
+		return false
+	}
+
+	return t.inverted == rm.inverted
 }

@@ -1,20 +1,21 @@
-package rule
+package rulemodifiers
 
 import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 )
 
-type methodModifier struct {
+type MethodModifier struct {
 	entries  []methodModifierEntry
 	inverted bool
 }
 
-var _ matchingModifier = (*methodModifier)(nil)
+var _ MatchingModifier = (*MethodModifier)(nil)
 
-func (m *methodModifier) Parse(modifier string) error {
+func (m *MethodModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
 	if eqIndex == -1 {
 		return fmt.Errorf("invalid method modifier")
@@ -42,7 +43,7 @@ func (m *methodModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *methodModifier) ShouldMatchReq(req *http.Request) bool {
+func (m *MethodModifier) ShouldMatchReq(req *http.Request) bool {
 	matches := false
 	for _, entry := range m.entries {
 		if entry.MatchesMethod(req.Method) {
@@ -56,7 +57,7 @@ func (m *methodModifier) ShouldMatchReq(req *http.Request) bool {
 	return matches
 }
 
-func (m *methodModifier) ShouldMatchRes(_ *http.Response) bool {
+func (m *MethodModifier) ShouldMatchRes(_ *http.Response) bool {
 	return false
 }
 
@@ -73,4 +74,19 @@ func (m *methodModifierEntry) Parse(modifier string) {
 // The method is expected to be uppercase.
 func (m *methodModifierEntry) MatchesMethod(method string) bool {
 	return m.method == method
+}
+
+func (mm *MethodModifier) Cancels(m Modifier) bool {
+	rm, ok := m.(*MethodModifier)
+	if !ok {
+		return false
+	}
+
+	for _, v := range mm.entries {
+		if !slices.Contains(rm.entries, v) {
+			return false
+		}
+	}
+
+	return rm.inverted == mm.inverted
 }
