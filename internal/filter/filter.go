@@ -30,7 +30,7 @@ type filterEventsEmitter interface {
 }
 
 type networkRules interface {
-	ParseRule(rule string, filterName *string) error
+	ParseRule(rule string, filterName *string) (isException bool, err error)
 	ModifyReq(req *http.Request) (appliedRules []rule.Rule, shouldBlock bool, redirectURL string)
 	ModifyRes(req *http.Request, res *http.Response) []rule.Rule
 	CreateBlockResponse(req *http.Request) *http.Response
@@ -214,8 +214,12 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		return false, nil
 	}
 
-	if err = f.networkRules.ParseRule(rule, filterListName); err != nil {
-		return true, fmt.Errorf("parse network rule: %w", err)
+	isExceptionRule, err := f.networkRules.ParseRule(rule, filterListName)
+	if err != nil {
+		return false, fmt.Errorf("parse network rule: %w", err)
+	}
+	if isExceptionRule {
+		return true, nil
 	}
 
 	return false, nil

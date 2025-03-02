@@ -98,11 +98,6 @@ func (rt *RuleTree[T]) Add(urlPattern string, filterName *string, data T) error 
 	return nil
 }
 
-// probably will need something like "type" here, because we dont know if its for req or res
-func (rt *RuleTree[T]) Get() (urlPattern string) {
-	return urlPattern
-}
-
 // FindMatchingRulesReq finds all rules that match the given request.
 func (rt *RuleTree[T]) FindMatchingRulesReq(req *http.Request) (data []T) {
 	host := req.URL.Hostname()

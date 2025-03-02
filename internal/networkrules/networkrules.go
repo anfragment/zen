@@ -40,7 +40,7 @@ func NewNetworkRules() *NetworkRules {
 	}
 }
 
-func (nr *NetworkRules) ParseRule(rawRule string, filterName *string) error {
+func (nr *NetworkRules) ParseRule(rawRule string, filterName *string) (isException bool, err error) {
 	if reHosts.MatchString(rawRule) {
 		if commentIndex := strings.IndexByte(rawRule, '#'); commentIndex != -1 {
 			rawRule = rawRule[:commentIndex]
@@ -54,28 +54,28 @@ func (nr *NetworkRules) ParseRule(rawRule string, filterName *string) error {
 					FilterName: filterName,
 				})
 			}
-			return nil
+			return false, nil
 		}
 
 		if reHostsIgnore.MatchString(host) {
-			return nil
+			return false, nil
 		}
 
 		nr.hostsMu.Lock()
 		nr.hosts[host] = filterName
 		nr.hostsMu.Unlock()
 
-		return nil
+		return false, nil
 	}
 
 	if exceptionRegex.MatchString(rawRule) {
-		return nr.exceptionRuleTree.Add(rawRule[2:], filterName, &exceptionrule.ExceptionRule{
+		return true, nr.exceptionRuleTree.Add(rawRule[2:], filterName, &exceptionrule.ExceptionRule{
 			RawRule:    rawRule,
 			FilterName: filterName,
 		})
 	}
 
-	return nr.regularRuleTree.Add(rawRule, filterName, &rule.Rule{
+	return false, nr.regularRuleTree.Add(rawRule, filterName, &rule.Rule{
 		RawRule:    rawRule,
 		FilterName: filterName,
 	})
@@ -88,7 +88,7 @@ func (nr *NetworkRules) ModifyRes(req *http.Request, res *http.Response) []rule.
 		return nil
 	}
 
-	exceptions := nr.exceptionRuleTree.FindMatchingRulesReq(req)
+	exceptions := nr.exceptionRuleTree.FindMatchingRulesRes(req, res)
 	fmt.Println("exc res", len(exceptions), req.URL.Hostname()) // TODO: remove after testing
 	for _, ex := range exceptions {
 		if slices.ContainsFunc(regularRules, ex.Cancels) {
