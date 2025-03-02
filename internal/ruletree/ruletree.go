@@ -68,9 +68,11 @@ func (rt *RuleTree[T]) Add(urlPattern string, filterName *string, data T) error 
 		return fmt.Errorf("unknown rule format")
 	}
 
-	if err := data.ParseModifiers(modifiers); err != nil {
-		// log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
-		return fmt.Errorf("parse modifiers: %w", err)
+	if modifiers != "" {
+		if err := data.ParseModifiers(modifiers); err != nil {
+			// log.Printf("failed to parse modifiers for rule %q: %v", rule, err)
+			return fmt.Errorf("parse modifiers: %w", err)
+		}
 	}
 
 	var node *node[T]
