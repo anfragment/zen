@@ -13,9 +13,17 @@ type Rule struct {
 	// string representation
 	RawRule string
 	// FilterName is the name of the filter that the rule belongs to.
-	FilterName         *string
-	MatchingModifiers  []rulemodifiers.MatchingModifier
+	FilterName *string
+
+	MatchingModifiers  matchingModifiers
 	ModifyingModifiers []rulemodifiers.ModifyingModifier
+}
+
+type matchingModifiers struct {
+	// AndModifiers should be matched together.
+	AndModifiers []rulemodifiers.MatchingModifier
+	// OrModifiers should be matched if one of them is matched.
+	OrModifiers []rulemodifiers.MatchingModifier
 }
 
 func (rm *Rule) ParseModifiers(modifiers string) error {
@@ -73,7 +81,11 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		}
 
 		if matchingModifier, ok := modifier.(rulemodifiers.MatchingModifier); ok {
-			rm.MatchingModifiers = append(rm.MatchingModifiers, matchingModifier)
+			if IsOrMatchingModifier(matchingModifier) {
+				rm.MatchingModifiers.OrModifiers = append(rm.MatchingModifiers.OrModifiers, matchingModifier)
+			} else {
+				rm.MatchingModifiers.AndModifiers = append(rm.MatchingModifiers.AndModifiers, matchingModifier)
+			}
 		} else if modifyingModifier, ok := modifier.(rulemodifiers.ModifyingModifier); ok {
 			rm.ModifyingModifiers = append(rm.ModifyingModifiers, modifyingModifier)
 		} else {
@@ -86,10 +98,21 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 
 // ShouldMatchReq returns true if the rule should match the request.
 func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
-	for _, modifier := range rm.MatchingModifiers {
-		if !modifier.ShouldMatchReq(req) {
+	// AndModifiers: All must match.
+	for _, m := range rm.MatchingModifiers.AndModifiers {
+		if !m.ShouldMatchReq(req) {
 			return false
 		}
+	}
+
+	// OrModifiers: At least one must match.
+	if len(rm.MatchingModifiers.OrModifiers) > 0 {
+		for _, m := range rm.MatchingModifiers.OrModifiers {
+			if m.ShouldMatchReq(req) {
+				return true
+			}
+		}
+		return false
 	}
 
 	return true
@@ -97,10 +120,19 @@ func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
 
 // ShouldMatchRes returns true if the rule should match the response.
 func (rm *Rule) ShouldMatchRes(res *http.Response) bool {
-	for _, modifier := range rm.MatchingModifiers {
-		if !modifier.ShouldMatchRes(res) {
+	for _, m := range rm.MatchingModifiers.AndModifiers {
+		if !m.ShouldMatchRes(res) {
 			return false
 		}
+	}
+
+	if len(rm.MatchingModifiers.OrModifiers) > 0 {
+		for _, m := range rm.MatchingModifiers.OrModifiers {
+			if m.ShouldMatchRes(res) {
+				return true
+			}
+		}
+		return false
 	}
 
 	return true
@@ -131,4 +163,13 @@ func (rm *Rule) ModifyRes(res *http.Response) (modified bool) {
 	}
 
 	return modified
+}
+
+func IsOrMatchingModifier(mm rulemodifiers.MatchingModifier) bool {
+	switch mm.(type) {
+	case *rulemodifiers.ContentTypeModifier:
+		return true
+	default:
+		return false
+	}
 }

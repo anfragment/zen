@@ -83,13 +83,11 @@ func (nr *NetworkRules) ParseRule(rawRule string, filterName *string) (isExcepti
 
 func (nr *NetworkRules) ModifyRes(req *http.Request, res *http.Response) []rule.Rule {
 	regularRules := nr.regularRuleTree.FindMatchingRulesRes(req, res)
-	fmt.Println("reg res", len(regularRules), req.URL.Hostname()) // TODO: remove after testing
 	if len(regularRules) == 0 {
 		return nil
 	}
 
 	exceptions := nr.exceptionRuleTree.FindMatchingRulesRes(req, res)
-	fmt.Println("exc res", len(exceptions), req.URL.Hostname()) // TODO: remove after testing
 	for _, ex := range exceptions {
 		if slices.ContainsFunc(regularRules, ex.Cancels) {
 			return nil
@@ -124,13 +122,11 @@ func (nr *NetworkRules) ModifyReq(req *http.Request) (appliedRules []rule.Rule, 
 	nr.hostsMu.RUnlock()
 
 	regularRules := nr.regularRuleTree.FindMatchingRulesReq(req)
-	fmt.Println("reg req", len(regularRules), req.URL.Hostname()) // TODO: remove after testing
 	if len(regularRules) == 0 {
 		return nil, false, ""
 	}
 
 	exceptions := nr.exceptionRuleTree.FindMatchingRulesReq(req)
-	fmt.Println("exc req", len(exceptions), req.URL.Hostname()) // TODO: remove after testing
 	for _, ex := range exceptions {
 		if slices.ContainsFunc(regularRules, ex.Cancels) {
 			return nil, false, ""

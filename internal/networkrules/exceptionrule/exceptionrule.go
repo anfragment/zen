@@ -27,8 +27,9 @@ func (er *ExceptionRule) Cancels(r *rule.Rule) bool {
 		return true
 	}
 
+	matchingModifiers := append(r.MatchingModifiers.AndModifiers, r.MatchingModifiers.OrModifiers...)
 	for _, m := range er.modifiers {
-		for _, match := range r.MatchingModifiers {
+		for _, match := range matchingModifiers {
 			if !m.Cancels(match) {
 				return false
 			}
