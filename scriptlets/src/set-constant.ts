@@ -1,3 +1,4 @@
+import { isProxyable } from './helpers/isProxyable';
 import { createLogger } from './helpers/logger';
 import { matchStack } from './helpers/matchStack';
 import { parseRegexpFromString, parseRegexpLiteral } from './helpers/parseRegexp';
@@ -131,15 +132,18 @@ export function setConstant(
     return;
   }
 
-  const nativeObject = Object; // Avoid infinite recursion in case we overwrite Object itself.
+  // Avoid infinite recursion in case we overwrite some sub-property of Object or Function.
+  const nativeObject = Object;
+  const nativeFunction = Function;
   const get = (chain: string[]) => {
     let proxyCache: { proxy: any; link: any };
+    let boundFnCache: Record<any, any>;
     return (target: any, key: any) => {
       if (chain.length === 1 && chain[0] === key) {
         logger.debug(`Returning fake value for property window.${property}`, { value });
         return fakeValue;
       }
-      let link = Reflect.get(target, key);
+      let link = Reflect.get(target, key, target);
       const desc = nativeObject.getOwnPropertyDescriptor(target, key);
       if (desc && 'value' in desc && !desc.configurable && !desc.writable) {
         // Get should return the original value for non-configurable, non-writable data properties.
@@ -149,19 +153,31 @@ export function setConstant(
 
       if (
         typeof link === 'function' &&
-        // Prevent rebinding if the function is already bound.
-        // Bound functions can be identified by the "bound " prefix in their name. See:
-        // https://262.ecma-international.org/6.0/index.html#sec-function.prototype.bind
-        !link.name.startsWith('bound ')
+        // This checks for native functions. The regex helps avoid false positives from functions containing the string "[native code]".
+        // Function.prototype.toString is used to handle edge cases where a function has its toString method overridden.
+        // Credit: https://stackoverflow.com/a/6599105
+        /\{\s*\[native code\]/.test(nativeFunction.prototype.toString.call(link))
       ) {
+        // Native functions frequently expect to be bounded to their original, **unproxied** object.
+        // See https://stackoverflow.com/a/57580096 for more details.
         // Fixes https://github.com/anfragment/zen/issues/201
-        return link.bind(target);
+        if (boundFnCache !== undefined && boundFnCache[key]) {
+          // Like with proxyCache, store the bound function to ensure object equality between different access operations.
+          link = boundFnCache[key];
+        } else {
+          link = link.bind(target);
+          if (boundFnCache === undefined) {
+            boundFnCache = {};
+          }
+          boundFnCache[key] = link;
+        }
       }
       if (chain[0] !== key || !isProxyable(link) || (stackRe !== null && !matchStack(stackRe))) {
         return link;
       }
 
       if (proxyCache?.link === link) {
+        // Ensure object equality between different access operations.
         // Fixes https://github.com/anfragment/zen/issues/224
         return proxyCache.proxy;
       }
@@ -194,6 +210,7 @@ export function setConstant(
         return capturedValue;
       }
       if (proxyCache?.capturedValue === capturedValue) {
+        // Ensure object equality between different access operations.
         // Fixes https://github.com/anfragment/zen/issues/224
         return proxyCache.proxy;
       }
@@ -210,8 +227,4 @@ export function setConstant(
             localValue = v;
           },
   });
-}
-
-function isProxyable(o: any): boolean {
-  return o !== null && (typeof o === 'function' || typeof o === 'object');
 }

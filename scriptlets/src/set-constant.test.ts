@@ -3,9 +3,16 @@ import { expect, test, describe, afterEach } from '@jest/globals';
 import { setConstant } from './set-constant';
 
 describe('set-constant', () => {
+  let nativeObject: typeof Object;
+
+  beforeEach(() => {
+    nativeObject = window.Object;
+  });
+
   afterEach(() => {
     delete (window as any).PROPERTY;
     delete (window as any).test;
+    window.Object = nativeObject;
   });
 
   test('sets a non-nested property', () => {
@@ -126,5 +133,11 @@ describe('set-constant', () => {
     setConstant('test.prop1.prop2', '123');
 
     expect((window as any).test.prop1 === (window as any).test.prop1).toBe(true);
+  });
+
+  test('affected native function is equal to itself', () => {
+    setConstant('Object.prototype.noAds', 'trueFunc');
+
+    expect(Object.hasOwn).toBe(Object.hasOwn);
   });
 });
