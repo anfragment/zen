@@ -120,15 +120,6 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 			return err
 		}
 
-		// if matchingModifier, ok := modifier.(matchingModifier); ok {
-		// 	er.matchingModifiers = append(er.matchingModifiers, matchingModifier)
-		// } else if modifyingModifier, ok := modifier.(modifyingModifier); ok {
-		// 	er.modifyingModifiers = append(er.modifyingModifiers, modifyingModifier)
-		// } else {
-		// 	panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
-		// }
-
-		// QA: Is it enough to cast only "matchingModifiers" in exception rules cause we dont have "modifyingModifiers" here?
 		if matchingModifier, ok := modifier.(exceptionModifier); ok {
 			if IsOrMatchingModifier(matchingModifier) {
 				er.Modifiers.OrModifiers = append(er.Modifiers.OrModifiers, matchingModifier)

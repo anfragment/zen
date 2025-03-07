@@ -77,10 +77,10 @@ func (h *HeaderModifier) ShouldMatchRes(res *http.Response) bool {
 }
 
 func (h *HeaderModifier) Cancels(m Modifier) bool {
-	rm, ok := m.(*HeaderModifier)
+	other, ok := m.(*HeaderModifier)
 	if !ok {
 		return false
 	}
 
-	return rm.exact == h.exact && rm.name == h.name && rm.regexp == h.regexp
+	return other.exact == h.exact && other.name == h.name && other.regexp == h.regexp
 }

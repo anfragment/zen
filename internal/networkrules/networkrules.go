@@ -49,7 +49,7 @@ func (nr *NetworkRules) ParseRule(rawRule string, filterName *string) (isExcepti
 		host := reHosts.FindStringSubmatch(rawRule)[1]
 		if strings.ContainsRune(host, ' ') {
 			for _, host := range strings.Split(host, " ") {
-				nr.regularRuleTree.Add(fmt.Sprintf("127.0.0.1 %s", host), filterName, &rule.Rule{
+				nr.regularRuleTree.Add(fmt.Sprintf("127.0.0.1 %s", host), &rule.Rule{
 					RawRule:    rawRule,
 					FilterName: filterName,
 				})
@@ -69,13 +69,13 @@ func (nr *NetworkRules) ParseRule(rawRule string, filterName *string) (isExcepti
 	}
 
 	if exceptionRegex.MatchString(rawRule) {
-		return true, nr.exceptionRuleTree.Add(rawRule[2:], filterName, &exceptionrule.ExceptionRule{
+		return true, nr.exceptionRuleTree.Add(rawRule[2:], &exceptionrule.ExceptionRule{
 			RawRule:    rawRule,
 			FilterName: filterName,
 		})
 	}
 
-	return false, nr.regularRuleTree.Add(rawRule, filterName, &rule.Rule{
+	return false, nr.regularRuleTree.Add(rawRule, &rule.Rule{
 		RawRule:    rawRule,
 		FilterName: filterName,
 	})

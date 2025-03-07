@@ -44,7 +44,7 @@ func NewRuleTree[T Data]() *RuleTree[T] {
 	}
 }
 
-func (rt *RuleTree[T]) Add(urlPattern string, filterName *string, data T) error {
+func (rt *RuleTree[T]) Add(urlPattern string, data T) error {
 	var tokens []string
 	var modifiers string
 	var rootKeyKind nodeKind

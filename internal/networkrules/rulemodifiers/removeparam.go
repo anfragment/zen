@@ -107,14 +107,14 @@ func (rm *RemoveParamModifier) ModifyRes(*http.Response) (modified bool) {
 	return false
 }
 
-func (rme *RemoveParamModifier) Cancels(m Modifier) bool {
-	rm, ok := m.(*RemoveParamModifier)
+func (rm *RemoveParamModifier) Cancels(modifier Modifier) bool {
+	other, ok := modifier.(*RemoveParamModifier)
 	if !ok {
 		return false
 	}
 
-	return rm.kind == rme.kind && rm.param == rme.param && rme.regexp == rm.regexp
+	return other.kind == rm.kind && other.param == rm.param && rm.regexp == other.regexp
 }
 
-func (rm *RemoveParamModifier) ShouldMatchReq(req *http.Request) bool  { return false }
-func (rm *RemoveParamModifier) ShouldMatchRes(res *http.Response) bool { return false }
+func (rm *RemoveParamModifier) ShouldMatchReq(_ *http.Request) bool  { return false }
+func (rm *RemoveParamModifier) ShouldMatchRes(_ *http.Response) bool { return false }

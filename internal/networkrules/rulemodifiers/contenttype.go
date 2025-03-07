@@ -70,11 +70,11 @@ func (m *ContentTypeModifier) ShouldMatchRes(_ *http.Response) bool {
 	return false
 }
 
-func (cm *ContentTypeModifier) Cancels(m Modifier) bool {
-	rm, ok := m.(*ContentTypeModifier)
+func (m *ContentTypeModifier) Cancels(modifier Modifier) bool {
+	other, ok := modifier.(*ContentTypeModifier)
 	if !ok {
 		return false
 	}
 
-	return rm.inverted == cm.inverted && rm.contentType == cm.contentType
+	return other.inverted == m.inverted && other.contentType == m.contentType
 }

@@ -130,14 +130,14 @@ func (rm *RemoveHeaderModifier) ModifyRes(res *http.Response) (modified bool) {
 	return true
 }
 
-func (rm *RemoveHeaderModifier) ShouldMatchReq(req *http.Request) bool  { return false }
-func (rm *RemoveHeaderModifier) ShouldMatchRes(res *http.Response) bool { return false }
+func (rm *RemoveHeaderModifier) ShouldMatchReq(_ *http.Request) bool  { return false }
+func (rm *RemoveHeaderModifier) ShouldMatchRes(_ *http.Response) bool { return false }
 
-func (rme *RemoveHeaderModifier) Cancels(m Modifier) bool {
-	rm, ok := m.(*RemoveHeaderModifier)
+func (rm *RemoveHeaderModifier) Cancels(modifier Modifier) bool {
+	other, ok := modifier.(*RemoveHeaderModifier)
 	if !ok {
 		return false
 	}
 
-	return rm.Kind == rme.Kind && rm.HeaderName == rme.HeaderName
+	return other.Kind == rm.Kind && other.HeaderName == rm.HeaderName
 }

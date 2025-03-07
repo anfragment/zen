@@ -76,17 +76,17 @@ func (m *methodModifierEntry) MatchesMethod(method string) bool {
 	return m.method == method
 }
 
-func (mm *MethodModifier) Cancels(m Modifier) bool {
-	rm, ok := m.(*MethodModifier)
+func (m *MethodModifier) Cancels(modifier Modifier) bool {
+	other, ok := modifier.(*MethodModifier)
 	if !ok {
 		return false
 	}
 
-	for _, v := range mm.entries {
-		if !slices.Contains(rm.entries, v) {
+	for _, v := range m.entries {
+		if !slices.Contains(other.entries, v) {
 			return false
 		}
 	}
 
-	return rm.inverted == mm.inverted
+	return other.inverted == m.inverted
 }

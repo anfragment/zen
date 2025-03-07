@@ -42,11 +42,11 @@ func (m *ThirdPartyModifier) ShouldMatchRes(_ *http.Response) bool {
 	return false
 }
 
-func (t *ThirdPartyModifier) Cancels(m Modifier) bool {
-	rm, ok := m.(*ThirdPartyModifier)
+func (m *ThirdPartyModifier) Cancels(modifier Modifier) bool {
+	other, ok := modifier.(*ThirdPartyModifier)
 	if !ok {
 		return false
 	}
 
-	return t.inverted == rm.inverted
+	return m.inverted == other.inverted
 }

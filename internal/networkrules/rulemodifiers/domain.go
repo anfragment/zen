@@ -121,21 +121,21 @@ func (m *domainModifierEntry) MatchDomain(domain string) bool {
 	}
 }
 
-func (dm *DomainModifier) Cancels(m Modifier) bool {
-	rm, ok := m.(*DomainModifier)
+func (m *DomainModifier) Cancels(modifier Modifier) bool {
+	other, ok := modifier.(*DomainModifier)
 	if !ok {
 		return false
 	}
 
-	if len(dm.entries) != len(rm.entries) {
+	if len(m.entries) != len(other.entries) {
 		return false
 	}
 
-	for _, v := range dm.entries {
-		if !slices.Contains(rm.entries, v) {
+	for _, v := range m.entries {
+		if !slices.Contains(other.entries, v) {
 			return false
 		}
 	}
 
-	return dm.inverted == rm.inverted
+	return m.inverted == other.inverted
 }
