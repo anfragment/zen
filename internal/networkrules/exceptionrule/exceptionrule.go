@@ -13,7 +13,12 @@ type ExceptionRule struct {
 	RawRule    string
 	FilterName *string
 
-	modifiers []exceptionModifier
+	Modifiers ExceptionModifiers
+}
+
+type ExceptionModifiers struct {
+	AndModifiers []exceptionModifier
+	OrModifiers  []exceptionModifier
 }
 
 type exceptionModifier interface {
@@ -23,24 +28,39 @@ type exceptionModifier interface {
 }
 
 func (er *ExceptionRule) Cancels(r *rule.Rule) bool {
-	if len(er.modifiers) == 0 {
+	if len(er.Modifiers.AndModifiers) == 0 && len(er.Modifiers.OrModifiers) == 0 {
 		return true
 	}
 
-	matchingModifiers := append(r.MatchingModifiers.AndModifiers, r.MatchingModifiers.OrModifiers...)
-	for _, m := range er.modifiers {
-		for _, match := range matchingModifiers {
-			if !m.Cancels(match) {
-				return false
+	for _, exc := range er.Modifiers.AndModifiers {
+		found := false
+		for _, basic := range r.MatchingModifiers.AndModifiers {
+			if exc.Cancels(basic) {
+				found = true
+				break
 			}
 		}
+		if !found {
+			return false
+		}
+	}
 
-		for _, match := range r.ModifyingModifiers {
-			if !m.Cancels(match) {
-				return false
+	if len(er.Modifiers.OrModifiers) > 0 {
+		found := false
+		for _, exc := range er.Modifiers.OrModifiers {
+			for _, basic := range r.MatchingModifiers.OrModifiers {
+				if exc.Cancels(basic) {
+					found = true
+					break
+				}
+			}
+			if found {
+				break
 			}
 		}
-
+		if !found {
+			return false
+		}
 	}
 
 	return true
@@ -110,7 +130,11 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 
 		// QA: Is it enough to cast only "matchingModifiers" in exception rules cause we dont have "modifyingModifiers" here?
 		if matchingModifier, ok := modifier.(exceptionModifier); ok {
-			er.modifiers = append(er.modifiers, matchingModifier)
+			if IsOrMatchingModifier(matchingModifier) {
+				er.Modifiers.OrModifiers = append(er.Modifiers.OrModifiers, matchingModifier)
+			} else {
+				er.Modifiers.AndModifiers = append(er.Modifiers.AndModifiers, matchingModifier)
+			}
 		} else {
 			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
@@ -122,10 +146,21 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 
 // ShouldMatchReq returns true if the rule should match the request.
 func (er *ExceptionRule) ShouldMatchReq(req *http.Request) bool {
-	for _, modifier := range er.modifiers {
-		if !modifier.ShouldMatchReq(req) {
+	// AndModifiers: All must match.
+	for _, m := range er.Modifiers.AndModifiers {
+		if !m.ShouldMatchReq(req) {
 			return false
 		}
+	}
+
+	// OrModifiers: At least one must match.
+	if len(er.Modifiers.OrModifiers) > 0 {
+		for _, m := range er.Modifiers.OrModifiers {
+			if m.ShouldMatchReq(req) {
+				return true
+			}
+		}
+		return false
 	}
 
 	return true
@@ -133,11 +168,29 @@ func (er *ExceptionRule) ShouldMatchReq(req *http.Request) bool {
 
 // ShouldMatchRes returns true if the rule should match the response.
 func (er *ExceptionRule) ShouldMatchRes(res *http.Response) bool {
-	for _, modifier := range er.modifiers {
-		if !modifier.ShouldMatchRes(res) {
+	for _, m := range er.Modifiers.AndModifiers {
+		if !m.ShouldMatchRes(res) {
 			return false
 		}
 	}
 
+	if len(er.Modifiers.OrModifiers) > 0 {
+		for _, m := range er.Modifiers.OrModifiers {
+			if m.ShouldMatchRes(res) {
+				return true
+			}
+		}
+		return false
+	}
+
 	return true
+}
+
+func IsOrMatchingModifier(mm exceptionModifier) bool {
+	switch mm.(type) {
+	case *rulemodifiers.ContentTypeModifier:
+		return true
+	default:
+		return false
+	}
 }
