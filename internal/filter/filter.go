@@ -187,39 +187,29 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		jsRule.RuleRegex also matches scriptlet rules.
 		Therefore, we must first check for a scriptlet rule match before checking for a JS rule match.
 	*/
-	if scriptletRegex.MatchString(rule) {
+	switch {
+	case scriptletRegex.MatchString(rule):
 		if err := f.scriptletsInjector.AddRule(rule, filterListTrusted); err != nil {
 			return false, fmt.Errorf("add scriptlet: %w", err)
 		}
-		return false, nil
-	}
-
-	if cosmetic.RuleRegex.MatchString(rule) {
+	case cosmetic.RuleRegex.MatchString(rule):
 		if err := f.cosmeticRulesInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add cosmetic rule: %w", err)
 		}
-	}
-
-	if filterListTrusted && cssrule.RuleRegex.MatchString(rule) {
+	case filterListTrusted && cssrule.RuleRegex.MatchString(rule):
 		if err := f.cssRulesInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add css rule: %w", err)
 		}
-		return false, nil
-	}
-
-	if filterListTrusted && jsrule.RuleRegex.MatchString(rule) {
+	case filterListTrusted && jsrule.RuleRegex.MatchString(rule):
 		if err := f.jsRuleInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add js rule: %w", err)
 		}
-		return false, nil
-	}
-
-	isExceptionRule, err := f.networkRules.ParseRule(rule, filterListName)
-	if err != nil {
-		return false, fmt.Errorf("parse network rule: %w", err)
-	}
-	if isExceptionRule {
-		return true, nil
+	default:
+		isExceptionRule, err := f.networkRules.ParseRule(rule, filterListName)
+		if err != nil {
+			return false, fmt.Errorf("parse network rule: %w", err)
+		}
+		return isExceptionRule, nil
 	}
 
 	return false, nil

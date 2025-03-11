@@ -41,28 +41,26 @@ func NewNetworkRules() *NetworkRules {
 }
 
 func (nr *NetworkRules) ParseRule(rawRule string, filterName *string) (isException bool, err error) {
-	if reHosts.MatchString(rawRule) {
-		if commentIndex := strings.IndexByte(rawRule, '#'); commentIndex != -1 {
-			rawRule = rawRule[:commentIndex]
+	if matches := reHosts.FindStringSubmatch(rawRule); matches != nil {
+		hostsField := matches[1]
+		if commentIndex := strings.IndexByte(hostsField, '#'); commentIndex != -1 {
+			hostsField = hostsField[:commentIndex]
 		}
 
-		host := reHosts.FindStringSubmatch(rawRule)[1]
-		if strings.ContainsRune(host, ' ') {
-			for _, host := range strings.Split(host, " ") {
-				nr.regularRuleTree.Add(fmt.Sprintf("127.0.0.1 %s", host), &rule.Rule{
-					RawRule:    rawRule,
-					FilterName: filterName,
-				})
-			}
-			return false, nil
-		}
-
-		if reHostsIgnore.MatchString(host) {
-			return false, nil
-		}
+		// An IP address may be followed by multiple hostnames.
+		//
+		// As stated in https://man.freebsd.org/cgi/man.cgi?hosts(5):
+		// "Items are separated by any number of blanks and/or tab characters."
+		hosts := strings.Fields(hostsField)
 
 		nr.hostsMu.Lock()
-		nr.hosts[host] = filterName
+		for _, host := range hosts {
+			if reHostsIgnore.MatchString(host) {
+				continue
+			}
+
+			nr.hosts[host] = filterName
+		}
 		nr.hostsMu.Unlock()
 
 		return false, nil
