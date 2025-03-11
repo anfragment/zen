@@ -17,7 +17,7 @@ var (
 	// exceptionRegex matches exception rules.
 	exceptionRegex = regexp.MustCompile(`^@@`)
 
-	reHosts       = regexp.MustCompile(`^(?:0\.0\.0\.0|127\.0\.0\.1) (.+)`)
+	reHosts       = regexp.MustCompile(`^(?:0\.0\.0\.0|127\.0\.0\.1)\s(.+)`) // Replace ' ' with \s to support edge-cases mentioned below
 	reHostsIgnore = regexp.MustCompile(`^(?:0\.0\.0\.0|broadcasthost|local|localhost(?:\.localdomain)?|ip6-\w+)$`)
 )
 
@@ -125,13 +125,13 @@ func (nr *NetworkRules) ModifyReq(req *http.Request) (appliedRules []rule.Rule, 
 	}
 
 	exceptions := nr.exceptionRuleTree.FindMatchingRulesReq(req)
-	for _, ex := range exceptions {
-		if slices.ContainsFunc(regularRules, ex.Cancels) {
-			return nil, false, ""
-		}
-	}
-
+outer:
 	for _, r := range regularRules {
+		for _, ex := range exceptions {
+			if ex.Cancels(r) {
+				continue outer
+			}
+		}
 		if r.ShouldBlockReq(req) {
 			return []rule.Rule{*r}, true, ""
 		}
