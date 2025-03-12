@@ -32,16 +32,60 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 	}
 
 	for _, m := range strings.Split(modifiers, ",") {
-		modifier, err := rulemodifiers.ParseModifier(m)
-		if err != nil {
-			return fmt.Errorf("parse modifier: %w", err)
+		if len(m) == 0 {
+			return fmt.Errorf("empty modifier")
+		}
+
+		isKind := func(kind string) bool {
+			if len(m) > 0 && m[0] == '~' {
+				return strings.HasPrefix(m[1:], kind)
+			}
+			return strings.HasPrefix(m, kind)
+		}
+		var modifier rulemodifiers.Modifier
+		isOr := false
+		switch {
+		case isKind("domain"):
+			modifier = &rulemodifiers.DomainModifier{}
+		case isKind("method"):
+			modifier = &rulemodifiers.MethodModifier{}
+		case isKind("document"),
+			isKind("doc"),
+			isKind("xmlhttprequest"),
+			isKind("xhr"),
+			isKind("font"),
+			isKind("subdocument"),
+			isKind("image"),
+			isKind("object"),
+			isKind("script"),
+			isKind("stylesheet"),
+			isKind("media"),
+			isKind("other"):
+			modifier = &rulemodifiers.ContentTypeModifier{}
+			isOr = true
+		case isKind("third-party"):
+			modifier = &rulemodifiers.ThirdPartyModifier{}
+		case isKind("removeparam"):
+			modifier = &rulemodifiers.RemoveParamModifier{}
+		case isKind("header"):
+			modifier = &rulemodifiers.HeaderModifier{}
+		case isKind("removeheader"):
+			modifier = &rulemodifiers.RemoveHeaderModifier{}
+		case isKind("all"):
+			// TODO: should act as "popup" modifier once it gets implemented
+			continue
+		default:
+			return fmt.Errorf("unknown modifier %s", m)
+		}
+
+		if err := modifier.Parse(m); err != nil {
+			return err
 		}
 
 		if matchingModifier, ok := modifier.(rulemodifiers.MatchingModifier); ok {
-			switch matchingModifier.(type) {
-			case *rulemodifiers.ContentTypeModifier:
+			if isOr {
 				rm.MatchingModifiers.OrModifiers = append(rm.MatchingModifiers.OrModifiers, matchingModifier)
-			default:
+			} else {
 				rm.MatchingModifiers.AndModifiers = append(rm.MatchingModifiers.AndModifiers, matchingModifier)
 			}
 		} else if modifyingModifier, ok := modifier.(rulemodifiers.ModifyingModifier); ok {

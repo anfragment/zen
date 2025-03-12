@@ -82,5 +82,19 @@ func (h *HeaderModifier) Cancels(m Modifier) bool {
 		return false
 	}
 
-	return other.exact == h.exact && other.name == h.name && other.regexp == h.regexp
+	if h.exact != other.exact {
+		return false
+	}
+
+	if h.name != other.name {
+		return false
+	}
+
+	if h.regexp == nil && other.regexp == nil {
+		return true
+	}
+	if h.regexp == nil || other.regexp == nil {
+		return false
+	}
+	return h.regexp.String() == other.regexp.String()
 }

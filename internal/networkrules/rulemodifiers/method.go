@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 )
 
@@ -82,8 +81,19 @@ func (m *MethodModifier) Cancels(modifier Modifier) bool {
 		return false
 	}
 
-	for _, v := range m.entries {
-		if !slices.Contains(other.entries, v) {
+	if len(m.entries) != len(other.entries) {
+		return false
+	}
+
+	for _, entry := range m.entries {
+		found := false
+		for _, otherEntry := range other.entries {
+			if entry.method == otherEntry.method {
+				found = true
+				break
+			}
+		}
+		if !found {
 			return false
 		}
 	}

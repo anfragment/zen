@@ -1,7 +1,6 @@
 package networkrules
 
 import (
-	"fmt"
 	"net/http"
 	"regexp"
 	"slices"
@@ -108,14 +107,12 @@ func (nr *NetworkRules) ModifyReq(req *http.Request) (appliedRules []rule.Rule, 
 
 	if filterName, ok := nr.hosts[host]; ok {
 		nr.hostsMu.RUnlock()
-		// 0.0.0.0 may not be the actual IP defined in the hosts file,
-		// but storing the actual one feels wasteful.
 		return []rule.Rule{
 			{
-				RawRule:    fmt.Sprintf("0.0.0.0 %s", host),
+				RawRule:    host,
 				FilterName: filterName,
 			},
-		}, false, ""
+		}, true, ""
 	}
 	nr.hostsMu.RUnlock()
 

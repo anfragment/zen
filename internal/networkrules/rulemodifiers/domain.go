@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"slices"
 	"strings"
 )
 
@@ -123,19 +122,42 @@ func (m *domainModifierEntry) MatchDomain(domain string) bool {
 
 func (m *DomainModifier) Cancels(modifier Modifier) bool {
 	other, ok := modifier.(*DomainModifier)
-	if !ok {
+	if !ok || len(m.entries) != len(other.entries) || m.inverted != other.inverted {
 		return false
 	}
 
-	if len(m.entries) != len(other.entries) {
-		return false
-	}
+	used := make(map[int]struct{}, len(other.entries))
 
-	for _, v := range m.entries {
-		if !slices.Contains(other.entries, v) {
+	for _, entry := range m.entries {
+		matchFound := false
+		for i, otherEntry := range other.entries {
+			if _, alreadyUsed := used[i]; alreadyUsed {
+				continue
+			}
+			if entryEqual(entry, otherEntry) {
+				used[i] = struct{}{}
+				matchFound = true
+				break
+			}
+		}
+		if !matchFound {
 			return false
 		}
 	}
 
-	return m.inverted == other.inverted
+	return true
+}
+
+func entryEqual(a, b domainModifierEntry) bool {
+	if a.regular != b.regular || a.tld != b.tld {
+		return false
+	}
+
+	if a.regexp == nil && b.regexp == nil {
+		return true
+	}
+	if a.regexp == nil || b.regexp == nil {
+		return false
+	}
+	return a.regexp.String() == b.regexp.String()
 }

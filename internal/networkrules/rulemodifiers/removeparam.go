@@ -113,7 +113,7 @@ func (rm *RemoveParamModifier) Cancels(modifier Modifier) bool {
 		return false
 	}
 
-	return other.kind == rm.kind && other.param == rm.param && rm.regexp == other.regexp
+	return other.kind == rm.kind && other.param == rm.param && rm.regexp.String() == other.regexp.String()
 }
 
 func (rm *RemoveParamModifier) ShouldMatchReq(_ *http.Request) bool  { return false }

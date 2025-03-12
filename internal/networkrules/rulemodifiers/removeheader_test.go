@@ -116,4 +116,93 @@ func TestRemoveHeaderModifier(t *testing.T) {
 			t.Error("expected response to not be modified")
 		}
 	})
+
+	t.Run("cancels", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name     string
+			a        RemoveHeaderModifier
+			b        RemoveHeaderModifier
+			expected bool
+		}{
+			{
+				name: "Should cancel - identical modifiers",
+				a: RemoveHeaderModifier{
+					Kind:       1,
+					HeaderName: "X-Test",
+				},
+				b: RemoveHeaderModifier{
+					Kind:       1,
+					HeaderName: "X-Test",
+				},
+				expected: true,
+			},
+			{
+				name:     "Should cancel - empty",
+				a:        RemoveHeaderModifier{},
+				b:        RemoveHeaderModifier{},
+				expected: true,
+			},
+			{
+				name: "Should not cancel - different HeaderName",
+				a: RemoveHeaderModifier{
+					Kind:       1,
+					HeaderName: "X-Test",
+				},
+				b: RemoveHeaderModifier{
+					Kind:       1,
+					HeaderName: "X-Different",
+				},
+				expected: false,
+			},
+			{
+				name: "Should not cancel - different Kind",
+				a: RemoveHeaderModifier{
+					Kind:       1,
+					HeaderName: "X-Test",
+				},
+				b: RemoveHeaderModifier{
+					Kind:       2,
+					HeaderName: "X-Test",
+				},
+				expected: false,
+			},
+			{
+				name: "Should not cancel - different Kind and HeaderName",
+				a: RemoveHeaderModifier{
+					Kind:       1,
+					HeaderName: "X-Test",
+				},
+				b: RemoveHeaderModifier{
+					Kind:       2,
+					HeaderName: "X-Other",
+				},
+				expected: false,
+			},
+			{
+				name: "Should not cancel - empty HeaderName",
+				a: RemoveHeaderModifier{
+					Kind:       1,
+					HeaderName: "",
+				},
+				b: RemoveHeaderModifier{
+					Kind:       1,
+					HeaderName: "X-Test",
+				},
+				expected: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				result := tt.a.Cancels(&tt.b)
+				if result != tt.expected {
+					t.Errorf("RemoveHeaderModifier.Cancels() = %t, want %t", result, tt.expected)
+				}
+			})
+		}
+	})
 }
