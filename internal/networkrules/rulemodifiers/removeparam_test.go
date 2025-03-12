@@ -22,12 +22,12 @@ func TestRemoveParamModifier(t *testing.T) {
 				a: RemoveParamModifier{
 					kind:   1,
 					param:  "id",
-					regexp: regexp.MustCompile("^\\d+$"),
+					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				b: RemoveParamModifier{
 					kind:   1,
 					param:  "id",
-					regexp: regexp.MustCompile("^\\d+$"),
+					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				expected: true,
 			},
@@ -42,12 +42,12 @@ func TestRemoveParamModifier(t *testing.T) {
 				a: RemoveParamModifier{
 					kind:   1,
 					param:  "id",
-					regexp: regexp.MustCompile("^\\d+$"),
+					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				b: RemoveParamModifier{
 					kind:   1,
 					param:  "user",
-					regexp: regexp.MustCompile("^\\d+$"),
+					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				expected: false,
 			},
@@ -56,12 +56,12 @@ func TestRemoveParamModifier(t *testing.T) {
 				a: RemoveParamModifier{
 					kind:   1,
 					param:  "id",
-					regexp: regexp.MustCompile("^\\d+$"),
+					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				b: RemoveParamModifier{
 					kind:   2,
 					param:  "id",
-					regexp: regexp.MustCompile("^\\d+$"),
+					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				expected: false,
 			},
@@ -70,7 +70,7 @@ func TestRemoveParamModifier(t *testing.T) {
 				a: RemoveParamModifier{
 					kind:   1,
 					param:  "id",
-					regexp: regexp.MustCompile("^\\d+$"),
+					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				b: RemoveParamModifier{
 					kind:   1,
@@ -103,7 +103,7 @@ func TestRemoveParamModifier(t *testing.T) {
 				b: RemoveParamModifier{
 					kind:   1,
 					param:  "id",
-					regexp: regexp.MustCompile("^\\d+$"),
+					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				expected: false,
 			},
