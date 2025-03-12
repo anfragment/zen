@@ -21,4 +21,5 @@ type ModifyingModifier interface {
 	Modifier
 	ModifyReq(req *http.Request) (modified bool)
 	ModifyRes(res *http.Response) (modified bool)
+	Cancels(Modifier) bool
 }

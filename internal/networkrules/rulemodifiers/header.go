@@ -82,11 +82,7 @@ func (h *HeaderModifier) Cancels(m Modifier) bool {
 		return false
 	}
 
-	if h.exact != other.exact {
-		return false
-	}
-
-	if h.name != other.name {
+	if h.exact != other.exact || h.name != other.name {
 		return false
 	}
 

@@ -131,9 +131,6 @@ func (rm *RemoveHeaderModifier) ModifyRes(res *http.Response) (modified bool) {
 	return true
 }
 
-func (rm *RemoveHeaderModifier) ShouldMatchReq(_ *http.Request) bool  { return false }
-func (rm *RemoveHeaderModifier) ShouldMatchRes(_ *http.Response) bool { return false }
-
 func (rm *RemoveHeaderModifier) Cancels(modifier Modifier) bool {
 	other, ok := modifier.(*RemoveHeaderModifier)
 	if !ok {

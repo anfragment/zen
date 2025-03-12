@@ -13,7 +13,8 @@ type ExceptionRule struct {
 	RawRule    string
 	FilterName *string
 
-	Modifiers ExceptionModifiers
+	Modifiers          ExceptionModifiers
+	ModifyingModifiers []rulemodifiers.ModifyingModifier
 }
 
 type ExceptionModifiers struct {
@@ -28,7 +29,7 @@ type exceptionModifier interface {
 }
 
 func (er *ExceptionRule) Cancels(r *rule.Rule) bool {
-	if len(er.Modifiers.AndModifiers) == 0 && len(er.Modifiers.OrModifiers) == 0 {
+	if len(er.Modifiers.AndModifiers) == 0 && len(er.Modifiers.OrModifiers) == 0 && len(er.ModifyingModifiers) == 0 {
 		return true
 	}
 
@@ -55,6 +56,19 @@ func (er *ExceptionRule) Cancels(r *rule.Rule) bool {
 				}
 			}
 			if found {
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	for _, exc := range er.ModifyingModifiers {
+		found := false
+		for _, basic := range r.ModifyingModifiers {
+			if exc.Cancels(basic) {
+				found = true
 				break
 			}
 		}
@@ -128,6 +142,8 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 			} else {
 				er.Modifiers.AndModifiers = append(er.Modifiers.AndModifiers, matchingModifier)
 			}
+		} else if modifyingModifier, ok := modifier.(rulemodifiers.ModifyingModifier); ok {
+			er.ModifyingModifiers = append(er.ModifyingModifiers, modifyingModifier)
 		} else {
 			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
 		}
