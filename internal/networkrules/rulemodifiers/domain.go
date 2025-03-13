@@ -52,14 +52,14 @@ func (m *DomainModifier) Parse(modifier string) error {
 }
 
 func (m *DomainModifier) ShouldMatchReq(req *http.Request) bool {
-	if referer := req.Header.Get("Referer"); referer == "" {
-		return false
+	var hostname string
+	if referer := req.Header.Get("Referer"); referer != "" {
+		url, err := url.Parse(referer)
+		if err != nil {
+			return false
+		}
+		hostname = url.Hostname()
 	}
-	url, err := url.Parse(req.Header.Get("Referer"))
-	if err != nil {
-		return false
-	}
-	hostname := url.Hostname()
 
 	matches := false
 	for _, entry := range m.entries {

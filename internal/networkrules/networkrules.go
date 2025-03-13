@@ -122,6 +122,7 @@ func (nr *NetworkRules) ModifyReq(req *http.Request) (appliedRules []rule.Rule, 
 	}
 
 	exceptions := nr.exceptionRuleTree.FindMatchingRulesReq(req)
+	initialURL := req.URL.String()
 outer:
 	for _, r := range regularRules {
 		for _, ex := range exceptions {
@@ -137,7 +138,6 @@ outer:
 		}
 	}
 
-	initialURL := req.URL.String()
 	finalURL := req.URL.String()
 
 	if initialURL != finalURL {
