@@ -118,99 +118,99 @@ func TestMethodModifier(t *testing.T) {
 		t.Parallel()
 
 		tests := []struct {
-			name     string
-			a        MethodModifier
-			b        MethodModifier
-			expected bool
+			name string
+			a    MethodModifier
+			b    MethodModifier
+			want bool
 		}{
 			{
-				name: "Should cancel - identical modifiers",
-				a: MethodModifier{
+				"Should cancel - identical modifiers",
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 						{method: "POST"},
 					},
 					inverted: true,
 				},
-				b: MethodModifier{
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 						{method: "POST"},
 					},
 					inverted: true,
 				},
-				expected: true,
+				true,
 			},
 			{
-				name:     "Should cancel - identical modifiers",
-				a:        MethodModifier{},
-				b:        MethodModifier{},
-				expected: true,
+				"Should cancel - identical modifiers",
+				MethodModifier{},
+				MethodModifier{},
+				true,
 			},
 			{
-				name: "Should cancel - identical methods but different order",
-				a: MethodModifier{
+				"Should cancel - identical methods but different order",
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "POST"},
 						{method: "GET"},
 					},
 					inverted: true,
 				},
-				b: MethodModifier{
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 						{method: "POST"},
 					},
 					inverted: true,
 				},
-				expected: true,
+				true,
 			},
 			{
-				name: "Should not cancel - different method entries",
-				a: MethodModifier{
+				"Should not cancel - different method entries",
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 						{method: "POST"},
 					},
 					inverted: true,
 				},
-				b: MethodModifier{
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "PUT"},
 						{method: "DELETE"},
 					},
 					inverted: true,
 				},
-				expected: false,
+				false,
 			},
 			{
-				name: "Should not cancel - different inverted flag",
-				a: MethodModifier{
+				"Should not cancel - different inverted flag",
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 						{method: "POST"},
 					},
 					inverted: true,
 				},
-				b: MethodModifier{
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 						{method: "POST"},
 					},
 					inverted: false,
 				},
-				expected: false,
+				false,
 			},
 			{
-				name: "Should not cancel - one has extra method",
-				a: MethodModifier{
+				"Should not cancel - one has extra method",
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 						{method: "POST"},
 					},
 					inverted: true,
 				},
-				b: MethodModifier{
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 						{method: "POST"},
@@ -218,33 +218,33 @@ func TestMethodModifier(t *testing.T) {
 					},
 					inverted: true,
 				},
-				expected: false,
+				false,
 			},
 			{
-				name: "Should not cancel - one is empty",
-				a: MethodModifier{
+				"Should not cancel - one is empty",
+				MethodModifier{
 					entries:  []methodModifierEntry{},
 					inverted: true,
 				},
-				b: MethodModifier{
+				MethodModifier{
 					entries: []methodModifierEntry{
 						{method: "GET"},
 					},
 					inverted: true,
 				},
-				expected: false,
+				false,
 			},
 			{
-				name: "Should cancel - both are empty",
-				a: MethodModifier{
+				"Should cancel - both are empty",
+				MethodModifier{
 					entries:  []methodModifierEntry{},
 					inverted: true,
 				},
-				b: MethodModifier{
+				MethodModifier{
 					entries:  []methodModifierEntry{},
 					inverted: true,
 				},
-				expected: true,
+				true,
 			},
 		}
 
@@ -253,8 +253,8 @@ func TestMethodModifier(t *testing.T) {
 				t.Parallel()
 
 				result := tt.a.Cancels(&tt.b)
-				if result != tt.expected {
-					t.Errorf("MethodModifier.Cancels() = %t, want %t", result, tt.expected)
+				if result != tt.want {
+					t.Errorf("MethodModifier.Cancels() = %t, want %t", result, tt.want)
 				}
 			})
 		}

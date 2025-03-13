@@ -51,6 +51,7 @@ func (m *DomainModifier) Parse(modifier string) error {
 	return nil
 }
 
+// ShouldMatchReq can omit "Referer" header for inverted domains.
 func (m *DomainModifier) ShouldMatchReq(req *http.Request) bool {
 	var hostname string
 	if referer := req.Header.Get("Referer"); referer != "" {

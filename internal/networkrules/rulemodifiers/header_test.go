@@ -119,80 +119,80 @@ func TestHeaderModifier(t *testing.T) {
 			want bool
 		}{
 			{
-				name: "Should cancel - identical modifiers",
-				a: HeaderModifier{
+				"Should cancel - identical modifiers",
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value",
 					regexp: regexp.MustCompile("^value$"),
 				},
-				b: HeaderModifier{
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value",
 					regexp: regexp.MustCompile("^value$"),
 				},
-				want: true,
+				true,
 			},
 			{
-				name: "Should cancel - empty",
-				a:    HeaderModifier{},
-				b:    HeaderModifier{},
-				want: true,
+				"Should cancel - empty",
+				HeaderModifier{},
+				HeaderModifier{},
+				true,
 			},
 			{
-				name: "Should not cancel - different header names",
-				a: HeaderModifier{
+				"Should not cancel - different header names",
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value",
 					regexp: regexp.MustCompile("^value$"),
 				},
-				b: HeaderModifier{
+				HeaderModifier{
 					name:   "X-Different",
 					exact:  "value",
 					regexp: regexp.MustCompile("^value$"),
 				},
-				want: false,
+				false,
 			},
 			{
-				name: "Should not cancel - different exact values",
-				a: HeaderModifier{
+				"Should not cancel - different exact values",
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value1",
 					regexp: regexp.MustCompile("^value$"),
 				},
-				b: HeaderModifier{
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value2",
 					regexp: regexp.MustCompile("^value$"),
 				},
-				want: false,
+				false,
 			},
 			{
-				name: "Should not cancel - different regex values",
-				a: HeaderModifier{
+				"Should not cancel - different regex values",
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value",
 					regexp: regexp.MustCompile("^value1$"),
 				},
-				b: HeaderModifier{
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value",
 					regexp: regexp.MustCompile("^value2$"),
 				},
-				want: false,
+				false,
 			},
 			{
-				name: "Should not cancel - one regex is nil",
-				a: HeaderModifier{
+				"Should not cancel - one regex is nil",
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value",
 					regexp: nil,
 				},
-				b: HeaderModifier{
+				HeaderModifier{
 					name:   "X-Test",
 					exact:  "value",
 					regexp: regexp.MustCompile("^value$"),
 				},
-				want: false,
+				false,
 			},
 		}
 

@@ -127,70 +127,70 @@ func TestRemoveHeaderModifier(t *testing.T) {
 			expected bool
 		}{
 			{
-				name: "Should cancel - identical modifiers",
-				a: RemoveHeaderModifier{
+				"Should cancel - identical modifiers",
+				RemoveHeaderModifier{
 					Kind:       1,
 					HeaderName: "X-Test",
 				},
-				b: RemoveHeaderModifier{
+				RemoveHeaderModifier{
 					Kind:       1,
 					HeaderName: "X-Test",
 				},
-				expected: true,
+				true,
 			},
 			{
-				name:     "Should cancel - empty",
-				a:        RemoveHeaderModifier{},
-				b:        RemoveHeaderModifier{},
-				expected: true,
+				"Should cancel - empty",
+				RemoveHeaderModifier{},
+				RemoveHeaderModifier{},
+				true,
 			},
 			{
-				name: "Should not cancel - different HeaderName",
-				a: RemoveHeaderModifier{
+				"Should not cancel - different HeaderName",
+				RemoveHeaderModifier{
 					Kind:       1,
 					HeaderName: "X-Test",
 				},
-				b: RemoveHeaderModifier{
+				RemoveHeaderModifier{
 					Kind:       1,
 					HeaderName: "X-Different",
 				},
-				expected: false,
+				false,
 			},
 			{
-				name: "Should not cancel - different Kind",
-				a: RemoveHeaderModifier{
+				"Should not cancel - different Kind",
+				RemoveHeaderModifier{
 					Kind:       1,
 					HeaderName: "X-Test",
 				},
-				b: RemoveHeaderModifier{
+				RemoveHeaderModifier{
 					Kind:       2,
 					HeaderName: "X-Test",
 				},
-				expected: false,
+				false,
 			},
 			{
-				name: "Should not cancel - different Kind and HeaderName",
-				a: RemoveHeaderModifier{
+				"Should not cancel - different Kind and HeaderName",
+				RemoveHeaderModifier{
 					Kind:       1,
 					HeaderName: "X-Test",
 				},
-				b: RemoveHeaderModifier{
+				RemoveHeaderModifier{
 					Kind:       2,
 					HeaderName: "X-Other",
 				},
-				expected: false,
+				false,
 			},
 			{
-				name: "Should not cancel - empty HeaderName",
-				a: RemoveHeaderModifier{
+				"Should not cancel - empty HeaderName",
+				RemoveHeaderModifier{
 					Kind:       1,
 					HeaderName: "",
 				},
-				b: RemoveHeaderModifier{
+				RemoveHeaderModifier{
 					Kind:       1,
 					HeaderName: "X-Test",
 				},
-				expected: false,
+				false,
 			},
 		}
 

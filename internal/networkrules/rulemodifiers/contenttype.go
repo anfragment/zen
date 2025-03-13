@@ -9,7 +9,6 @@ type ContentTypeModifier struct {
 	inverted    bool
 }
 
-// Q: how do i import "matchingModifier" from rule.go without causing import cycle?
 var _ MatchingModifier = (*ContentTypeModifier)(nil)
 
 var (
