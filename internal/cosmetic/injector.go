@@ -52,11 +52,7 @@ func (inj *Injector) AddRule(rule string) error {
 	}
 
 	if match := exceptionRuleRegex.FindStringSubmatch(rule); match != nil {
-		css, err := sanitizeCSSSelector(match[2])
-		if err != nil {
-			return fmt.Errorf("sanitize css selector: %w", err)
-		}
-		if err := inj.store.AddExceptionRule(match[1], css); err != nil {
+		if err := inj.store.AddExceptionRule(match[1], match[2]); err != nil {
 			return fmt.Errorf("add exception rule: %w", err)
 		}
 		return nil
