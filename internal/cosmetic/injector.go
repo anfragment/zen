@@ -41,7 +41,11 @@ func NewInjector() *Injector {
 
 func (inj *Injector) AddRule(rule string) error {
 	if match := primaryRuleRegex.FindStringSubmatch(rule); match != nil {
-		if err := inj.store.AddPrimaryRule(match[1], match[2]); err != nil {
+		css, err := sanitizeCSSSelector(match[2])
+		if err != nil {
+			return fmt.Errorf("sanitize css selector: %w", err)
+		}
+		if err := inj.store.AddPrimaryRule(match[1], css); err != nil {
 			return fmt.Errorf("add primary rule: %w", err)
 		}
 		return nil
