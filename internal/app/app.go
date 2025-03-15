@@ -19,8 +19,8 @@ import (
 	"github.com/anfragment/zen/internal/filter"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
+	"github.com/anfragment/zen/internal/networkrules"
 	"github.com/anfragment/zen/internal/proxy"
-	"github.com/anfragment/zen/internal/ruletree"
 	"github.com/anfragment/zen/internal/scriptlet"
 	"github.com/anfragment/zen/internal/scriptlet/triestore"
 	"github.com/anfragment/zen/internal/selfupdate"
@@ -165,9 +165,7 @@ func (a *App) StartProxy() (err error) {
 		}
 	}()
 
-	ruleMatcher := ruletree.NewRuleTree()
-	exceptionRuleMatcher := ruletree.NewRuleTree()
-
+	networkRules := networkrules.NewNetworkRules()
 	scriptletStore := triestore.NewTrieStore()
 	scriptletInjector, err := scriptlet.NewInjector(scriptletStore)
 	if err != nil {
@@ -178,7 +176,7 @@ func (a *App) StartProxy() (err error) {
 	cssRulesInjector := cssrule.NewInjector()
 	jsRuleInjector := jsrule.NewInjector()
 
-	filter, err := filter.NewFilter(a.config, ruleMatcher, exceptionRuleMatcher, scriptletInjector, cosmeticRulesInjector, cssRulesInjector, jsRuleInjector, a.eventsHandler)
+	filter, err := filter.NewFilter(a.config, networkRules, scriptletInjector, cosmeticRulesInjector, cssRulesInjector, jsRuleInjector, a.eventsHandler)
 	if err != nil {
 		return fmt.Errorf("create filter: %v", err)
 	}

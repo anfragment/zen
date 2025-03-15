@@ -19,7 +19,7 @@ import (
 	"github.com/anfragment/zen/internal/cssrule"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
-	"github.com/anfragment/zen/internal/rule"
+	"github.com/anfragment/zen/internal/networkrules/rule"
 )
 
 // filterEventsEmitter emits filter events.
@@ -29,11 +29,12 @@ type filterEventsEmitter interface {
 	OnFilterModify(method, url, referer string, rules []rule.Rule)
 }
 
-// ruleMatcher matches requests against rules.
-type ruleMatcher interface {
-	AddRule(rule string, filterName *string) error
-	FindMatchingRulesReq(*http.Request) []rule.Rule
-	FindMatchingRulesRes(*http.Request, *http.Response) []rule.Rule
+type networkRules interface {
+	ParseRule(rule string, filterName *string) (isException bool, err error)
+	ModifyReq(req *http.Request) (appliedRules []rule.Rule, shouldBlock bool, redirectURL string)
+	ModifyRes(req *http.Request, res *http.Response) []rule.Rule
+	CreateBlockResponse(req *http.Request) *http.Response
+	CreateRedirectResponse(req *http.Request, to string) *http.Response
 }
 
 // config provides filter configuration.
@@ -68,8 +69,7 @@ type jsRuleInjector interface {
 // Safe for concurrent use.
 type Filter struct {
 	config                config
-	ruleMatcher           ruleMatcher
-	exceptionRuleMatcher  ruleMatcher
+	networkRules          networkRules
 	scriptletsInjector    scriptletsInjector
 	cosmeticRulesInjector cosmeticRulesInjector
 	cssRulesInjector      cssRulesInjector
@@ -80,22 +80,20 @@ type Filter struct {
 var (
 	// ignoreLineRegex matches comments and [Adblock Plus 2.0]-style headers.
 	ignoreLineRegex = regexp.MustCompile(`^(?:!|\[|#([^#%]|$))`)
-	// exceptionRegex matches exception rules.
-	exceptionRegex = regexp.MustCompile(`^@@`)
 	// scriptletRegex matches scriptlet rules.
 	scriptletRegex = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher ruleMatcher, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, networkRules networkRules, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
 	if eventsEmitter == nil {
 		return nil, errors.New("eventsEmitter is nil")
 	}
-	if ruleMatcher == nil {
-		return nil, errors.New("ruleMatcher is nil")
+	if networkRules == nil {
+		return nil, errors.New("networkRules is nil")
 	}
 	if scriptletsInjector == nil {
 		return nil, errors.New("scriptletsInjector is nil")
@@ -109,14 +107,10 @@ func NewFilter(config config, ruleMatcher ruleMatcher, exceptionRuleMatcher rule
 	if jsRuleInjector == nil {
 		return nil, errors.New("jsRuleInjector is nil")
 	}
-	if exceptionRuleMatcher == nil {
-		return nil, errors.New("exceptionRuleMatcher is nil")
-	}
 
 	f := &Filter{
 		config:                config,
-		ruleMatcher:           ruleMatcher,
-		exceptionRuleMatcher:  exceptionRuleMatcher,
+		networkRules:          networkRules,
 		scriptletsInjector:    scriptletsInjector,
 		cosmeticRulesInjector: cosmeticRulesInjector,
 		cssRulesInjector:      cssRulesInjector,
@@ -193,75 +187,48 @@ func (f *Filter) AddRule(rule string, filterListName *string, filterListTrusted 
 		jsRule.RuleRegex also matches scriptlet rules.
 		Therefore, we must first check for a scriptlet rule match before checking for a JS rule match.
 	*/
-	if scriptletRegex.MatchString(rule) {
+	switch {
+	case scriptletRegex.MatchString(rule):
 		if err := f.scriptletsInjector.AddRule(rule, filterListTrusted); err != nil {
 			return false, fmt.Errorf("add scriptlet: %w", err)
 		}
-		return false, nil
-	}
-
-	if cosmetic.RuleRegex.MatchString(rule) {
+	case cosmetic.RuleRegex.MatchString(rule):
 		if err := f.cosmeticRulesInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add cosmetic rule: %w", err)
 		}
-	}
-
-	if filterListTrusted && cssrule.RuleRegex.MatchString(rule) {
+	case filterListTrusted && cssrule.RuleRegex.MatchString(rule):
 		if err := f.cssRulesInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add css rule: %w", err)
 		}
-		return false, nil
-	}
-
-	if filterListTrusted && jsrule.RuleRegex.MatchString(rule) {
+	case filterListTrusted && jsrule.RuleRegex.MatchString(rule):
 		if err := f.jsRuleInjector.AddRule(rule); err != nil {
 			return false, fmt.Errorf("add js rule: %w", err)
 		}
-		return false, nil
-	}
-	if exceptionRegex.MatchString(rule) {
-		if err := f.exceptionRuleMatcher.AddRule(rule[2:], filterListName); err != nil {
-			return true, fmt.Errorf("add exception: %w", err)
+	default:
+		isExceptionRule, err := f.networkRules.ParseRule(rule, filterListName)
+		if err != nil {
+			return false, fmt.Errorf("parse network rule: %w", err)
 		}
-		return true, nil
+		return isExceptionRule, nil
 	}
-	if err := f.ruleMatcher.AddRule(rule, filterListName); err != nil {
-		return false, fmt.Errorf("add rule: %w", err)
-	}
+
 	return false, nil
 }
 
 // HandleRequest handles the given request by matching it against the filter rules.
 // If the request should be blocked, it returns a response that blocks the request. If the request should be modified, it modifies it in-place.
 func (f *Filter) HandleRequest(req *http.Request) *http.Response {
-	if len(f.exceptionRuleMatcher.FindMatchingRulesReq(req)) > 0 {
-		// TODO: implement precise exception handling
-		// https://adguard.com/kb/general/ad-filtering/create-own-filters/#removeheader-modifier (see "Negating $removeheader")
-		return nil
-	}
-
-	matchingRules := f.ruleMatcher.FindMatchingRulesReq(req)
-	if len(matchingRules) == 0 {
-		return nil
-	}
-
-	var appliedRules []rule.Rule
 	initialURL := req.URL.String()
 
-	for _, r := range matchingRules {
-		if r.ShouldBlockReq(req) {
-			f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), []rule.Rule{r})
-			return f.createBlockResponse(req)
-		}
-		if r.ModifyReq(req) {
-			appliedRules = append(appliedRules, r)
-		}
+	appliedRules, shouldBlock, redirectURL := f.networkRules.ModifyReq(req)
+	if shouldBlock {
+		f.eventsEmitter.OnFilterBlock(req.Method, initialURL, req.Header.Get("Referer"), appliedRules)
+		return f.networkRules.CreateBlockResponse(req)
 	}
 
-	finalURL := req.URL.String()
-	if initialURL != finalURL {
-		f.eventsEmitter.OnFilterRedirect(req.Method, initialURL, finalURL, req.Header.Get("Referer"), appliedRules)
-		return f.createRedirectResponse(req, finalURL)
+	if redirectURL != "" {
+		f.eventsEmitter.OnFilterRedirect(req.Method, initialURL, redirectURL, req.Header.Get("Referer"), appliedRules)
+		return f.networkRules.CreateRedirectResponse(req, redirectURL)
 	}
 
 	if len(appliedRules) > 0 {
@@ -294,23 +261,7 @@ func (f *Filter) HandleResponse(req *http.Request, res *http.Response) error {
 		}
 	}
 
-	if len(f.exceptionRuleMatcher.FindMatchingRulesRes(req, res)) > 0 {
-		return nil
-	}
-
-	matchingRules := f.ruleMatcher.FindMatchingRulesRes(req, res)
-	if len(matchingRules) == 0 {
-		return nil
-	}
-
-	var appliedRules []rule.Rule
-
-	for _, r := range matchingRules {
-		if r.ModifyRes(res) {
-			appliedRules = append(appliedRules, r)
-		}
-	}
-
+	appliedRules := f.networkRules.ModifyRes(req, res)
 	if len(appliedRules) > 0 {
 		f.eventsEmitter.OnFilterModify(req.Method, req.URL.String(), req.Header.Get("Referer"), appliedRules)
 	}

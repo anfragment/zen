@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"fmt"
@@ -16,15 +16,15 @@ const (
 	removeparamKindExactInverse
 )
 
-type removeParamModifier struct {
+type RemoveParamModifier struct {
 	kind   removeparamKind
 	param  string
 	regexp *regexp.Regexp
 }
 
-var _ modifyingModifier = (*removeParamModifier)(nil)
+var _ ModifyingModifier = (*RemoveParamModifier)(nil)
 
-func (rm *removeParamModifier) Parse(modifier string) error {
+func (rm *RemoveParamModifier) Parse(modifier string) error {
 	if modifier == "removeparam" {
 		rm.kind = removeparamKindGeneric
 		return nil
@@ -57,7 +57,7 @@ func (rm *removeParamModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (rm *removeParamModifier) ModifyReq(req *http.Request) (modified bool) {
+func (rm *RemoveParamModifier) ModifyReq(req *http.Request) (modified bool) {
 	query := req.URL.Query()
 	params := make([]string, 0, len(query))
 	for param := range query {
@@ -103,6 +103,25 @@ func (rm *removeParamModifier) ModifyReq(req *http.Request) (modified bool) {
 	return modified
 }
 
-func (rm *removeParamModifier) ModifyRes(*http.Response) (modified bool) {
+func (rm *RemoveParamModifier) ModifyRes(*http.Response) (modified bool) {
 	return false
+}
+
+func (rm *RemoveParamModifier) Cancels(modifier Modifier) bool {
+	other, ok := modifier.(*RemoveParamModifier)
+	if !ok {
+		return false
+	}
+
+	if other.kind != rm.kind || other.param != rm.param {
+		return false
+	}
+
+	if rm.regexp == nil && other.regexp == nil {
+		return true
+	}
+	if rm.regexp == nil || other.regexp == nil {
+		return false
+	}
+	return rm.regexp.String() == other.regexp.String()
 }

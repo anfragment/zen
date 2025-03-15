@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"errors"
@@ -17,14 +17,14 @@ var (
 	domainModifierRegex = regexp.MustCompile(`~?((/.*/)|[^|]+)+`)
 )
 
-type domainModifier struct {
+type DomainModifier struct {
 	entries  []domainModifierEntry
 	inverted bool
 }
 
-var _ matchingModifier = (*domainModifier)(nil)
+var _ MatchingModifier = (*DomainModifier)(nil)
 
-func (m *domainModifier) Parse(modifier string) error {
+func (m *DomainModifier) Parse(modifier string) error {
 	eqIndex := strings.IndexByte(modifier, '=')
 	if eqIndex == -1 || eqIndex == len(modifier)-1 {
 		return errors.New("invalid domain modifier")
@@ -51,15 +51,16 @@ func (m *domainModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (m *domainModifier) ShouldMatchReq(req *http.Request) bool {
-	if referer := req.Header.Get("Referer"); referer == "" {
-		return false
+// ShouldMatchReq can omit "Referer" header for inverted domains.
+func (m *DomainModifier) ShouldMatchReq(req *http.Request) bool {
+	var hostname string
+	if referer := req.Header.Get("Referer"); referer != "" {
+		url, err := url.Parse(referer)
+		if err != nil {
+			return false
+		}
+		hostname = url.Hostname()
 	}
-	url, err := url.Parse(req.Header.Get("Referer"))
-	if err != nil {
-		return false
-	}
-	hostname := url.Hostname()
 
 	matches := false
 	for _, entry := range m.entries {
@@ -74,7 +75,7 @@ func (m *domainModifier) ShouldMatchReq(req *http.Request) bool {
 	return matches
 }
 
-func (m *domainModifier) ShouldMatchRes(_ *http.Response) bool {
+func (m *DomainModifier) ShouldMatchRes(_ *http.Response) bool {
 	return false
 }
 
@@ -118,4 +119,46 @@ func (m *domainModifierEntry) MatchDomain(domain string) bool {
 	default:
 		return false
 	}
+}
+
+func (m *DomainModifier) Cancels(modifier Modifier) bool {
+	other, ok := modifier.(*DomainModifier)
+	if !ok || len(m.entries) != len(other.entries) || m.inverted != other.inverted {
+		return false
+	}
+
+	used := make(map[int]struct{}, len(other.entries))
+
+	for _, entry := range m.entries {
+		matchFound := false
+		for i, otherEntry := range other.entries {
+			if _, alreadyUsed := used[i]; alreadyUsed {
+				continue
+			}
+			if entryEqual(entry, otherEntry) {
+				used[i] = struct{}{}
+				matchFound = true
+				break
+			}
+		}
+		if !matchFound {
+			return false
+		}
+	}
+
+	return true
+}
+
+func entryEqual(a, b domainModifierEntry) bool {
+	if a.regular != b.regular || a.tld != b.tld {
+		return false
+	}
+
+	if a.regexp == nil && b.regexp == nil {
+		return true
+	}
+	if a.regexp == nil || b.regexp == nil {
+		return false
+	}
+	return a.regexp.String() == b.regexp.String()
 }

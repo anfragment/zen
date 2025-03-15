@@ -1,4 +1,4 @@
-package rule
+package rulemodifiers
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-type headerModifier struct {
+type HeaderModifier struct {
 	// name is the name of the header.
 	name string
 	// exact is non-empty when the modifier should match an exact header value.
@@ -17,9 +17,9 @@ type headerModifier struct {
 	regexp *regexp.Regexp
 }
 
-var _ matchingModifier = (*headerModifier)(nil)
+var _ MatchingModifier = (*HeaderModifier)(nil)
 
-func (h *headerModifier) Parse(modifier string) error {
+func (h *HeaderModifier) Parse(modifier string) error {
 	if len(modifier) == 0 {
 		return errors.New("empty modifier")
 	}
@@ -52,11 +52,11 @@ func (h *headerModifier) Parse(modifier string) error {
 	return nil
 }
 
-func (h *headerModifier) ShouldMatchReq(_ *http.Request) bool {
+func (h *HeaderModifier) ShouldMatchReq(_ *http.Request) bool {
 	return false
 }
 
-func (h *headerModifier) ShouldMatchRes(res *http.Response) bool {
+func (h *HeaderModifier) ShouldMatchRes(res *http.Response) bool {
 	value := res.Header.Get(h.name)
 	if len(value) == 0 {
 		return false
@@ -74,4 +74,23 @@ func (h *headerModifier) ShouldMatchRes(res *http.Response) bool {
 	}
 
 	return true
+}
+
+func (h *HeaderModifier) Cancels(m Modifier) bool {
+	other, ok := m.(*HeaderModifier)
+	if !ok {
+		return false
+	}
+
+	if h.exact != other.exact || h.name != other.name {
+		return false
+	}
+
+	if h.regexp == nil && other.regexp == nil {
+		return true
+	}
+	if h.regexp == nil || other.regexp == nil {
+		return false
+	}
+	return h.regexp.String() == other.regexp.String()
 }
