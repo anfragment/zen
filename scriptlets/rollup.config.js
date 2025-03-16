@@ -23,9 +23,9 @@ export default {
         [
           '@babel/preset-env',
           {
-            targets: '> 0.2%',
+            targets: '> 0.2%, not dead',
             useBuiltIns: 'usage',
-            corejs: 3
+            corejs: '3.41'
           }
         ]
       ],
