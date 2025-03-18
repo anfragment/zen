@@ -15,6 +15,7 @@ type ExceptionRule struct {
 
 	Modifiers          ExceptionModifiers
 	ModifyingModifiers []rulemodifiers.ModifyingModifier
+	Document           bool
 }
 
 type ExceptionModifiers struct {
@@ -29,6 +30,10 @@ type exceptionModifier interface {
 }
 
 func (er *ExceptionRule) Cancels(r *rule.Rule) bool {
+	if r.Document && er.Document {
+		return true
+	}
+
 	if len(er.Modifiers.AndModifiers) == 0 && len(er.Modifiers.OrModifiers) == 0 && len(er.ModifyingModifiers) == 0 {
 		return true
 	}
@@ -96,6 +101,11 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 			}
 			return strings.HasPrefix(m, kind)
 		}
+		if isKind("document") || isKind("doc") {
+			er.Document = true
+			continue
+		}
+
 		var modifier rulemodifiers.Modifier
 		isOr := false
 		switch {
@@ -103,9 +113,7 @@ func (er *ExceptionRule) ParseModifiers(modifiers string) error {
 			modifier = &rulemodifiers.DomainModifier{}
 		case isKind("method"):
 			modifier = &rulemodifiers.MethodModifier{}
-		case isKind("document"),
-			isKind("doc"),
-			isKind("xmlhttprequest"),
+		case isKind("xmlhttprequest"),
 			isKind("xhr"),
 			isKind("font"),
 			isKind("subdocument"),

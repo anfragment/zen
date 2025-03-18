@@ -17,6 +17,9 @@ type Rule struct {
 
 	MatchingModifiers  matchingModifiers
 	ModifyingModifiers []rulemodifiers.ModifyingModifier
+
+	// Document shows if rule has Document modifier.
+	Document bool
 }
 
 type matchingModifiers struct {
@@ -42,6 +45,12 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			}
 			return strings.HasPrefix(m, kind)
 		}
+
+		if isKind("document") || isKind("doc") {
+			rm.Document = true
+			continue
+		}
+
 		var modifier rulemodifiers.Modifier
 		isOr := false
 		switch {
@@ -49,9 +58,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			modifier = &rulemodifiers.DomainModifier{}
 		case isKind("method"):
 			modifier = &rulemodifiers.MethodModifier{}
-		case isKind("document"),
-			isKind("doc"),
-			isKind("xmlhttprequest"),
+		case isKind("xmlhttprequest"),
 			isKind("xhr"),
 			isKind("font"),
 			isKind("subdocument"),
@@ -100,6 +107,10 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 
 // ShouldMatchReq returns true if the rule should match the request.
 func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
+	if req.Header.Get("Sec-Fetch-User") == "?1" && !rm.Document {
+		return false
+	}
+
 	// AndModifiers: All must match.
 	for _, m := range rm.MatchingModifiers.AndModifiers {
 		if !m.ShouldMatchReq(req) {
@@ -122,6 +133,7 @@ func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
 
 // ShouldMatchRes returns true if the rule should match the response.
 func (rm *Rule) ShouldMatchRes(res *http.Response) bool {
+	// maybe add sec-fetch logic too
 	for _, m := range rm.MatchingModifiers.AndModifiers {
 		if !m.ShouldMatchRes(res) {
 			return false
