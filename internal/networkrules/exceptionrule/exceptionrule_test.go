@@ -11,6 +11,8 @@ func TestExceptionRule(t *testing.T) {
 	t.Parallel()
 
 	t.Run("'@@||page' should cancel '||page$document'", func(t *testing.T) {
+		t.Parallel()
+
 		filterName := "test"
 
 		er := &ExceptionRule{
@@ -30,6 +32,8 @@ func TestExceptionRule(t *testing.T) {
 	})
 
 	t.Run("'@@||page$document' should cancel '||page$document'", func(t *testing.T) {
+		t.Parallel()
+
 		filterName := "test"
 
 		er := &ExceptionRule{
@@ -50,6 +54,8 @@ func TestExceptionRule(t *testing.T) {
 	})
 
 	t.Run("'@@||page$document' should not cancel '||page'", func(t *testing.T) {
+		t.Parallel()
+
 		filterName := "test"
 
 		er := &ExceptionRule{
