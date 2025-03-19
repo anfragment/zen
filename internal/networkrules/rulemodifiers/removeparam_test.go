@@ -109,90 +109,90 @@ func TestRemoveParamModifier(t *testing.T) {
 			expected bool
 		}{
 			{
-				"Should cancel - identical modifiers",
+				"identical modifiers - should cancel",
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				true,
 			},
 			{
-				"Should cancel - empty",
+				"empty modifiers - should cancel",
 				RemoveParamModifier{},
 				RemoveParamModifier{},
 				true,
 			},
 			{
-				"Should not cancel - different param",
+				"modifiers with different \"param\" - should not cancel",
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "user",
 					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				false,
 			},
 			{
-				"Should not cancel - different kind",
+				"modifiers with different \"kind\" - should not cancel",
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				RemoveParamModifier{
-					kind:   2,
+					kind:   removeparamKindExact,
 					param:  "id",
 					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				false,
 			},
 			{
-				"Should not cancel - different regex",
+				"modifiers with different \"regexp\" - should not cancel",
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: regexp.MustCompile(`^\d+$`),
 				},
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: regexp.MustCompile("^[a-zA-Z]+$"),
 				},
 				false,
 			},
 			{
-				"Should cancel - both regex nil",
+				"modifiers with nil regexes - should cancel",
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: nil,
 				},
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: nil,
 				},
 				true,
 			},
 			{
-				"Should not cancel - one regex nil, one non-nil",
+				"modifier with nil regex should not cancel with non-nil regex",
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: nil,
 				},
 				RemoveParamModifier{
-					kind:   1,
+					kind:   removeparamKindRegexp,
 					param:  "id",
 					regexp: regexp.MustCompile(`^\d+$`),
 				},
