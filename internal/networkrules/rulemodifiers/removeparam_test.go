@@ -12,6 +12,16 @@ func TestRemoveParamModifier(t *testing.T) {
 	t.Run("ModifyReq", func(t *testing.T) {
 		t.Parallel()
 
+		mustParse := func(modifier string) RemoveParamModifier {
+			t.Helper()
+
+			var rm RemoveParamModifier
+			if err := rm.Parse(modifier); err != nil {
+				t.Fatalf("Failed to parse modifier: %v", err)
+			}
+			return rm
+		}
+
 		tests := []struct {
 			name     string
 			modifier RemoveParamModifier
@@ -21,58 +31,65 @@ func TestRemoveParamModifier(t *testing.T) {
 		}{
 			{
 				name:     "generic removes all params",
-				modifier: RemoveParamModifier{kind: removeparamKindGeneric},
+				modifier: mustParse("removeparam"),
 				url:      "https://example.com/?id=123&name=test",
 				want:     "https://example.com/",
 				modified: true,
 			},
 			{
 				name:     "exact removes the specified param",
-				modifier: RemoveParamModifier{kind: removeparamKindExact, param: "id"},
+				modifier: mustParse("removeparam=id"),
 				url:      "https://example.com/?id=123&known=1&name=test",
 				want:     "https://example.com/?known=1&name=test",
 				modified: true,
 			},
 			{
 				name:     "exact leaves the URL unchanged if the param is not found",
-				modifier: RemoveParamModifier{kind: removeparamKindExact, param: "unknown"},
+				modifier: mustParse("removeparam=unknown"),
 				url:      "https://example.com/?id=123&name=test&known=1",
 				want:     "https://example.com/?id=123&name=test&known=1",
 				modified: false,
 			},
 			{
+				name:     "exact leaves the URL unchanged if the URL has no query params",
+				modifier: mustParse("removeparam=id"),
+				url:      "https://example.com:443/",
+				want:     "https://example.com:443/",
+				modified: false,
+			},
+			{
 				name:     "exact inverse removes all params except the specified one",
-				modifier: RemoveParamModifier{kind: removeparamKindExactInverse, param: "id"},
+				modifier: mustParse("removeparam=~id"),
 				url:      "https://example.com/?id=123&name=test&known=1",
 				want:     "https://example.com/?id=123",
 				modified: true,
 			},
 			{
 				name:     "regexp removes matching params",
-				modifier: RemoveParamModifier{kind: removeparamKindRegexp, regexp: regexp.MustCompile(`id=\d+`)},
+				modifier: mustParse("removeparam=/id=\\d+/"),
 				url:      "https://example.com/?id=123&name=test",
 				want:     "https://example.com/?name=test",
 				modified: true,
 			},
 			{
 				name:     "regexp leaves the URL unchanged if the param is not found",
-				modifier: RemoveParamModifier{kind: removeparamKindRegexp, regexp: regexp.MustCompile(`id=[a-z]+`)},
+				modifier: mustParse("removeparam=/id=[a-z]+/"),
 				url:      "https://example.com/?id=123&name=test",
 				want:     "https://example.com/?id=123&name=test",
 				modified: false,
 			},
 			{
-				name:     "exact leaves the URL unchanged if the URL has no query params",
-				modifier: RemoveParamModifier{kind: removeparamKindGeneric},
-				url:      "https://example.com:443/",
-				want:     "https://example.com:443/",
-				modified: false,
-			},
-			{
-				name:     "for multiple values with the same key, only the matching values are removed",
-				modifier: RemoveParamModifier{kind: removeparamKindRegexp, regexp: regexp.MustCompile(`^id=\d+$`)},
+				name:     "regexp only removes matching params for values with the same key",
+				modifier: mustParse("removeparam=/id=\\d+/"),
 				url:      "https://example.com/?id=test0&id=1&id=2&id=3&id=test1&id=test2",
 				want:     "https://example.com/?id=test0&id=test1&id=test2",
+				modified: true,
+			},
+			{
+				name:     "inverse regexp removes non-matching params",
+				modifier: mustParse("removeparam=~/id=\\d+/"),
+				url:      "https://example.com/?id=123&name=test&known=1",
+				want:     "https://example.com/?id=123",
 				modified: true,
 			},
 		}
