@@ -251,11 +251,6 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 	}
 	defer clientConn.Close()
 
-	if filterResp := p.filter.HandleRequest(connReq); filterResp != nil {
-		filterResp.Write(clientConn)
-		return
-	}
-
 	host, _, err := net.SplitHostPort(connReq.Host)
 	if err != nil {
 		log.Printf("splitting host and port(%s): %v", logger.Redacted(connReq.Host), err)

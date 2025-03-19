@@ -14,22 +14,20 @@ var _ MatchingModifier = (*ContentTypeModifier)(nil)
 var (
 	// secFetchDestMap maps Sec-Fetch-Dest header values to corresponding content type modifiers.
 	secFetchDestMap = map[string]string{
-		"document": "document",
-		"empty":    "xmlhttprequest",
-		"font":     "font",
-		"frame":    "subdocument",
-		"iframe":   "subdocument",
-		"image":    "image",
-		"object":   "object",
-		"script":   "script",
-		"style":    "stylesheet",
-		"audio":    "media",
-		"track":    "media",
-		"video":    "media",
+		"empty":  "xmlhttprequest",
+		"font":   "font",
+		"frame":  "subdocument",
+		"iframe": "subdocument",
+		"image":  "image",
+		"object": "object",
+		"script": "script",
+		"style":  "stylesheet",
+		"audio":  "media",
+		"track":  "media",
+		"video":  "media",
 	}
 	// aliases maps content type aliases to their canonical names.
 	aliases = map[string]string{
-		"doc": "document",
 		"css": "stylesheet",
 		"xhr": "xmlhttprequest",
 	}

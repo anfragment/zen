@@ -53,7 +53,7 @@ func TestDomainModifier(t *testing.T) {
 		reqWithoutReferer := &http.Request{}
 
 		want := true
-		if got := m.ShouldMatchReq(reqWithoutReferer); !got {
+		if got := m.ShouldMatchReq(reqWithoutReferer); got != want {
 			t.Errorf("domainModifier{%s}.ShouldMatchReq() = %v, want %v", modifier, got, want)
 		}
 	})
