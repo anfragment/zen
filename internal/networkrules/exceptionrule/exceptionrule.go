@@ -30,8 +30,8 @@ type exceptionModifier interface {
 }
 
 func (er *ExceptionRule) Cancels(r *rule.Rule) bool {
-	if r.Document && er.Document {
-		return true
+	if er.Document && !r.Document {
+		return false
 	}
 
 	if len(er.Modifiers.AndModifiers) == 0 && len(er.Modifiers.OrModifiers) == 0 && len(er.ModifyingModifiers) == 0 {

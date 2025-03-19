@@ -107,7 +107,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 
 // ShouldMatchReq returns true if the rule should match the request.
 func (rm *Rule) ShouldMatchReq(req *http.Request) bool {
-	if req.Header.Get("Sec-Fetch-User") == "?1" && !rm.Document {
+	if req.Header.Get("Sec-Fetch-User") == "?1" && req.Header.Get("Sec-Fetch-Dest") == "document" && !rm.Document {
 		return false
 	}
 
