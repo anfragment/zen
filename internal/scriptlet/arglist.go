@@ -9,8 +9,8 @@ import (
 // argList represents the argument list of a scriptlet, excluding the function call expression.
 type argList string
 
-func (l argList) ConvertUboToCanonical() argList {
-	args := strings.Split(string(l), ",")
+func (al argList) ConvertUboToCanonical() argList {
+	args := strings.Split(string(al), ",")
 	for i := range args {
 		// uBo scriptlets may use both quoted and unquoted strings.
 		if !isQuoted(args[i]) {
@@ -20,8 +20,8 @@ func (l argList) ConvertUboToCanonical() argList {
 	return argList(strings.Join(args, ","))
 }
 
-func (l argList) Normalize() (argList, error) {
-	args := strings.Split(string(l), ",")
+func (al argList) Normalize() (argList, error) {
+	args := strings.Split(string(al), ",")
 	var normalized string
 	for i, arg := range args {
 		arg = strings.TrimSpace(arg)
@@ -36,8 +36,8 @@ func (l argList) Normalize() (argList, error) {
 	return argList(normalized), nil
 }
 
-func (b argList) GenerateInjection(w io.Writer) error {
-	_, err := fmt.Fprintf(w, `try{scriptlet(%s)}catch(ex){console.error(ex);}`, b)
+func (al argList) GenerateInjection(w io.Writer) error {
+	_, err := fmt.Fprintf(w, `try{scriptlet(%s)}catch(ex){console.error(ex);}`, al)
 	return err
 }
 

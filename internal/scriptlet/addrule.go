@@ -6,18 +6,17 @@ import (
 	"regexp"
 )
 
+// TODO: rethink and reimplement trusted rule handling.
+
 var (
 	canonicalPrimary        = regexp.MustCompile(`(.*)#%#\/\/scriptlet\((.+)\)`)
 	canonicalExceptionRegex = regexp.MustCompile(`(.*)#@%#\/\/scriptlet\((.+)\)`)
 	ublockPrimaryRegex      = regexp.MustCompile(`(.*)##\+js\((.+)\)`)
 	ublockExceptionRegex    = regexp.MustCompile(`(.*)#@#\+js\((.+)\)`)
 	errUnsupportedSyntax    = errors.New("unsupported syntax")
-	// TODO: rethink and reimplement trusted rule handling
-	// trustedOnlyScriptlets              = []string{}
-	// errTrustedScriptletInUntrustedList = errors.New("trusted scriptlet in untrusted list")
 )
 
-func (inj *Injector) AddRule(rule string, filterListTrusted bool) error {
+func (inj *Injector) AddRule(rule string, _ bool) error {
 	if match := canonicalPrimary.FindStringSubmatch(rule); match != nil {
 		normalized, err := argList(match[2]).Normalize()
 		if err != nil {
