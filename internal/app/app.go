@@ -351,5 +351,5 @@ func (a *App) ImportCustomFilterLists() error {
 }
 
 func (a *App) IsNoSelfUpdate() bool {
-	return selfupdate.IsNoSelfUpdate()
+	return selfupdate.NoSelfUpdate == "true"
 }

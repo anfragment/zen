@@ -21,9 +21,9 @@ import (
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// noSelfUpdate is set to "true" for builds distributed to package managers to prevent auto-updating. It is typed as a string because the linker allows only setting string variables at compile time (see https://pkg.go.dev/cmd/link).
+// NoSelfUpdate is set to "true" for builds distributed to package managers to prevent auto-updating. It is typed as a string because the linker allows only setting string variables at compile time (see https://pkg.go.dev/cmd/link).
 // Set at compile time using ldflags (see the prod-noupdate task in the /tasks/build directory).
-var noSelfUpdate = "false"
+var NoSelfUpdate = "false"
 
 // releaseTrack is the release track to follow for updates. It currently only takes the value "stable".
 var releaseTrack = "stable"
@@ -50,14 +50,6 @@ type release struct {
 	SHA256      string `json:"sha256"`
 }
 
-type UpdatePolicyType string
-
-const (
-	UpdatePolicyAutomatic = "automatic"
-	UpdatePolicyPrompt    = "prompt"
-	UpdatePolicyDisabled  = "disabled"
-)
-
 const (
 	appName = "Zen"
 )
@@ -76,12 +68,12 @@ func NewSelfUpdater(httpClient httpClient, policy cfg.UpdatePolicyType) (*SelfUp
 		releaseTrack: releaseTrack,
 		httpClient:   httpClient,
 	}
-	switch noSelfUpdate {
+	switch NoSelfUpdate {
 	case "true":
 		u.noSelfUpdate = true
 	case "false":
 	default:
-		return nil, fmt.Errorf("invalid noSelfUpdate value: %s", noSelfUpdate)
+		return nil, fmt.Errorf("invalid noSelfUpdate value: %s", NoSelfUpdate)
 	}
 
 	return &u, nil
@@ -470,8 +462,4 @@ func findAppBundleInDir(dir string) (string, error) {
 func generateBackupName(originalName string) string {
 	timestamp := time.Now().UnixMilli()
 	return fmt.Sprintf("%s.backup-%d", originalName, timestamp)
-}
-
-func IsNoSelfUpdate() bool {
-	return noSelfUpdate == "true"
 }

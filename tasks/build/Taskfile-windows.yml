@@ -14,4 +14,4 @@ tasks:
   prod-noupdate:
     desc: Create a production build of the application with self-updates disabled.
     cmds:
-      - wails build -o Zen.exe -platform "windows/{{default .ARCH64 .ARCH}}" -nsis -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version={{.GIT_TAG}}' -X 'github.com/anfragment/zen/internal/selfupdate.noSelfUpdate=true'" -m -skipbindings -tags prod
+      - wails build -o Zen.exe -platform "windows/{{default .ARCH64 .ARCH}}" -nsis -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version={{.GIT_TAG}}' -X 'github.com/anfragment/zen/internal/selfupdate.NoSelfUpdate=true'" -m -skipbindings -tags prod
