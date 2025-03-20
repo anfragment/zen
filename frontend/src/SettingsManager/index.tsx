@@ -62,7 +62,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
         </div>
         <div>Your Comprehensive Ad-Blocker and Privacy Guard</div>
         <div>Version: {state.version}</div>
-        <div>© 2024 Ansar Smagulov</div>
+        <div>© 2025 Ansar Smagulov</div>
         <Button
           minimal
           small
