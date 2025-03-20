@@ -24,8 +24,6 @@ func replaceExecutable(tempDir string) error {
 		return fmt.Errorf("get exec path: %w", err)
 	}
 
-	fmt.Println("o", newExecPath, currentExecPath)
-
 	if err := os.Rename(newExecPath, currentExecPath); err != nil {
 		return fmt.Errorf("move new executable: %w", err)
 	}
