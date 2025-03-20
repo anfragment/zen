@@ -1,6 +1,7 @@
 package rulemodifiers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -12,6 +13,7 @@ type removeparamKind int8
 const (
 	removeparamKindGeneric removeparamKind = iota
 	removeparamKindRegexp
+	removeparamKindRegexpInverse
 	removeparamKindExact
 	removeparamKindExactInverse
 )
@@ -31,65 +33,85 @@ func (rm *RemoveParamModifier) Parse(modifier string) error {
 	}
 
 	eqIndex := strings.IndexByte(modifier, '=')
-	if eqIndex == -1 {
-		return fmt.Errorf("invalid removeparam modifier")
+	if eqIndex == -1 || eqIndex == len(modifier)-1 {
+		return errors.New("invalid syntax")
 	}
 	value := modifier[eqIndex+1:]
+
+	var inverse bool
+	if value[0] == '~' {
+		inverse = true
+		value = value[1:]
+	}
 
 	regexp, err := parseRegexp(value)
 	if err != nil {
 		return fmt.Errorf("parse regexp: %w", err)
 	}
 	if regexp != nil {
-		rm.kind = removeparamKindRegexp
+		if inverse {
+			rm.kind = removeparamKindRegexpInverse
+		} else {
+			rm.kind = removeparamKindRegexp
+		}
 		rm.regexp = regexp
 		return nil
 	}
 
-	if value[0] == '~' {
+	if inverse {
 		rm.kind = removeparamKindExactInverse
-		rm.param = value[1:]
-		return nil
+		rm.param = value
+	} else {
+		rm.kind = removeparamKindExact
+		rm.param = value
 	}
-
-	rm.kind = removeparamKindExact
-	rm.param = value
 	return nil
 }
 
 func (rm *RemoveParamModifier) ModifyReq(req *http.Request) (modified bool) {
 	query := req.URL.Query()
-	params := make([]string, 0, len(query))
-	for param := range query {
-		params = append(params, param)
-	}
 
 	switch rm.kind {
 	case removeparamKindGeneric:
-		for _, param := range params {
+		for param := range query {
 			query.Del(param)
 			modified = true
 		}
 	case removeparamKindRegexp:
-		for _, param := range params {
-			// The second condition addresses an issue with how some filter lists implement regexp removeparam modifiers.
-			// For example, here's a rule from DandelionSprout's CleanURLs list:
-			// $removeparam=/^utm(_[a-z_]*)?=/
-			// The '=' sign at the end would prevent matching the parameter name. Therefore, we check for it separately.
-			if rm.regexp.MatchString(param) || rm.regexp.MatchString(param+"=") {
-				query.Del(param)
-				modified = true
+		for param, values := range query {
+			filtered := values[:0]
+			for _, v := range values {
+				// Regexp rules match the entire query parameter, not just the name.
+				if rm.regexp.MatchString(param + "=" + v) {
+					modified = true
+				} else {
+					filtered = append(filtered, v)
+				}
 			}
+			query[param] = filtered
+		}
+	case removeparamKindRegexpInverse:
+		for param, values := range query {
+			filtered := values[:0]
+			for _, v := range values {
+				// Regexp rules match the entire query parameter, not just the name.
+				if !rm.regexp.MatchString(param + "=" + v) {
+					modified = true
+				} else {
+					filtered = append(filtered, v)
+				}
+			}
+			query[param] = filtered
 		}
 	case removeparamKindExact:
-		for _, param := range params {
+		for param := range query {
 			if param == rm.param {
 				query.Del(param)
 				modified = true
 			}
 		}
 	case removeparamKindExactInverse:
-		for _, param := range params {
+		for param := range query {
 			if param != rm.param {
 				query.Del(param)
 				modified = true
