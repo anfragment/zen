@@ -81,7 +81,7 @@ func (rm *RemoveParamModifier) ModifyReq(req *http.Request) (modified bool) {
 		for param, values := range query {
 			filtered := values[:0]
 			for _, v := range values {
-				// Regexp rules match the entire query parameter, not just the value.
+				// Regexp rules match the entire query parameter, not just the name.
 				if rm.regexp.MatchString(param + "=" + v) {
 					modified = true
 				} else {
@@ -94,7 +94,7 @@ func (rm *RemoveParamModifier) ModifyReq(req *http.Request) (modified bool) {
 		for param, values := range query {
 			filtered := values[:0]
 			for _, v := range values {
-				// Regexp rules match the entire query parameter, not just the value.
+				// Regexp rules match the entire query parameter, not just the name.
 				if !rm.regexp.MatchString(param + "=" + v) {
 					modified = true
 				} else {
