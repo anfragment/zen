@@ -54,6 +54,17 @@ var migrations = map[string]func(c *Config) error{
 		}
 		return nil
 	},
+	"v0.9.0": func(c *Config) error {
+		c.Lock()
+		defer c.Unlock()
+
+		c.UpdatePolicy = UpdatePolicyPrompt
+
+		if err := c.Save(); err != nil {
+			return fmt.Errorf("save config: %v", err)
+		}
+		return nil
+	},
 }
 
 // RunMigrations runs the version-to-version migrations.

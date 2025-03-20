@@ -91,7 +91,7 @@ func (a *App) commonStartup(ctx context.Context) {
 	go func() {
 		su, err := selfupdate.NewSelfUpdater(&http.Client{
 			Timeout: 20 * time.Second,
-		})
+		}, a.config.GetUpdatePolicy())
 		if err != nil {
 			log.Printf("error creating self updater: %v", err)
 			return
@@ -348,4 +348,8 @@ func (a *App) ImportCustomFilterLists() error {
 	}
 
 	return nil
+}
+
+func (a *App) IsNoSelfUpdate() bool {
+	return selfupdate.IsNoSelfUpdate()
 }

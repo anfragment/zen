@@ -1,9 +1,10 @@
-import { Tag, Button } from '@blueprintjs/core';
+import { Button, Radio, RadioGroup, Tag } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
 import './index.css';
 
-import { GetVersion } from '../../wailsjs/go/cfg/Config';
+import { IsNoSelfUpdate } from '../../wailsjs/go/app/App';
+import { GetUpdatePolicy, GetVersion, SetUpdatePolicy } from '../../wailsjs/go/cfg/Config';
 import { BrowserOpenURL } from '../../wailsjs/runtime';
 import { ProxyState } from '../types';
 
@@ -19,12 +20,24 @@ export interface SettingsManagerProps {
 export function SettingsManager({ proxyState }: SettingsManagerProps) {
   const [state, setState] = useState({
     version: '',
+    updatePolicy: '',
+    showUpdateRadio: false,
   });
 
   useEffect(() => {
     (async () => {
-      const version = await GetVersion();
-      setState({ ...state, version });
+      const [version, updatePolicy, noSelfUpdate] = await Promise.all([
+        GetVersion(),
+        GetUpdatePolicy(),
+        IsNoSelfUpdate(),
+      ]);
+
+      setState((prev) => ({
+        ...prev,
+        showUpdateRadio: !noSelfUpdate,
+        updatePolicy,
+        version,
+      }));
     })();
   }, []);
 
@@ -37,6 +50,28 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
         <div className="settings-manager__section-body">
           <AutostartSwitch />
+
+          {state.showUpdateRadio && (
+            <RadioGroup
+              label="Choose how updates are installed"
+              onChange={async (e: any) => {
+                if (e.target.value) {
+                  await SetUpdatePolicy(e.target.value);
+                  await GetUpdatePolicy().then((v) =>
+                    setState((prev) => ({
+                      ...prev,
+                      updatePolicy: v,
+                    })),
+                  );
+                }
+              }}
+              selectedValue={state.updatePolicy}
+            >
+              <Radio label="Automatic updates" value="automatic" />
+              <Radio label="Ask before updating" value="prompt" />
+              <Radio label="Disable updates" value="disabled" />
+            </RadioGroup>
+          )}
         </div>
 
         <div className="settings-manager__section-body">

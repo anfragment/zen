@@ -38,6 +38,7 @@ type httpClient interface {
 type SelfUpdater struct {
 	version      string
 	noSelfUpdate bool
+	policy       cfg.UpdatePolicyType
 	releaseTrack string
 	httpClient   httpClient
 }
@@ -49,11 +50,19 @@ type release struct {
 	SHA256      string `json:"sha256"`
 }
 
+type UpdatePolicyType string
+
+const (
+	UpdatePolicyAutomatic = "automatic"
+	UpdatePolicyPrompt    = "prompt"
+	UpdatePolicyDisabled  = "disabled"
+)
+
 const (
 	appName = "Zen"
 )
 
-func NewSelfUpdater(httpClient httpClient) (*SelfUpdater, error) {
+func NewSelfUpdater(httpClient httpClient, policy cfg.UpdatePolicyType) (*SelfUpdater, error) {
 	if httpClient == nil {
 		return nil, errors.New("httpClient is nil")
 	}
@@ -63,6 +72,7 @@ func NewSelfUpdater(httpClient httpClient) (*SelfUpdater, error) {
 
 	u := SelfUpdater{
 		version:      cfg.Version,
+		policy:       policy,
 		releaseTrack: releaseTrack,
 		httpClient:   httpClient,
 	}
@@ -83,6 +93,12 @@ func (su *SelfUpdater) checkForUpdates() (*release, error) {
 		log.Println("noSelfUpdate=true, self-update disabled")
 		return nil, nil
 	}
+
+	if su.policy == cfg.UpdatePolicyDisabled {
+		log.Println("updatePolicy=disabled, self-update disabled")
+		return nil, nil
+	}
+
 	if su.version == "development" {
 		log.Println("version=development, self-update disabled")
 		return nil, nil
@@ -157,11 +173,13 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		return nil
 	}
 
-	if proceed, err := su.showUpdateDialog(ctx, rel.Description); err != nil {
-		return fmt.Errorf("show update dialog: %w", err)
-	} else if !proceed {
-		log.Println("aborting update, user declined")
-		return nil
+	if su.policy == cfg.UpdatePolicyPrompt {
+		if proceed, err := su.showUpdateDialog(ctx, rel.Description); err != nil {
+			return fmt.Errorf("show update dialog: %w", err)
+		} else if !proceed {
+			log.Println("aborting update, user declined")
+			return nil
+		}
 	}
 
 	tmpFile, err := su.downloadAndVerifyFile(rel.AssetURL, rel.SHA256)
@@ -183,11 +201,13 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		panic("unsupported platform")
 	}
 
-	if restart, err := su.showRestartDialog(ctx); err != nil {
-		return fmt.Errorf("show restart dialog: %w", err)
-	} else if !restart {
-		log.Println("user declined to restart")
-		return nil
+	if su.policy == cfg.UpdatePolicyPrompt {
+		if restart, err := su.showRestartDialog(ctx); err != nil {
+			return fmt.Errorf("show restart dialog: %w", err)
+		} else if !restart {
+			log.Println("user declined to restart")
+			return nil
+		}
 	}
 
 	if err := su.restartApplication(ctx); err != nil {
@@ -450,4 +470,8 @@ func findAppBundleInDir(dir string) (string, error) {
 func generateBackupName(originalName string) string {
 	timestamp := time.Now().UnixMilli()
 	return fmt.Sprintf("%s.backup-%d", originalName, timestamp)
+}
+
+func IsNoSelfUpdate() bool {
+	return noSelfUpdate == "true"
 }
