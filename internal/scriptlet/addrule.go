@@ -3,167 +3,48 @@ package scriptlet
 import (
 	"errors"
 	"fmt"
-	"net"
 	"regexp"
-	"strings"
 )
 
 var (
-	// reAdguardScriptlet detects and extracts key data from AdGuard-style scriptlets.
-	reAdguardScriptlet = regexp.MustCompile(`(.*)#%#\/\/scriptlet\((.+)\)`)
-	// adguardToCanonical maps AdGuard scriptlet names to their respective implementations inside the scriptlet bundle.
-	adguardToCanonical = map[string]string{
-		"set-local-storage-item":      "setLocalStorageItem",
-		"set-session-storage-item":    "setSessionStorageItem",
-		"nowebrtc":                    "nowebrtc",
-		"prevent-fetch":               "preventFetch",
-		"prevent-xhr":                 "preventXHR",
-		"set-constant":                "setConstant",
-		"json-prune":                  "jsonPrune",
-		"json-prune-fetch-response":   "jsonPruneFetchResponse",
-		"json-prune-xhr-response":     "jsonPruneXHRResponse",
-		"abort-current-inline-script": "abortCurrentInlineScript",
-		"prevent-window-open":         "preventWindowOpen",
-		"abort-on-property-read":      "abortOnPropertyRead",
-		"abort-on-property-write":     "abortOnPropertyWrite",
-		"abort-on-stack-trace":        "abortOnStackTrace",
-	}
-	// reUblockScriptlet detects and extracts key data from uBlock Origin-style scriptlets.
-	reUblockScriptlet = regexp.MustCompile(`(.*)##\+js\((.+)\)`)
-	// ublockToCanonical maps uBlock Origin scriptlet names to their respective implementations inside the scriptlet bundle.
-	ublockToCanonical = map[string]string{
-		"set-local-storage-item": "setLocalStorageItem",
-		"no-xhr-if":              "preventXHR",
-		"no-fetch-if":            "preventFetch",
-		"nowebrtc":               "nowebrtc",
-		"set-constant":           "setConstant",
-		"nowoif":                 "preventWindowOpen",
-		"aopr":                   "abortOnPropertyRead",
-		"aopw":                   "abortOnPropertyWrite",
-		"aost":                   "abortOnStackTrace",
-		// TODO: add prune-json and related scriptlets after checking their compatibility with AdGuard.
-	}
-	trustedOnlyScriptlets              = []string{}
-	errNotQuotedString                 = errors.New("not a quoted string")
-	errUnsupportedSyntax               = errors.New("unsupported syntax")
-	errEmptyScriptletBody              = errors.New("scriptlet body is empty")
-	errTrustedScriptletInUntrustedList = errors.New("trusted scriptlet in untrusted list")
+	canonicalPrimary        = regexp.MustCompile(`(.*)#%#\/\/scriptlet\((.+)\)`)
+	canonicalExceptionRegex = regexp.MustCompile(`(.*)#@%#\/\/scriptlet\((.+)\)`)
+	ublockPrimaryRegex      = regexp.MustCompile(`(.*)##\+js\((.+)\)`)
+	ublockExceptionRegex    = regexp.MustCompile(`(.*)#@#\+js\((.+)\)`)
+	errUnsupportedSyntax    = errors.New("unsupported syntax")
+	// TODO: rethink and reimplement trusted rule handling
+	// trustedOnlyScriptlets              = []string{}
+	// errTrustedScriptletInUntrustedList = errors.New("trusted scriptlet in untrusted list")
 )
 
 func (inj *Injector) AddRule(rule string, filterListTrusted bool) error {
-	var rawHostnames string
-	var scriptlet *Scriptlet
-	var err error
-	if match := reAdguardScriptlet.FindStringSubmatch(rule); match != nil {
-		rawHostnames = match[1]
-		scriptlet, err = parseAdguardScriptlet(match[2])
+	if match := canonicalPrimary.FindStringSubmatch(rule); match != nil {
+		normalized, err := argList(match[2]).Normalize()
 		if err != nil {
-			return fmt.Errorf("parse adguard scriptlet: %w", err)
+			return fmt.Errorf("normalize scriptlet body: %w", err)
 		}
-	} else if match := reUblockScriptlet.FindStringSubmatch(rule); match != nil {
-		rawHostnames = match[1]
-		scriptlet, err = parseUblockScriptlet(match[2])
+		inj.store.AddPrimaryRule(match[1], normalized)
+	} else if match := canonicalExceptionRegex.FindStringSubmatch(rule); match != nil {
+		normalized, err := argList(match[2]).Normalize()
 		if err != nil {
-			return fmt.Errorf("parse ublock origin scriptlet: %w", err)
+			return fmt.Errorf("normalize scriptlet body: %w", err)
 		}
+		inj.store.AddExceptionRule(match[1], normalized)
+	} else if match := ublockPrimaryRegex.FindStringSubmatch(rule); match != nil {
+		normalized, err := argList(match[2]).ConvertUboToCanonical().Normalize()
+		if err != nil {
+			return fmt.Errorf("normalize scriptlet body: %w", err)
+		}
+		inj.store.AddPrimaryRule(match[1], normalized)
+	} else if match := ublockExceptionRegex.FindStringSubmatch(rule); match != nil {
+		normalized, err := argList(match[2]).ConvertUboToCanonical().Normalize()
+		if err != nil {
+			return fmt.Errorf("normalize scriptlet body: %w", err)
+		}
+		inj.store.AddExceptionRule(match[1], normalized)
 	} else {
 		return errUnsupportedSyntax
 	}
 
-	if !filterListTrusted {
-		for _, trusted := range trustedOnlyScriptlets {
-			if trusted == scriptlet.Name {
-				return errTrustedScriptletInUntrustedList
-			}
-		}
-	}
-
-	if len(rawHostnames) == 0 {
-		inj.store.Add(nil, scriptlet)
-		return nil
-	}
-
-	hostnames := strings.Split(rawHostnames, ",")
-	subdomainHostnames := make([]string, 0, len(hostnames))
-	for _, hostname := range hostnames {
-		if len(hostname) == 0 {
-			return errors.New("empty hostnames are not allowed")
-		}
-
-		if net.ParseIP(hostname) == nil && !strings.HasPrefix(hostname, "*.") {
-			subdomainHostnames = append(subdomainHostnames, "*."+hostname)
-		}
-	}
-	inj.store.Add(hostnames, scriptlet)
-	inj.store.Add(subdomainHostnames, scriptlet)
-
 	return nil
-}
-
-func parseAdguardScriptlet(scriptletBody string) (*Scriptlet, error) {
-	if len(scriptletBody) == 0 {
-		return nil, errEmptyScriptletBody
-	}
-
-	bodyParams := strings.Split(scriptletBody, ",")
-
-	adguardName, err := extractQuotedString(bodyParams[0])
-	if err != nil {
-		return nil, fmt.Errorf("extract quoted string from %q: %w", bodyParams[0], err)
-	}
-	canonicalName, ok := adguardToCanonical[adguardName]
-	if !ok {
-		return nil, fmt.Errorf("%q is not a known AdGuard scriptlet", adguardName)
-	}
-
-	scriptlet := Scriptlet{
-		Name: canonicalName,
-	}
-	if len(bodyParams) > 1 {
-		scriptlet.Args = bodyParams[1:]
-		for i := range scriptlet.Args {
-			scriptlet.Args[i] = strings.TrimSpace(scriptlet.Args[i])
-			scriptlet.Args[i], err = extractQuotedString(scriptlet.Args[i])
-			if err != nil {
-				return nil, fmt.Errorf("extract quoted string from %q: %w", scriptlet.Args[i], err)
-			}
-		}
-	}
-
-	return &scriptlet, nil
-}
-
-func parseUblockScriptlet(scriptletBody string) (*Scriptlet, error) {
-	if len(scriptletBody) == 0 {
-		return nil, errEmptyScriptletBody
-	}
-
-	bodyParams := strings.Split(scriptletBody, ",")
-
-	canonicalName, ok := ublockToCanonical[bodyParams[0]]
-	if !ok {
-		return nil, fmt.Errorf("%q is not a known uBlock Origin scriptlet", bodyParams[0])
-	}
-
-	scriptlet := Scriptlet{
-		Name: canonicalName,
-	}
-	if len(bodyParams) > 1 {
-		scriptlet.Args = bodyParams[1:]
-		for i := range scriptlet.Args {
-			scriptlet.Args[i] = strings.TrimSpace(scriptlet.Args[i])
-		}
-	}
-
-	return &scriptlet, nil
-}
-
-func extractQuotedString(quoted string) (string, error) {
-	if len(quoted) < 2 {
-		return "", errNotQuotedString
-	}
-	if (quoted[0] == '\'' && quoted[len(quoted)-1] == '\'') || (quoted[0] == '"' && quoted[len(quoted)-1] == '"') {
-		return quoted[1 : len(quoted)-1], nil
-	}
-	return "", errNotQuotedString
 }
