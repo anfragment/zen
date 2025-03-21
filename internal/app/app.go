@@ -24,6 +24,7 @@ import (
 	"github.com/anfragment/zen/internal/scriptlet"
 	"github.com/anfragment/zen/internal/scriptlet/triestore"
 	"github.com/anfragment/zen/internal/selfupdate"
+	"github.com/anfragment/zen/internal/sysproxy"
 	"github.com/anfragment/zen/internal/systray"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -35,12 +36,13 @@ type App struct {
 	// startupDone is closed once the application has fully started.
 	// It ensures that all dependencies are fully initialized
 	// before frontend-bound methods can use them.
-	startupDone     chan struct{}
-	startOnDomReady bool
-	config          *cfg.Config
-	eventsHandler   *eventsHandler
-	proxy           *proxy.Proxy
-	proxyOn         bool
+	startupDone        chan struct{}
+	startOnDomReady    bool
+	config             *cfg.Config
+	eventsHandler      *eventsHandler
+	proxy              *proxy.Proxy
+	proxyOn            bool
+	systemProxyManager *sysproxy.Manager
 	// proxyMu ensures that proxy is only started or stopped once at a time.
 	proxyMu    sync.Mutex
 	certStore  *certstore.DiskCertStore
@@ -61,12 +63,15 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 		return nil, fmt.Errorf("failed to create cert store: %v", err)
 	}
 
+	systemProxyManager := sysproxy.NewManager(config.GetPACPort())
+
 	return &App{
-		name:            name,
-		startupDone:     make(chan struct{}),
-		config:          config,
-		certStore:       certStore,
-		startOnDomReady: startOnDomReady,
+		name:               name,
+		startupDone:        make(chan struct{}),
+		config:             config,
+		certStore:          certStore,
+		startOnDomReady:    startOnDomReady,
+		systemProxyManager: systemProxyManager,
 	}, nil
 }
 
@@ -186,7 +191,7 @@ func (a *App) StartProxy() (err error) {
 		return fmt.Errorf("create cert manager: %v", err)
 	}
 
-	a.proxy, err = proxy.NewProxy(filter, certGenerator, a.config.GetPort(), a.config.GetIgnoredHosts())
+	a.proxy, err = proxy.NewProxy(filter, certGenerator, a.config.GetPort())
 	if err != nil {
 		return fmt.Errorf("create proxy: %v", err)
 	}
@@ -195,11 +200,19 @@ func (a *App) StartProxy() (err error) {
 		return fmt.Errorf("initialize cert store: %v", err)
 	}
 
-	if err := a.proxy.Start(); err != nil {
-		if errors.Is(err, proxy.ErrUnsupportedDesktopEnvironment) {
+	port, err := a.proxy.Start()
+	if err != nil {
+		return fmt.Errorf("start proxy: %v", err)
+	}
+
+	if err := a.systemProxyManager.Set(port); err != nil {
+		if errors.Is(err, sysproxy.ErrUnsupportedDesktopEnvironment) {
 			a.eventsHandler.OnUnsupportedDE(err)
 		} else {
-			return fmt.Errorf("start proxy: %v", err)
+			if stopErr := a.proxy.Stop(); stopErr != nil {
+				return fmt.Errorf("stop proxy: %v, set system proxy: %v", stopErr, err)
+			}
+			return fmt.Errorf("set system proxy: %v", err)
 		}
 	}
 
@@ -237,6 +250,10 @@ func (a *App) StopProxy() (err error) {
 
 	if !a.proxyOn {
 		return nil
+	}
+
+	if err := a.systemProxyManager.Clear(); err != nil {
+		return fmt.Errorf("clear system proxy: %v", err)
 	}
 
 	if err := a.proxy.Stop(); err != nil {

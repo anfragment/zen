@@ -30,22 +30,18 @@ type filter interface {
 
 // Proxy is a forward HTTP/HTTPS proxy that can filter requests.
 type Proxy struct {
-	filter           filter
-	certGenerator    certGenerator
-	port             int
-	server           *http.Server
-	requestTransport http.RoundTripper
-	requestClient    *http.Client
-	netDialer        *net.Dialer
-	ignoredHosts     []string
-	ignoredHostsMu   sync.RWMutex
+	filter             filter
+	certGenerator      certGenerator
+	port               int
+	server             *http.Server
+	requestTransport   http.RoundTripper
+	requestClient      *http.Client
+	netDialer          *net.Dialer
+	transparentHosts   []string
+	transparentHostsMu sync.RWMutex
 }
 
-var (
-	ErrUnsupportedDesktopEnvironment = errors.New("system proxy configuration is currently only supported on GNOME")
-)
-
-func NewProxy(filter filter, certGenerator certGenerator, port int, ignoredHosts []string) (*Proxy, error) {
+func NewProxy(filter filter, certGenerator certGenerator, port int) (*Proxy, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")
 	}
@@ -57,7 +53,6 @@ func NewProxy(filter filter, certGenerator certGenerator, port int, ignoredHosts
 		filter:        filter,
 		certGenerator: certGenerator,
 		port:          port,
-		ignoredHosts:  ignoredHosts,
 	}
 
 	p.netDialer = &net.Dialer{
@@ -82,19 +77,19 @@ func NewProxy(filter filter, certGenerator certGenerator, port int, ignoredHosts
 }
 
 // Start starts the proxy on the given address.
-func (p *Proxy) Start() error {
-	p.initExclusionList()
-
+//
+// If Proxy was configured with a port of 0, the actual port will be returned.
+func (p *Proxy) Start() (int, error) {
 	p.server = &http.Server{
 		Handler:           p,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", p.port))
 	if err != nil {
-		return fmt.Errorf("listen: %v", err)
+		return 0, fmt.Errorf("listen: %v", err)
 	}
-	p.port = listener.Addr().(*net.TCPAddr).Port
-	log.Printf("proxy listening on port %d", p.port)
+	actualPort := listener.Addr().(*net.TCPAddr).Port
+	log.Printf("proxy listening on port %d", actualPort)
 
 	go func() {
 		if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
@@ -102,66 +97,13 @@ func (p *Proxy) Start() error {
 		}
 	}()
 
-	if err := p.setSystemProxy(); err != nil {
-		// dont stop the proxy if setting the system proxy fails, as user can user can set it manually for each application
-		if errors.Is(err, ErrUnsupportedDesktopEnvironment) {
-			return err
-		}
-
-		if err := p.Stop(); err != nil {
-			log.Printf("error stopping proxy: %v", err)
-		}
-		return fmt.Errorf("set system proxy: %v", err)
-	}
-
-	return nil
-}
-
-func (p *Proxy) initExclusionList() {
-	var wg sync.WaitGroup
-	wg.Add(len(exclusionListURLs))
-	client := &http.Client{
-		Timeout: 20 * time.Second,
-	}
-
-	for _, url := range exclusionListURLs {
-		go func(url string) {
-			defer wg.Done()
-			resp, err := client.Get(url)
-			if err != nil {
-				log.Printf("failed to get exclusion list: %v", err)
-				return
-			}
-			defer resp.Body.Close()
-
-			scanner := bufio.NewScanner(resp.Body)
-			for scanner.Scan() {
-				host := strings.TrimSpace(scanner.Text())
-				if len(host) == 0 || strings.HasPrefix(host, "#") {
-					continue
-				}
-
-				p.ignoredHostsMu.Lock()
-				p.ignoredHosts = append(p.ignoredHosts, host)
-				p.ignoredHostsMu.Unlock()
-			}
-			if err := scanner.Err(); err != nil {
-				log.Printf("error scanning exclusion list: %v", err)
-			}
-		}(url)
-	}
-	wg.Wait()
+	return actualPort, nil
 }
 
 // Stop stops the proxy.
 func (p *Proxy) Stop() error {
 	if err := p.shutdownServer(); err != nil {
-		// Intentionally not returning error because we still want to unset the system proxy.
-		log.Printf("error shutting down server: %v", err)
-	}
-
-	if err := p.unsetSystemProxy(); err != nil {
-		return fmt.Errorf("unset system proxy: %v", err)
+		return fmt.Errorf("shut down server: %v", err)
 	}
 
 	return nil
@@ -292,9 +234,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 			if err != io.EOF {
 				if strings.Contains(err.Error(), "tls: ") {
 					log.Printf("adding %s to ignored hosts", logger.Redacted(host))
-					p.ignoredHostsMu.Lock()
-					p.ignoredHosts = append(p.ignoredHosts, host)
-					p.ignoredHostsMu.Unlock()
+					p.addTransparentHost(host)
 				}
 
 				log.Printf("reading request(%s): %v", logger.Redacted(connReq.Host), err)
@@ -324,9 +264,7 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 		if err != nil {
 			if strings.Contains(err.Error(), "tls: ") {
 				log.Printf("adding %s to ignored hosts", logger.Redacted(host))
-				p.ignoredHostsMu.Lock()
-				p.ignoredHosts = append(p.ignoredHosts, host)
-				p.ignoredHostsMu.Unlock()
+				p.addTransparentHost(host)
 			}
 
 			log.Printf("roundtrip(%s): %v", logger.Redacted(connReq.Host), err)
@@ -364,16 +302,24 @@ func (p *Proxy) proxyConnect(w http.ResponseWriter, connReq *http.Request) {
 
 // shouldMITM returns true if the host should be MITM'd.
 func (p *Proxy) shouldMITM(host string) bool {
-	p.ignoredHostsMu.RLock()
-	defer p.ignoredHostsMu.RUnlock()
+	p.transparentHostsMu.RLock()
+	defer p.transparentHostsMu.RUnlock()
 
-	for _, ignoredHost := range p.ignoredHosts {
+	for _, ignoredHost := range p.transparentHosts {
 		if strings.HasSuffix(host, ignoredHost) {
 			return false
 		}
 	}
 
 	return true
+}
+
+// addTransparentHost adds a host to the list of hosts that should be MITM'd.
+func (p *Proxy) addTransparentHost(host string) {
+	p.transparentHostsMu.Lock()
+	defer p.transparentHostsMu.Unlock()
+
+	p.transparentHosts = append(p.transparentHosts, host)
 }
 
 // tunnel tunnels the connection between the client and the remote server
