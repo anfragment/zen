@@ -10,14 +10,11 @@ var exclusionListURLs = []string{
 	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
 }
 
-func (p *Proxy) setSystemProxy() error {
+func setSystemProxy(pacURL string) error {
 	if binaryExists("gsettings") {
 		commands := [][]string{
-			[]string{"gsettings", "set", "org.gnome.system.proxy", "mode", "manual"},
-			[]string{"gsettings", "set", "org.gnome.system.proxy.http", "host", "127.0.0.1"},
-			[]string{"gsettings", "set", "org.gnome.system.proxy.http", "port", fmt.Sprint(p.port)},
-			[]string{"gsettings", "set", "org.gnome.system.proxy.https", "host", "127.0.0.1"},
-			[]string{"gsettings", "set", "org.gnome.system.proxy.https", "port", fmt.Sprint(p.port)},
+			[]string{"gsettings", "set", "org.gnome.system.proxy", "autoconfig-url", pacURL},
+			[]string{"gsettings", "set", "org.gnome.system.proxy", "mode", "auto"},
 		}
 
 		for _, command := range commands {
