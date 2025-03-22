@@ -32,10 +32,19 @@ const (
 type UpdatePolicyType string
 
 const (
-	UpdatePolicyAutomatic = "automatic"
-	UpdatePolicyPrompt    = "prompt"
-	UpdatePolicyDisabled  = "disabled"
+	UpdatePolicyAutomatic UpdatePolicyType = "automatic"
+	UpdatePolicyPrompt    UpdatePolicyType = "prompt"
+	UpdatePolicyDisabled  UpdatePolicyType = "disabled"
 )
+
+var UpdatePolicyEnum = []struct {
+	Value  UpdatePolicyType
+	TSName string
+}{
+	{UpdatePolicyAutomatic, "AUTOMATIC"},
+	{UpdatePolicyPrompt, "PROMPT"},
+	{UpdatePolicyDisabled, "DISABLED"},
+}
 
 // Config stores and manages the configuration for the application.
 // Although all fields are public, this is only for use by the JSON marshaller.
@@ -330,8 +339,8 @@ func (c *Config) GetCAInstalled() bool {
 
 // SetCAInstalled sets whether the CA is installed.
 func (c *Config) SetCAInstalled(caInstalled bool) {
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	c.Certmanager.CAInstalled = caInstalled
 	if err := c.Save(); err != nil {

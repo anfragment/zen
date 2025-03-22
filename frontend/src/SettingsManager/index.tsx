@@ -1,10 +1,10 @@
-import { Button, Radio, RadioGroup, Tag } from '@blueprintjs/core';
+import { Button, Tag } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
 import './index.css';
 
 import { IsNoSelfUpdate } from '../../wailsjs/go/app/App';
-import { GetUpdatePolicy, GetVersion, SetUpdatePolicy } from '../../wailsjs/go/cfg/Config';
+import { GetVersion } from '../../wailsjs/go/cfg/Config';
 import { BrowserOpenURL } from '../../wailsjs/runtime';
 import { ProxyState } from '../types';
 
@@ -13,6 +13,7 @@ import { ExportLogsButton } from './ExportLogsButton';
 import { IgnoredHostsInput } from './IgnoredHostsInput';
 import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
+import { UpdatePolicyRadioGroup } from './UpdatePolicyRadioGroup';
 
 export interface SettingsManagerProps {
   proxyState: ProxyState;
@@ -26,16 +27,11 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
   useEffect(() => {
     (async () => {
-      const [version, updatePolicy, noSelfUpdate] = await Promise.all([
-        GetVersion(),
-        GetUpdatePolicy(),
-        IsNoSelfUpdate(),
-      ]);
+      const [version, noSelfUpdate] = await Promise.all([GetVersion(), IsNoSelfUpdate()]);
 
       setState((prev) => ({
         ...prev,
         showUpdateRadio: !noSelfUpdate,
-        updatePolicy,
         version,
       }));
     })();
@@ -50,28 +46,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
         <div className="settings-manager__section-body">
           <AutostartSwitch />
-
-          {state.showUpdateRadio && (
-            <RadioGroup
-              label="Choose how updates are installed"
-              onChange={async (e: any) => {
-                if (e.target.value) {
-                  await SetUpdatePolicy(e.target.value);
-                  await GetUpdatePolicy().then((v) =>
-                    setState((prev) => ({
-                      ...prev,
-                      updatePolicy: v,
-                    })),
-                  );
-                }
-              }}
-              selectedValue={state.updatePolicy}
-            >
-              <Radio label="Automatic updates" value="automatic" />
-              <Radio label="Ask before updating" value="prompt" />
-              <Radio label="Disable updates" value="disabled" />
-            </RadioGroup>
-          )}
+          {state.showUpdateRadio && <UpdatePolicyRadioGroup />}
         </div>
 
         <div className="settings-manager__section-body">
