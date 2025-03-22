@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/anfragment/zen/internal/autostart"
 	"github.com/blang/semver"
 )
 
@@ -52,6 +53,22 @@ var migrations = map[string]func(c *Config) error{
 		if err := c.Save(); err != nil {
 			return fmt.Errorf("save config: %v", err)
 		}
+		return nil
+	},
+	"v0.9.0": func(c *Config) error {
+		autostart := autostart.Manager{}
+		if enabled, err := autostart.IsEnabled(); err != nil {
+			return fmt.Errorf("check enabled: %w", err)
+		} else if enabled {
+			// Re-enable to change autostart command
+			if err := autostart.Disable(); err != nil {
+				return fmt.Errorf("disable autostart: %w", err)
+			}
+			if err := autostart.Enable(); err != nil {
+				return fmt.Errorf("enable autostart: %w", err)
+			}
+		}
+
 		return nil
 	},
 }

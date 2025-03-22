@@ -37,9 +37,13 @@ func main() {
 	}
 
 	var startOnDomReady bool
+	var startHidden bool
 	for _, arg := range os.Args[1:] {
 		if arg == "--start" {
 			startOnDomReady = true
+		}
+		if arg == "--hidden" {
+			startHidden = true
 		}
 	}
 	app, err := app.NewApp(appName, config, startOnDomReady)
@@ -71,6 +75,7 @@ func main() {
 			},
 		},
 		HideWindowOnClose: runtime.GOOS == "darwin" || runtime.GOOS == "windows", // only macOS keeps closed windows in taskbar
+		StartHidden:       startHidden,
 	})
 
 	if err != nil {
