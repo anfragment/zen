@@ -41,8 +41,8 @@ func (m *Manager) Set(proxyPort int) error {
 
 	m.server = &http.Server{
 		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  time.Minute,
+		WriteTimeout: time.Minute,
 	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", m.pacPort))
 	if err != nil {
