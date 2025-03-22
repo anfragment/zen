@@ -20,22 +20,15 @@ var (
 	internetOptionRefresh         = 37
 )
 
-func (p *Proxy) setSystemProxy() error {
+func setSystemProxy(pacURL string) error {
 	k, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Internet Settings`, registry.ALL_ACCESS)
 	if err != nil {
 		return err
 	}
 	defer k.Close()
 
-	if err := k.SetDWordValue("ProxyEnable", 1); err != nil {
-		return err
-	}
-
-	if err := k.SetStringValue("ProxyServer", fmt.Sprintf("%s:%d", "127.0.0.1", p.port)); err != nil {
-		if err := k.SetDWordValue("ProxyEnable", 0); err != nil {
-			log.Printf("failed to disable proxy during error handling: %v", err)
-		}
-		return err
+	if err := k.SetStringValue("AutoConfigURL", pacURL); err != nil {
+		return fmt.Errorf("set AutoConfigURL: %v", err)
 	}
 
 	callInternetSetOption(internetOptionSettingsChanged)
@@ -44,15 +37,15 @@ func (p *Proxy) setSystemProxy() error {
 	return nil
 }
 
-func (p *Proxy) unsetSystemProxy() error {
+func unsetSystemProxy() error {
 	k, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Internet Settings`, registry.ALL_ACCESS)
 	if err != nil {
 		return err
 	}
 	defer k.Close()
 
-	if err := k.SetDWordValue("ProxyEnable", 0); err != nil {
-		return err
+	if err := k.DeleteValue("AutoConfigURL"); err != nil {
+		return fmt.Errorf("delete AutoConfigURL: %v", err)
 	}
 
 	callInternetSetOption(internetOptionSettingsChanged)
