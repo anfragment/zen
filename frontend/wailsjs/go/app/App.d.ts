@@ -5,6 +5,8 @@ export function ExportCustomFilterLists():Promise<void>;
 
 export function ImportCustomFilterLists():Promise<void>;
 
+export function IsNoSelfUpdate():Promise<boolean>;
+
 export function OpenLogsDirectory():Promise<void>;
 
 export function StartProxy():Promise<void>;

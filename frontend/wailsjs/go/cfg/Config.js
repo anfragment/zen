@@ -34,6 +34,10 @@ export function GetTargetTypeFilterLists(arg1) {
   return window['go']['cfg']['Config']['GetTargetTypeFilterLists'](arg1);
 }
 
+export function GetUpdatePolicy() {
+  return window['go']['cfg']['Config']['GetUpdatePolicy']();
+}
+
 export function GetVersion() {
   return window['go']['cfg']['Config']['GetVersion']();
 }
@@ -80,6 +84,10 @@ export function SetMyRules(arg1) {
 
 export function SetPort(arg1) {
   return window['go']['cfg']['Config']['SetPort'](arg1);
+}
+
+export function SetUpdatePolicy(arg1) {
+  return window['go']['cfg']['Config']['SetUpdatePolicy'](arg1);
 }
 
 export function ToggleFilterList(arg1, arg2) {
