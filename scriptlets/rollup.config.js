@@ -9,7 +9,7 @@ export default {
   output: {
     file: 'dist/bundle.js',
     format: 'iife',
-    name: 'scriptlets'
+    name: 'scriptlet'
   },
   plugins: [
     resolve(),
