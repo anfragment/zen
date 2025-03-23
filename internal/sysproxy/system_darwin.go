@@ -44,14 +44,24 @@ func setSystemProxy(pacURL string) error {
 		return errors.New("no network service found")
 	}
 
+	cmd = exec.Command("networksetup", "-setwebproxystate", networkService, "off")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("unset web proxy for network service %q: %v (%q)", networkService, err, out)
+	}
+
+	cmd = exec.Command("networksetup", "-setsecurewebproxystate", networkService, "off")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("unset secure web proxy for network service %q: %v (%q)", networkService, err, out)
+	}
+
 	cmd = exec.Command("networksetup", "-setautoproxyurl", networkService, pacURL)
 	if out, err = cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("set web proxy for network service %q: %v\n%s", networkService, err, out)
+		return fmt.Errorf("set autoproxyurl to %q for network service %q: %v (%q)", pacURL, networkService, err, out)
 	}
 
 	cmd = exec.Command("networksetup", "-setautoproxystate", networkService, "on")
 	if out, err = cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("enable web proxy for network service %q: %v\n%s", networkService, err, out)
+		return fmt.Errorf("set autoproxystate to on for network service %q: %v (%q)", networkService, err, out)
 	}
 
 	return nil
@@ -59,12 +69,12 @@ func setSystemProxy(pacURL string) error {
 
 func unsetSystemProxy() error {
 	if networkService == "" {
-		return fmt.Errorf("trying to unset system proxy without setting it first")
+		return errors.New("trying to unset system proxy without setting it first")
 	}
 
-	cmd := exec.Command("networksetup", "-setautoproxyurl", networkService, "off")
+	cmd := exec.Command("networksetup", "-setautoproxystate", networkService, "off")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("unset web proxy (network service: %s): %v\n%s", networkService, err, out)
+		return fmt.Errorf("set autoproxystate to off for network service %q: %v (%q)", networkService, err, out)
 	}
 
 	networkService = ""
