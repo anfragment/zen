@@ -77,7 +77,7 @@ func main() {
 				Message: fmt.Sprintf("Your Comprehensive Ad-Blocker and Privacy Guard\nVersion: %s\n© 2025 Ansar Smagulov", cfg.Version),
 			},
 		},
-		HideWindowOnClose: runtime.GOOS == "darwin" || runtime.GOOS == "windows", // only macOS keeps closed windows in taskbar
+		HideWindowOnClose: runtime.GOOS == "darwin" || runtime.GOOS == "windows",
 		StartHidden:       startHidden,
 	})
 
