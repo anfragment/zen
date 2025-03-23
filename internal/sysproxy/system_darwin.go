@@ -59,10 +59,7 @@ func setSystemProxy(pacURL string) error {
 		return fmt.Errorf("set autoproxyurl to %q for network service %q: %v (%q)", pacURL, networkService, err, out)
 	}
 
-	cmd = exec.Command("networksetup", "-setautoproxystate", networkService, "on")
-	if out, err = cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("set autoproxystate to on for network service %q: %v (%q)", networkService, err, out)
-	}
+	// There's no need to set autoproxystate to on, as setting the URL already does that.
 
 	return nil
 }
