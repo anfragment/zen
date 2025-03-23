@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/anfragment/zen/internal/scriptlet"
-	"github.com/anfragment/zen/internal/scriptlet/triestore"
 	"golang.org/x/net/html"
 )
 
@@ -17,7 +16,7 @@ func TestInjectorPublic(t *testing.T) {
 	t.Run("makes an HTML-standards compliant injection with a generic scriptlet", func(t *testing.T) {
 		t.Parallel()
 
-		i := newInjectorWithTrieStore(t)
+		i := newInjector(t)
 		err := i.AddRule(`#%#//scriptlet('prevent-xhr', 'example.com')`, false)
 		if err != nil {
 			t.Fatalf("failed to add rule: %v", err)
@@ -41,7 +40,7 @@ func TestInjectorPublic(t *testing.T) {
 	t.Run("makes an HTML-standards compliant injection with a hostname-specific scriptlet", func(t *testing.T) {
 		t.Parallel()
 
-		i := newInjectorWithTrieStore(t)
+		i := newInjector(t)
 		err := i.AddRule(`news.example.com#%#//scriptlet('prevent-xhr', 'example.com')`, false)
 		if err != nil {
 			t.Fatalf("failed to add rule: %v", err)
@@ -65,7 +64,7 @@ func TestInjectorPublic(t *testing.T) {
 	t.Run("doesn't inject scriptlets into a response without a matching rule", func(t *testing.T) {
 		t.Parallel()
 
-		i := newInjectorWithTrieStore(t)
+		i := newInjector(t)
 		err := i.AddRule(`example.com#%#//scriptlet('prevent-xhr', 'example.com')`, false)
 		if err != nil {
 			t.Fatalf("failed to add rule: %v", err)
@@ -124,10 +123,9 @@ func newBlankHTTPResponse(t *testing.T) *http.Response {
 	}
 }
 
-func newInjectorWithTrieStore(t *testing.T) *scriptlet.Injector {
+func newInjector(t *testing.T) *scriptlet.Injector {
 	t.Helper()
-	store := triestore.NewTrieStore()
-	injector, err := scriptlet.NewInjector(store)
+	injector, err := scriptlet.NewInjectorWithDefaults()
 	if err != nil {
 		t.Fatalf("failed to create injector: %v", err)
 	}
