@@ -29,6 +29,23 @@ const (
 	FilterListTypeCustom FilterListType = "custom"
 )
 
+type UpdatePolicyType string
+
+const (
+	UpdatePolicyAutomatic UpdatePolicyType = "automatic"
+	UpdatePolicyPrompt    UpdatePolicyType = "prompt"
+	UpdatePolicyDisabled  UpdatePolicyType = "disabled"
+)
+
+var UpdatePolicyEnum = []struct {
+	Value  UpdatePolicyType
+	TSName string
+}{
+	{UpdatePolicyAutomatic, "AUTOMATIC"},
+	{UpdatePolicyPrompt, "PROMPT"},
+	{UpdatePolicyDisabled, "DISABLED"},
+}
+
 // Config stores and manages the configuration for the application.
 // Although all fields are public, this is only for use by the JSON marshaller.
 // All access to the Config should be done through the exported methods.
@@ -46,6 +63,7 @@ type Config struct {
 		Port         int      `json:"port"`
 		IgnoredHosts []string `json:"ignoredHosts"`
 	} `json:"proxy"`
+	UpdatePolicy UpdatePolicyType `json:"updatePolicy"`
 
 	// firstLaunch is true if the application is being run for the first time.
 	firstLaunch bool
@@ -321,8 +339,8 @@ func (c *Config) GetCAInstalled() bool {
 
 // SetCAInstalled sets whether the CA is installed.
 func (c *Config) SetCAInstalled(caInstalled bool) {
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	c.Certmanager.CAInstalled = caInstalled
 	if err := c.Save(); err != nil {
@@ -332,4 +350,21 @@ func (c *Config) SetCAInstalled(caInstalled bool) {
 
 func (c *Config) GetVersion() string {
 	return Version
+}
+
+func (c *Config) GetUpdatePolicy() UpdatePolicyType {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.UpdatePolicy
+}
+
+func (c *Config) SetUpdatePolicy(p UpdatePolicyType) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.UpdatePolicy = p
+	if err := c.Save(); err != nil {
+		log.Printf("failed to save config: %v", err)
+	}
 }

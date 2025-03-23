@@ -56,6 +56,14 @@ var migrations = map[string]func(c *Config) error{
 		return nil
 	},
 	"v0.9.0": func(c *Config) error {
+		c.Lock()
+		defer c.Unlock()
+
+		c.UpdatePolicy = UpdatePolicyPrompt
+		if err := c.Save(); err != nil {
+			return fmt.Errorf("save config: %v", err)
+		}
+
 		autostart := autostart.Manager{}
 		if enabled, err := autostart.IsEnabled(); err != nil {
 			return fmt.Errorf("check enabled: %w", err)

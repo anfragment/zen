@@ -10,6 +10,10 @@ export function ImportCustomFilterLists() {
   return window['go']['app']['App']['ImportCustomFilterLists']();
 }
 
+export function IsNoSelfUpdate() {
+  return window['go']['app']['App']['IsNoSelfUpdate']();
+}
+
 export function OpenLogsDirectory() {
   return window['go']['app']['App']['OpenLogsDirectory']();
 }

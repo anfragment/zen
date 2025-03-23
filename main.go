@@ -68,6 +68,9 @@ func main() {
 			config,
 			autostart,
 		},
+		EnumBind: []interface{}{
+			cfg.UpdatePolicyEnum,
+		},
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
 				Title:   appName,

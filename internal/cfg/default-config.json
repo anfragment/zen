@@ -1,7 +1,7 @@
 {
   "filter": {
     "filterLists": [
-      { 
+      {
         "url": "https://easylist.to/easylist/easylist.txt",
         "name": "EasyList",
         "enabled": true,
@@ -280,5 +280,6 @@
   },
   "proxy": {
     "port": 0
-  }
+  },
+  "updatePolicy": "prompt"
 }

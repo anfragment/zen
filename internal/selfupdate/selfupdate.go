@@ -21,9 +21,9 @@ import (
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// noSelfUpdate is set to "true" for builds distributed to package managers to prevent auto-updating. It is typed as a string because the linker allows only setting string variables at compile time (see https://pkg.go.dev/cmd/link).
+// NoSelfUpdate is set to "true" for builds distributed to package managers to prevent auto-updating. It is typed as a string because the linker allows only setting string variables at compile time (see https://pkg.go.dev/cmd/link).
 // Set at compile time using ldflags (see the prod-noupdate task in the /tasks/build directory).
-var noSelfUpdate = "false"
+var NoSelfUpdate = "false"
 
 // releaseTrack is the release track to follow for updates. It currently only takes the value "stable".
 var releaseTrack = "stable"
@@ -38,6 +38,7 @@ type httpClient interface {
 type SelfUpdater struct {
 	version      string
 	noSelfUpdate bool
+	policy       cfg.UpdatePolicyType
 	releaseTrack string
 	httpClient   httpClient
 }
@@ -53,7 +54,7 @@ const (
 	appName = "Zen"
 )
 
-func NewSelfUpdater(httpClient httpClient) (*SelfUpdater, error) {
+func NewSelfUpdater(httpClient httpClient, policy cfg.UpdatePolicyType) (*SelfUpdater, error) {
 	if httpClient == nil {
 		return nil, errors.New("httpClient is nil")
 	}
@@ -63,15 +64,16 @@ func NewSelfUpdater(httpClient httpClient) (*SelfUpdater, error) {
 
 	u := SelfUpdater{
 		version:      cfg.Version,
+		policy:       policy,
 		releaseTrack: releaseTrack,
 		httpClient:   httpClient,
 	}
-	switch noSelfUpdate {
+	switch NoSelfUpdate {
 	case "true":
 		u.noSelfUpdate = true
 	case "false":
 	default:
-		return nil, fmt.Errorf("invalid noSelfUpdate value: %s", noSelfUpdate)
+		return nil, fmt.Errorf("invalid noSelfUpdate value: %s", NoSelfUpdate)
 	}
 
 	return &u, nil
@@ -83,6 +85,12 @@ func (su *SelfUpdater) checkForUpdates() (*release, error) {
 		log.Println("noSelfUpdate=true, self-update disabled")
 		return nil, nil
 	}
+
+	if su.policy == cfg.UpdatePolicyDisabled {
+		log.Println("updatePolicy=disabled, self-update disabled")
+		return nil, nil
+	}
+
 	if su.version == "development" {
 		log.Println("version=development, self-update disabled")
 		return nil, nil
@@ -157,11 +165,13 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		return nil
 	}
 
-	if proceed, err := su.showUpdateDialog(ctx, rel.Description); err != nil {
-		return fmt.Errorf("show update dialog: %w", err)
-	} else if !proceed {
-		log.Println("aborting update, user declined")
-		return nil
+	if su.policy == cfg.UpdatePolicyPrompt {
+		if proceed, err := su.showUpdateDialog(ctx, rel.Description); err != nil {
+			return fmt.Errorf("show update dialog: %w", err)
+		} else if !proceed {
+			log.Println("aborting update, user declined")
+			return nil
+		}
 	}
 
 	tmpFile, err := su.downloadAndVerifyFile(rel.AssetURL, rel.SHA256)
@@ -183,11 +193,13 @@ func (su *SelfUpdater) ApplyUpdate(ctx context.Context) error {
 		panic("unsupported platform")
 	}
 
-	if restart, err := su.showRestartDialog(ctx); err != nil {
-		return fmt.Errorf("show restart dialog: %w", err)
-	} else if !restart {
-		log.Println("user declined to restart")
-		return nil
+	if su.policy == cfg.UpdatePolicyPrompt {
+		if restart, err := su.showRestartDialog(ctx); err != nil {
+			return fmt.Errorf("show restart dialog: %w", err)
+		} else if !restart {
+			log.Println("user declined to restart")
+			return nil
+		}
 	}
 
 	if err := su.restartApplication(ctx); err != nil {
