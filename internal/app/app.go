@@ -22,7 +22,6 @@ import (
 	"github.com/anfragment/zen/internal/networkrules"
 	"github.com/anfragment/zen/internal/proxy"
 	"github.com/anfragment/zen/internal/scriptlet"
-	"github.com/anfragment/zen/internal/scriptlet/triestore"
 	"github.com/anfragment/zen/internal/selfupdate"
 	"github.com/anfragment/zen/internal/sysproxy"
 	"github.com/anfragment/zen/internal/systray"
@@ -96,7 +95,7 @@ func (a *App) commonStartup(ctx context.Context) {
 	go func() {
 		su, err := selfupdate.NewSelfUpdater(&http.Client{
 			Timeout: 20 * time.Second,
-		})
+		}, a.config.GetUpdatePolicy())
 		if err != nil {
 			log.Printf("error creating self updater: %v", err)
 			return
@@ -171,8 +170,7 @@ func (a *App) StartProxy() (err error) {
 	}()
 
 	networkRules := networkrules.NewNetworkRules()
-	scriptletStore := triestore.NewTrieStore()
-	scriptletInjector, err := scriptlet.NewInjector(scriptletStore)
+	scriptletInjector, err := scriptlet.NewInjectorWithDefaults()
 	if err != nil {
 		return fmt.Errorf("create scriptlets injector: %v", err)
 	}
@@ -365,4 +363,8 @@ func (a *App) ImportCustomFilterLists() error {
 	}
 
 	return nil
+}
+
+func (a *App) IsNoSelfUpdate() bool {
+	return selfupdate.NoSelfUpdate == "true"
 }

@@ -21,6 +21,8 @@ export function GetPort():Promise<number>;
 
 export function GetTargetTypeFilterLists(arg1:cfg.FilterListType):Promise<Array<cfg.FilterList>>;
 
+export function GetUpdatePolicy():Promise<cfg.UpdatePolicyType>;
+
 export function GetVersion():Promise<string>;
 
 export function Lock():Promise<void>;
@@ -44,6 +46,8 @@ export function SetIgnoredHosts(arg1:Array<string>):Promise<void>;
 export function SetMyRules(arg1:Array<string>):Promise<void>;
 
 export function SetPort(arg1:number):Promise<string>;
+
+export function SetUpdatePolicy(arg1:cfg.UpdatePolicyType):Promise<void>;
 
 export function ToggleFilterList(arg1:string,arg2:boolean):Promise<string>;
 

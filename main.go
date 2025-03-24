@@ -37,9 +37,13 @@ func main() {
 	}
 
 	var startOnDomReady bool
+	var startHidden bool
 	for _, arg := range os.Args[1:] {
 		if arg == "--start" {
 			startOnDomReady = true
+		}
+		if arg == "--hidden" {
+			startHidden = true
 		}
 	}
 	app, err := app.NewApp(appName, config, startOnDomReady)
@@ -64,13 +68,17 @@ func main() {
 			config,
 			autostart,
 		},
+		EnumBind: []interface{}{
+			cfg.UpdatePolicyEnum,
+		},
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
 				Title:   appName,
 				Message: fmt.Sprintf("Your Comprehensive Ad-Blocker and Privacy Guard\nVersion: %s\n© 2025 Ansar Smagulov", cfg.Version),
 			},
 		},
-		HideWindowOnClose: runtime.GOOS == "darwin" || runtime.GOOS == "windows", // only macOS keeps closed windows in taskbar
+		HideWindowOnClose: runtime.GOOS == "darwin" || runtime.GOOS == "windows",
+		StartHidden:       startHidden,
 	})
 
 	if err != nil {

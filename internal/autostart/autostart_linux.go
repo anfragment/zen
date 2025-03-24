@@ -17,7 +17,7 @@ const (
 Name={{.Name}}
 Comment=Automatically start {{.Name}} at user login
 Type=Application
-Exec={{.ExecPath}} --start
+Exec={{.ExecPath}} --start --hidden
 X-GNOME-Autostart-enabled=true`
 )
 
