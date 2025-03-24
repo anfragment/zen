@@ -1,10 +1,12 @@
 import { FormGroup, TextArea } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDebouncedCallback } from 'use-debounce';
 
 import { GetIgnoredHosts, SetIgnoredHosts } from '../../wailsjs/go/cfg/Config';
 
 export function IgnoredHostsInput() {
+  const { t } = useTranslation();
   const [state, setState] = useState({
     ignoredHosts: '',
     loading: true,
@@ -28,13 +30,13 @@ export function IgnoredHostsInput() {
 
   return (
     <FormGroup
-      label="Ignored Hosts"
+      label={t('ignoredHostsInput.label')}
       labelFor="ignoredHosts"
       helperText={
         <>
-          Hosts for transparent proxying, used for services with certificate pinning or those disrupted by proxying.
-          Still subject to ad-blocking at the domain level. <br />
-          One host per line.
+          {t('ignoredHostsInput.description')}
+          <br />
+          {t('ignoredHostsInput.helper')}
         </>
       }
     >

@@ -1,5 +1,6 @@
 import { Tag, Button } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import './index.css';
 
@@ -12,11 +13,13 @@ import { ExportLogsButton } from './ExportLogsButton';
 import { IgnoredHostsInput } from './IgnoredHostsInput';
 import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
+import { LanguageSelector } from './LanguageSelector';
 
 export interface SettingsManagerProps {
   proxyState: ProxyState;
 }
 export function SettingsManager({ proxyState }: SettingsManagerProps) {
+  const { t } = useTranslation();
   const [state, setState] = useState({
     version: '',
   });
@@ -32,9 +35,12 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
     <div className="settings-manager">
       <div className="settings-manager__section--app">
         <Tag large intent="primary" fill className="settings-manager__section-header">
-          App
+          {t('settings.sections.app')}
         </Tag>
 
+        <div className="settings-manager__section-body">
+          <LanguageSelector />
+        </div>
         <div className="settings-manager__section-body">
           <AutostartSwitch />
         </div>
@@ -46,7 +52,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
       <div className="settings-manager__section--advanced">
         <Tag large intent="warning" fill className="settings-manager__section-header">
-          Advanced
+          {t('settings.sections.advanced')}
         </Tag>
 
         <div className="settings-manager__section-body">
@@ -58,10 +64,12 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
       <div className="settings-manager__about bp5-text-muted">
         <div>
-          <strong>Zen</strong>
+          <strong>{t('app.title')}</strong>
         </div>
-        <div>Your Comprehensive Ad-Blocker and Privacy Guard</div>
-        <div>Version: {state.version}</div>
+        <div>{t('settings.about.tagline')}</div>
+        <div>
+          {t('settings.about.version')}: {state.version}
+        </div>
         <div>© 2025 Ansar Smagulov</div>
         <Button
           minimal
@@ -70,7 +78,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
           className="settings-manager__about-github-button"
           onClick={() => BrowserOpenURL('https://github.com/anfragment/zen')}
         >
-          GitHub
+          {t('settings.about.github')}
         </Button>
       </div>
     </div>

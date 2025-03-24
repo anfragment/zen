@@ -1,6 +1,7 @@
 import { Spinner, SpinnerSize, Switch, Button, MenuItem, Popover, Menu, Tag } from '@blueprintjs/core';
 import { Select } from '@blueprintjs/select';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { GetFilterLists, RemoveFilterList, ToggleFilterList } from '../../wailsjs/go/cfg/Config';
 // eslint-disable-next-line import/order
@@ -16,6 +17,7 @@ import { ImportFilterList } from './ImportFilterList';
 import { FilterListType } from './types';
 
 export function FilterLists() {
+  const { t } = useTranslation();
   const [state, setState] = useState<{
     filterLists: cfg.FilterList[];
     loading: boolean;
@@ -26,6 +28,7 @@ export function FilterLists() {
 
   const fetchLists = async () => {
     const filterLists = await GetFilterLists();
+
     setState({ ...state, filterLists, loading: false });
   };
 
@@ -47,7 +50,7 @@ export function FilterLists() {
               key={item}
               text={
                 <>
-                  {item[0].toUpperCase() + item.slice(1)}
+                  {t(`filterTypes.${item}`)}
                   <span className="bp5-text-muted filter-lists__select-count">
                     ({state.filterLists.filter((filterList) => filterList.type === item && filterList.enabled).length}/
                     {state.filterLists.filter((filterList) => filterList.type === item).length})
@@ -66,7 +69,7 @@ export function FilterLists() {
           popoverProps={{ minimal: true }}
           filterable={false}
         >
-          <Button text={type[0].toUpperCase() + type.slice(1)} rightIcon="caret-down" />
+          <Button text={t(`filterTypes.${type}`)} rightIcon="caret-down" />
         </Select>
 
         {type === FilterListType.CUSTOM && (
@@ -78,11 +81,10 @@ export function FilterLists() {
               </Menu>
             }
           >
-            <Button icon="more" text="More" />
+            <Button icon="more" text={t('filterLists.more')} />
           </Popover>
         )}
       </div>
-
       {state.loading && <Spinner size={SpinnerSize.SMALL} className="filter-lists__spinner" />}
 
       {state.filterLists
@@ -110,8 +112,10 @@ function ListItem({
   showDelete?: boolean;
   onChange?: () => void;
 }) {
+  const { t } = useTranslation();
   const [switchLoading, setSwitchLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
   return (
     <div className="filter-lists__list">
       <div className="filter-lists__list-header">
@@ -124,7 +128,7 @@ function ListItem({
             const err = await ToggleFilterList(filterList.url, e.currentTarget.checked);
             if (err) {
               AppToaster.show({
-                message: `Failed to toggle filter list: ${err}`,
+                message: t('filterLists.toggleError', { error: err }),
                 intent: 'danger',
               });
             }
@@ -137,7 +141,7 @@ function ListItem({
       </div>
       {filterList.trusted ? (
         <Tag intent="success" className="filter-lists__list-trusted">
-          Trusted
+          {t('filterLists.trusted')}
         </Tag>
       ) : null}
 
@@ -155,7 +159,7 @@ function ListItem({
             const err = await RemoveFilterList(filterList.url);
             if (err) {
               AppToaster.show({
-                message: `Failed to remove filter list: ${err}`,
+                message: t('filterLists.removeError', { error: err }),
                 intent: 'danger',
               });
             }
@@ -163,7 +167,7 @@ function ListItem({
             onChange?.();
           }}
         >
-          Delete
+          {t('filterLists.delete')}
         </Button>
       )}
     </div>

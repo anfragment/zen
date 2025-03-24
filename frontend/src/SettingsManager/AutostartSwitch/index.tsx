@@ -3,8 +3,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { IsEnabled, Enable, Disable } from '../../../wailsjs/go/autostart/Manager';
 import { AppToaster } from '../../common/toaster';
+import { useTranslation } from 'react-i18next';
 
 export function AutostartSwitch() {
+  const { t } = useTranslation();
   const [state, setState] = useState({
     enabled: false,
     loading: true,
@@ -24,7 +26,7 @@ export function AutostartSwitch() {
         await Disable();
       } catch (err) {
         AppToaster.show({
-          message: `Failed to disable autostart: ${err}`,
+          message: t('autoStartSwitch.disableError', { error: err }),
           intent: 'danger',
         });
         setState((state) => ({ ...state, loading: false }));
@@ -40,7 +42,7 @@ export function AutostartSwitch() {
         await Enable();
       } catch (err) {
         AppToaster.show({
-          message: `Failed to enable autostart: ${err}`,
+          message: t('autoStartSwitch.enableError', { error: err }),
           intent: 'danger',
         });
         setState((state) => ({ ...state, loading: false }));
@@ -51,7 +53,7 @@ export function AutostartSwitch() {
   }, []);
 
   return (
-    <FormGroup label="Autostart" labelFor="autostart" helperText={<>Start Zen automatically when you log in.</>}>
+    <FormGroup label={t('autoStartSwitch.label')} labelFor="autostart" helperText={t('autoStartSwitch.description')}>
       <Switch
         id="autostart"
         checked={state.enabled}

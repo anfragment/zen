@@ -1,10 +1,12 @@
 import { MenuItem } from '@blueprintjs/core';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ImportCustomFilterLists } from '../../wailsjs/go/app/App';
 import { AppToaster } from '../common/toaster';
 
 export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const handleImport = async () => {
@@ -12,13 +14,13 @@ export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
     try {
       await ImportCustomFilterLists();
       AppToaster.show({
-        message: 'Custom filter lists imported successfully',
+        message: t('importFilterList.successMessage'),
         intent: 'success',
       });
       onAdd();
     } catch (error) {
       AppToaster.show({
-        message: `${error}`,
+        message: t('importFilterList.errorMessage', { error }),
         intent: 'danger',
       });
     } finally {
@@ -26,5 +28,5 @@ export function ImportFilterList({ onAdd }: { onAdd: () => void }) {
     }
   };
 
-  return <MenuItem icon="download" text="Import" onClick={handleImport} disabled={loading} />;
+  return <MenuItem icon="download" text={t('importFilterList.import')} onClick={handleImport} disabled={loading} />;
 }
