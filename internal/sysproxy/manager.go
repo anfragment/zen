@@ -23,6 +23,23 @@ var (
 					return "DIRECT";
 				}
 			}
+
+			if (
+				isPlainHostName(host) ||		// no dots, typical of intranet
+				dnsDomainIs(host, ".local")	// mDNS / Bonjour
+			) {
+				return "DIRECT";
+			}
+
+			if (
+				isInNet(host, "127.0.0.0", "255.0.0.0") ||			// loopback
+				isInNet(host, "10.0.0.0", "255.0.0.0") ||				// 10.0.0.0/8
+				isInNet(host, "172.16.0.0", "255.240.0.0") ||		// 172.16.0.0/12
+				isInNet(host, "192.168.0.0", "255.255.0.0")			// 192.168.0.0/16
+			) {
+				return "DIRECT";
+			}
+
 			return "PROXY 127.0.0.1:{{.ProxyPort}}; DIRECT";
 		}`))
 
