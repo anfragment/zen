@@ -61,7 +61,7 @@ func NewManager(pacPort int) *Manager {
 func (m *Manager) Set(proxyPort int) error {
 	pac := renderPac(proxyPort)
 	mux := http.NewServeMux()
-	mux.HandleFunc("/proxy.pac", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/proxy.pac", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/x-ns-proxy-autoconfig")
 		w.WriteHeader(http.StatusOK)
 		w.Write(pac)
