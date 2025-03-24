@@ -27,6 +27,9 @@ func setSystemProxy(pacURL string) error {
 	}
 	defer k.Close()
 
+	if err := k.SetDWordValue("ProxyEnable", 0); err != nil {
+		return fmt.Errorf("set ProxyEnable: %v", err)
+	}
 	if err := k.SetStringValue("AutoConfigURL", pacURL); err != nil {
 		return fmt.Errorf("set AutoConfigURL: %v", err)
 	}
