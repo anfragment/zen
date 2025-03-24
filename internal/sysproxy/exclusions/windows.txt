@@ -10,6 +10,8 @@ wustat.windows.com
 windowsupdate.com
 msftncsi.com
 microsoft.com
+msftconnecttest.com
+
 
 # Xbox Live
 device.ra.live.com
