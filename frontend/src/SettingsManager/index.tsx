@@ -1,9 +1,10 @@
-import { Tag, Button } from '@blueprintjs/core';
+import { Button, Tag } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import './index.css';
 
+import { IsNoSelfUpdate } from '../../wailsjs/go/app/App';
 import { GetVersion } from '../../wailsjs/go/cfg/Config';
 import { BrowserOpenURL } from '../../wailsjs/runtime';
 import { ProxyState } from '../types';
@@ -14,6 +15,7 @@ import { IgnoredHostsInput } from './IgnoredHostsInput';
 import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
 import { LanguageSelector } from './LanguageSelector';
+import { UpdatePolicyRadioGroup } from './UpdatePolicyRadioGroup';
 
 export interface SettingsManagerProps {
   proxyState: ProxyState;
@@ -22,12 +24,19 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
   const { t } = useTranslation();
   const [state, setState] = useState({
     version: '',
+    updatePolicy: '',
+    showUpdateRadio: false,
   });
 
   useEffect(() => {
     (async () => {
-      const version = await GetVersion();
-      setState({ ...state, version });
+      const [version, noSelfUpdate] = await Promise.all([GetVersion(), IsNoSelfUpdate()]);
+
+      setState((prev) => ({
+        ...prev,
+        showUpdateRadio: !noSelfUpdate,
+        version,
+      }));
     })();
   }, []);
 
@@ -43,6 +52,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
         </div>
         <div className="settings-manager__section-body">
           <AutostartSwitch />
+          {state.showUpdateRadio && <UpdatePolicyRadioGroup />}
         </div>
 
         <div className="settings-manager__section-body">

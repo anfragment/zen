@@ -29,6 +29,7 @@ const (
 		<key>ProgramArguments</key>
 		<array>
 			<string>--start</string>
+			<string>--hidden</string>
 		</array>
 		<key>RunAtLoad</key>
 		<true/>
