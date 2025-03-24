@@ -1,7 +1,4 @@
 {
-  "aboba": {
-    "value": "aboba.value"
-  },
   "app": {
     "proxy": {
       "description": "The proxy is not active. Click the button below to activate it.",
