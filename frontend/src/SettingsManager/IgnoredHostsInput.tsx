@@ -33,7 +33,7 @@ export function IgnoredHostsInput() {
       helperText={
         <>
           Hosts for transparent proxying, used for services with certificate pinning or those disrupted by proxying.
-          Still subject to ad-blocking at the domain level. <br />
+          Still subject to request blocking at the domain level. <br />
           One host per line.
         </>
       }
