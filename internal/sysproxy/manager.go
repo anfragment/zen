@@ -62,7 +62,6 @@ func (m *Manager) Set(proxyPort int) error {
 	pac := renderPac(proxyPort)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/proxy.pac", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("serving PAC for %s", r.RemoteAddr)
 		w.Header().Set("Content-Type", "application/x-ns-proxy-autoconfig")
 		w.WriteHeader(http.StatusOK)
 		w.Write(pac)
