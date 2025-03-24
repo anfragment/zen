@@ -105,13 +105,20 @@
       "usefulIf": "This can be useful if"
     },
     "language": {
-      "abob23": "settings.language.abob23",
       "helper": "Select your preferred language",
       "label": "Language"
     },
     "sections": {
       "advanced": "Advanced",
       "app": "App"
+    },
+    "updates": {
+      "automatic": "Automatic updates",
+      "choosePolicy": "Choose how updates are installed",
+      "description": "If \"Automatic updates\" is selected, the app will automatically check for and apply updates on launch.",
+      "disabled": "Disable updates",
+      "prompt": "Ask before updating",
+      "title": "Updates"
     }
   },
   "startStopButton": {

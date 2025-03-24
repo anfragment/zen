@@ -1,10 +1,12 @@
 import { Radio, RadioGroup, FormGroup } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { GetUpdatePolicy, SetUpdatePolicy } from '../../../wailsjs/go/cfg/Config';
 import { cfg } from '../../../wailsjs/go/models';
 
 export function UpdatePolicyRadioGroup() {
+  const { t } = useTranslation();
   const [state, setState] = useState({
     policy: '',
   });
@@ -20,16 +22,9 @@ export function UpdatePolicyRadioGroup() {
   }, []);
 
   return (
-    <FormGroup
-      helperText={
-        <>
-          If &quot;Automatic updates&quot; is selected, the app will automatically check for and apply updates on
-          launch.
-        </>
-      }
-    >
+    <FormGroup helperText={t('settings.updates.description')}>
       <RadioGroup
-        label="Choose how updates are installed"
+        label={t('settings.updates.choosePolicy')}
         onChange={async (e: any) => {
           const p = e.target.value;
           if (p) {
@@ -42,9 +37,9 @@ export function UpdatePolicyRadioGroup() {
         }}
         selectedValue={state.policy}
       >
-        <Radio label="Automatic updates" value={cfg.UpdatePolicyType.AUTOMATIC} />
-        <Radio label="Ask before updating" value={cfg.UpdatePolicyType.PROMPT} />
-        <Radio label="Disable updates" value={cfg.UpdatePolicyType.DISABLED} />
+        <Radio label={t('settings.updates.automatic') as string} value={cfg.UpdatePolicyType.AUTOMATIC} />
+        <Radio label={t('settings.updates.prompt') as string} value={cfg.UpdatePolicyType.PROMPT} />
+        <Radio label={t('settings.updates.disabled') as string} value={cfg.UpdatePolicyType.DISABLED} />
       </RadioGroup>
     </FormGroup>
   );

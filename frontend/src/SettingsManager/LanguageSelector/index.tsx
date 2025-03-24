@@ -1,4 +1,4 @@
-import { Button, FormGroup, Icon, MenuItem } from '@blueprintjs/core';
+import { Button, FormGroup, MenuItem } from '@blueprintjs/core';
 import { ItemRenderer, Select } from '@blueprintjs/select';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
