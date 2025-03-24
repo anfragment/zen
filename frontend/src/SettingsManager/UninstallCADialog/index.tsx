@@ -20,7 +20,7 @@ export function UninstallCADialog({ proxyState }: UninstallCADialogProps) {
 
   return (
     <>
-      <Tooltip content={proxyState !== 'off' ? t('settings.ca.stopProxyTooltip') || '' : undefined}>
+      <Tooltip content={proxyState !== 'off' ? (t('settings.ca.stopProxyTooltip') as string) : undefined}>
         <Button
           disabled={proxyState !== 'off'}
           onClick={() => setState((state) => ({ ...state, isOpen: true }))}
