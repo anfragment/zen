@@ -1,0 +1,154 @@
+# This file contains macOS-specific hostnames that Zen will not MITM.
+
+# The following hostnames are sourced from https://support.apple.com/en-gb/HT210060.
+# Only relevant hostnames used by macOS over :80 and :443 are included.
+# The article includes a "Recent changes" section that should be checked periodically for updates.
+# Device setup
+albert.apple.com
+captive.apple.com
+gs.apple.com
+humb.apple.com
+static.ips.apple.com
+sq-device.apple.com
+tbsc.apple.com
+
+# Device management
+push.apple.com
+deviceenrollment.apple.com
+deviceservices-external.apple.com
+gdmf.apple.com
+identity.apple.com
+iprofiles.apple.com
+mdmenrollment.apple.com
+vpp.itunes.apple.com
+appattest.apple.com
+axm-servicediscovery.apple.com
+
+# Apple Business Manager and Apple School Manager
+business.apple.com
+school.apple.com
+appleid.cdn-apple.com
+idmsa.apple.com
+itunes.apple.com
+mzstatic.com
+api.ent.apple.com
+api.edu.apple.com
+statici.icloud.com
+vertexsmb.com
+www.apple.com
+ws-ee-maidsvc.icloud.com
+
+# Apple Business Essentials device management
+axm-adm-enroll.apple.com
+axm-adm-mdm.apple.com
+axm-adm-scep.apple.com
+axm-app.apple.com
+icons.axm-usercontent-apple.com
+
+# Classroom and Schoolwork
+s.mzstatic.com
+play.itunes.apple.com
+ws-ee-maidsvc.icloud.com
+ws.school.apple.com
+
+# Software updates
+appldnld.apple.com
+configuration.apple.com
+gdmf.apple.com
+gg.apple.com
+gs.apple.com
+ig.apple.com
+mesu.apple.com
+oscdn.apple.com
+osrecovery.apple.com
+skl.apple.com
+swcdn.apple.com
+swdist.apple.com
+swdownload.apple.com
+swscan.apple.com
+updates-http.cdn-apple.com
+updates.cdn-apple.com
+xp.apple.com
+gdmf-ados.apple.com
+gsra.apple.com
+wkms-public.apple.com
+fcs-keys-pub-prod.cdn-apple.com
+
+# Apps and additional content
+itunes.apple.com
+apps.apple.com
+mzstatic.com
+itunes.apple.com
+ppq.apple.com
+api.apple-cloudkit.com
+appattest.apple.com
+token.safebrowsing.apple
+audiocontentdownload.apple.com
+devimages-cdn.apple.com
+download.developer.apple.com
+playgrounds-assets-cdn.apple.com
+playgrounds-cdn.apple.com
+sylvan.apple.com
+gateway.icloud.com
+
+# Content caching
+lcdn-registration.apple.com
+suconfig.apple.com
+xp-cdn.apple.com
+lcdn-locator.apple.com
+serverstatus.apple.com
+
+# Beta updates
+bpapi.apple.com
+cssubmissions.apple.com
+fba.apple.com
+
+# Apple diagnostics
+diagassets.apple.com
+
+# Domain Name System resolution
+doh.dns.apple.com
+
+# Certificate validation
+certs.apple.com
+crl.apple.com
+crl3.digicert.com
+crl4.digicert.com
+ocsp.apple.com
+ocsp.digicert.cn
+ocsp.digicert.com
+ocsp2.apple.com
+valid.apple.com
+
+# Apple Account
+account.apple.com
+appleid.cdn-apple.com
+idmsa.apple.com
+gsa.apple.com
+
+# iCloud
+apple-cloudkit.com
+apple-livephotoskit.com
+apzones.com
+cdn-apple.com
+gc.apple.com
+icloud.com
+icloud.com.cn
+icloud.apple.com
+icloud-content.com
+iwork.apple.com
+mask.icloud.com
+mask-h2.icloud.com
+mask-api.icloud.com
+
+# Apple Intelligence, Siri and Search
+guzzoni.apple.com
+smoot.apple.com
+apple-relay.cloudflare.com
+apple-relay.fastly-edge.com
+cp4.cloudflare.com
+apple-relay.apple.com
+
+# Associated domains
+app-site-association.cdn-apple.com
+app-site-association.networking.apple
