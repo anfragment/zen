@@ -1,6 +1,7 @@
 package sysproxy
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -9,12 +10,10 @@ import (
 )
 
 var (
-	// exclusionListURLs = []string{
-	// 	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
-	// 	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/apple.txt",
-	// }
 	reInterfaceName = regexp.MustCompile(`^[\w\d]+$`)
 	networkService  string
+	//go:embed exclusions/darwin.txt
+	platformSpecificExcludedHosts []byte
 )
 
 // setSystemProxy sets the system proxy to the proxy address.

@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-var exclusionListURLs = []string{
-	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
-}
+var (
+	platformSpecificExcludedHosts []byte
+)
 
 func setSystemProxy(pacURL string) error {
 	if !binaryExists("gsettings") {

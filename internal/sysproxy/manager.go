@@ -2,6 +2,7 @@ package sysproxy
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"fmt"
 	"log"
@@ -15,7 +16,18 @@ var (
 	ErrUnsupportedDesktopEnvironment = errors.New("system proxy configuration is currently only supported on GNOME")
 
 	pacTemplate = template.Must(
-		template.New("pac").Parse(`function FindProxyForURL(url, host) {return "PROXY 127.0.0.1:{{.ProxyPort}}";}`))
+		template.New("pac").Parse(`function FindProxyForURL(url, host) {
+			var excludedHosts = [{{range $index, $host := .ExcludedHosts}}{{if $index}}, {{end}}"{{$host}}"{{end}}];
+			for (var i = 0; i < excludedHosts.length; i++) {
+				if (dnsDomainIs(host, excludedHosts[i])) {
+					return "DIRECT";
+				}
+			}
+			return "PROXY 127.0.0.1:{{.ProxyPort}}; DIRECT";
+		}`))
+
+	//go:embed exclusions/common.txt
+	commonExcludedHosts []byte
 )
 
 type Manager struct {
@@ -84,6 +96,34 @@ func (m *Manager) Clear() error {
 
 func renderPac(proxyPort int) []byte {
 	var buf bytes.Buffer
-	pacTemplate.Execute(&buf, struct{ ProxyPort int }{ProxyPort: proxyPort})
+	pacTemplate.Execute(&buf, struct {
+		ProxyPort     int
+		ExcludedHosts []string
+	}{
+		ProxyPort:     proxyPort,
+		ExcludedHosts: buildExcludedHosts(),
+	})
 	return buf.Bytes()
+}
+
+func buildExcludedHosts() []string {
+	var excludedHosts []string
+
+	processList := func(data []byte) {
+		for _, line := range bytes.Split(data, []byte("\n")) {
+			if hashIndex := bytes.IndexByte(line, '#'); hashIndex != -1 {
+				line = line[:hashIndex]
+			}
+			line = bytes.TrimSpace(line)
+			if len(line) == 0 {
+				continue
+			}
+			excludedHosts = append(excludedHosts, string(line))
+		}
+	}
+
+	processList(commonExcludedHosts)
+	processList(platformSpecificExcludedHosts)
+
+	return excludedHosts
 }

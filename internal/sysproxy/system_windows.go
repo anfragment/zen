@@ -1,6 +1,7 @@
 package sysproxy
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 
@@ -8,16 +9,14 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-var exclusionListURLs = []string{
-	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
-	"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/windows.txt",
-}
-
 var (
 	wininet                       = windows.NewLazySystemDLL("wininet.dll")
 	internetSetOption             = wininet.NewProc("InternetSetOptionW")
 	internetOptionSettingsChanged = 39
 	internetOptionRefresh         = 37
+
+	//go:embed exclusions/windows.txt
+	platformSpecificExcludedHosts []byte
 )
 
 func setSystemProxy(pacURL string) error {
