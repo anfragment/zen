@@ -1,3 +1,10 @@
+// Package sysproxy implements [Manager], providing a unified, cross-platform interface for configuring system proxies.
+//
+// sysproxy uses PAC (Proxy Auto-Config) as the configuration method due to the extensive use of proxy exceptions.
+// While declarative configuration methods also support exceptions, they often impose strict limits on the number
+// of characters that can be specified. For example, the ProxyOverride registry key on Windows is limited to
+// approximately 2000 characters, and the equivalent setting on macOS has a limit of around 650 characters.
+// In contrast, PAC files can typically be up to 1MB in size, which is more than sufficient for our use case.
 package sysproxy
 
 import (
@@ -17,6 +24,9 @@ type Manager struct {
 	server  *http.Server
 }
 
+// NewManager creates a new system proxy Manager.
+// The PAC server will listen on the given pacPort.
+// If pacPort is 0, a random port will be chosen.
 func NewManager(pacPort int) *Manager {
 	return &Manager{
 		pacPort: pacPort,
