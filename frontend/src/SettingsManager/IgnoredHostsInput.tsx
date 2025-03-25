@@ -32,9 +32,9 @@ export function IgnoredHostsInput() {
       labelFor="ignoredHosts"
       helperText={
         <>
-          Hosts for transparent proxying, used for services with certificate pinning or those disrupted by proxying.
-          Still subject to request blocking at the domain level. <br />
-          One host per line.
+          Hosts to exclude from proxying. Use this for services with certificate pinning or those disrupted by proxying.
+          <br />
+          Enter one host per line.
         </>
       }
     >
