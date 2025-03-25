@@ -1,34 +1,16 @@
 package sysproxy
 
 import (
-	"bytes"
 	_ "embed"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
-	"text/template"
 	"time"
 )
 
-var (
-	ErrUnsupportedDesktopEnvironment = errors.New("system proxy configuration is currently only supported on GNOME")
-
-	pacTemplate = template.Must(
-		template.New("pac").Parse(`function FindProxyForURL(url, host) {
-			var excludedHosts = [{{range $index, $host := .ExcludedHosts}}{{if $index}}, {{end}}"{{$host}}"{{end}}];
-			for (var i = 0; i < excludedHosts.length; i++) {
-				if (dnsDomainIs(host, excludedHosts[i])) {
-					return "DIRECT";
-				}
-			}
-			return "PROXY 127.0.0.1:{{.ProxyPort}}; DIRECT";
-		}`))
-
-	//go:embed exclusions/common.txt
-	commonExcludedHosts []byte
-)
+var ErrUnsupportedDesktopEnvironment = errors.New("system proxy configuration is currently only supported on GNOME")
 
 type Manager struct {
 	pacPort int
@@ -41,32 +23,14 @@ func NewManager(pacPort int) *Manager {
 	}
 }
 
-func (m *Manager) Set(proxyPort int) error {
-	pac := renderPac(proxyPort)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/proxy.pac", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/x-ns-proxy-autoconfig")
-		w.WriteHeader(http.StatusOK)
-		w.Write(pac)
-	})
+// Set configures the system proxy to use the proxy server listening on the given port.
+func (m *Manager) Set(proxyPort int, userConfiguredExcludedHosts []string) error {
+	pac := renderPac(proxyPort, userConfiguredExcludedHosts)
 
-	m.server = &http.Server{
-		Handler:      mux,
-		ReadTimeout:  time.Minute,
-		WriteTimeout: time.Minute,
-	}
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", m.pacPort))
+	actualPort, err := m.makeServer(pac)
 	if err != nil {
-		return fmt.Errorf("listen: %v", err)
+		return fmt.Errorf("make server: %v", err)
 	}
-	actualPort := listener.Addr().(*net.TCPAddr).Port
-	log.Printf("PAC server listening on port %d", actualPort)
-
-	go func() {
-		if err := m.server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			log.Printf("error serving PAC: %v", err)
-		}
-	}()
 
 	pacURL := fmt.Sprintf("http://127.0.0.1:%d/proxy.pac", actualPort)
 	if err := setSystemProxy(pacURL); err != nil {
@@ -76,6 +40,7 @@ func (m *Manager) Set(proxyPort int) error {
 	return nil
 }
 
+// Clear removes the system proxy configuration.
 func (m *Manager) Clear() error {
 	if m.server == nil {
 		log.Println("warning: trying to clear system proxy without setting it first")
@@ -93,36 +58,33 @@ func (m *Manager) Clear() error {
 	return nil
 }
 
-func renderPac(proxyPort int) []byte {
-	var buf bytes.Buffer
-	pacTemplate.Execute(&buf, struct {
-		ProxyPort     int
-		ExcludedHosts []string
-	}{
-		ProxyPort:     proxyPort,
-		ExcludedHosts: buildExcludedHosts(),
+// makeServer starts an HTTP server that serves the PAC file.
+// It returns the actual port the server is listening on, which may be different from the requested port if the latter is 0.
+func (m *Manager) makeServer(pac []byte) (int, error) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/proxy.pac", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/x-ns-proxy-autoconfig")
+		w.WriteHeader(http.StatusOK)
+		w.Write(pac)
 	})
-	return buf.Bytes()
-}
 
-func buildExcludedHosts() []string {
-	var excludedHosts []string
-
-	processList := func(data []byte) {
-		for _, line := range bytes.Split(data, []byte("\n")) {
-			if hashIndex := bytes.IndexByte(line, '#'); hashIndex != -1 {
-				line = line[:hashIndex]
-			}
-			line = bytes.TrimSpace(line)
-			if len(line) == 0 {
-				continue
-			}
-			excludedHosts = append(excludedHosts, string(line))
-		}
+	m.server = &http.Server{
+		Handler:      mux,
+		ReadTimeout:  time.Minute,
+		WriteTimeout: time.Minute,
 	}
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", m.pacPort))
+	if err != nil {
+		return -1, fmt.Errorf("listen: %v", err)
+	}
+	actualPort := listener.Addr().(*net.TCPAddr).Port
+	log.Printf("PAC server listening on port %d", actualPort)
 
-	processList(commonExcludedHosts)
-	processList(platformSpecificExcludedHosts)
+	go func() {
+		if err := m.server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			log.Printf("error serving PAC: %v", err)
+		}
+	}()
 
-	return excludedHosts
+	return actualPort, nil
 }

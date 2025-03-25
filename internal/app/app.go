@@ -203,7 +203,7 @@ func (a *App) StartProxy() (err error) {
 		return fmt.Errorf("start proxy: %v", err)
 	}
 
-	if err := a.systemProxyManager.Set(port); err != nil {
+	if err := a.systemProxyManager.Set(port, a.config.GetIgnoredHosts()); err != nil {
 		if errors.Is(err, sysproxy.ErrUnsupportedDesktopEnvironment) {
 			a.eventsHandler.OnUnsupportedDE(err)
 		} else {
