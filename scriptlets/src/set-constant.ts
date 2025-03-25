@@ -110,6 +110,10 @@ export function setConstant(
   }
   stackRe ??= null;
 
+  const fakeLog = () => {
+    logger.debug(`Returning fake value for property window.${property}`, { value });
+  };
+
   if (!property.includes('.')) {
     let localValue = window[property as any];
     const odesc = Object.getOwnPropertyDescriptor(window, property);
@@ -119,7 +123,7 @@ export function setConstant(
         if (stackRe !== null && !matchStack(stackRe)) {
           return typeof odesc?.get === 'function' ? odesc.get.apply(window) : localValue;
         }
-        logger.debug(`Returning fake value for property window.${property}`, { value });
+        fakeLog();
         return fakeValue;
       },
       set:
@@ -140,7 +144,7 @@ export function setConstant(
     let boundFnCache: Record<any, any>;
     return (target: any, key: any) => {
       if (chain.length === 1 && chain[0] === key) {
-        logger.debug(`Returning fake value for property window.${property}`, { value });
+        fakeLog();
         return fakeValue;
       }
       let link = Reflect.get(target, key, target);
@@ -190,41 +194,73 @@ export function setConstant(
   };
 
   const rootChain = property.split('.');
-  const rootProp = rootChain.shift() as any;
-  const odesc = Object.getOwnPropertyDescriptor(window, rootProp);
-  let localValue = window[rootProp];
-  let proxyCache: { capturedValue: any; proxy: any };
-  Object.defineProperty(window, rootProp, {
-    configurable: true,
-    get: () => {
-      let capturedValue;
-      if (typeof odesc?.get === 'function') {
-        // On certain properties, Safari wants window getters to be called with "window" as "this".
-        // Therefore, we apply instead of doing a regular function call.
-        capturedValue = odesc.get.apply(window);
-      } else {
-        capturedValue = localValue;
-      }
+  const rootProp = rootChain[0] as any;
+  let prev: any = window;
+  let current: any = window[rootProp];
+  for (let i = 1; i < rootChain.length; i++) {
+    const part = rootChain[i] as any;
 
-      if (!isProxyable(capturedValue) || (stackRe !== null && !matchStack(stackRe))) {
-        return capturedValue;
-      }
-      if (proxyCache?.capturedValue === capturedValue) {
-        // Ensure object equality between different access operations.
-        // Fixes https://github.com/anfragment/zen/issues/224
-        return proxyCache.proxy;
-      }
-      const proxy = new Proxy(capturedValue, {
-        get: get(rootChain),
+    if (current != undefined && i === rootChain.length - 1) {
+      const odesc = Object.getOwnPropertyDescriptor(current, part);
+      let localValue = current[part];
+      // Setting a getter/setter property plays more nicely with complex websites, YouTube in particular.
+      Object.defineProperty(current, part, {
+        configurable: true,
+        get: () => {
+          if (stackRe !== null && !matchStack(stackRe)) {
+            return typeof odesc?.get === 'function' ? odesc.get.apply(current) : localValue;
+          }
+          fakeLog();
+          return fakeValue;
+        },
+        set:
+          typeof odesc?.set === 'function'
+            ? odesc?.set.bind(current)
+            : (v) => {
+                localValue = v;
+              },
       });
-      proxyCache = { capturedValue, proxy };
-      return proxy;
-    },
-    set:
-      typeof odesc?.set === 'function'
-        ? odesc?.set.bind(window)
-        : (v) => {
-            localValue = v;
-          },
-  });
+      return;
+    }
+
+    if (current == undefined || current[part] == undefined) {
+      // Go up a level and create a proxy for the current property.
+      const odesc = Object.getOwnPropertyDescriptor(prev, rootChain[i - 1]);
+      let localValue = current;
+      let proxyCache: { capturedValue: any; proxy: any };
+      Object.defineProperty(prev, rootChain[i - 1], {
+        configurable: true,
+        get: () => {
+          const capturedValue = odesc?.get ? odesc.get.apply(prev) : localValue;
+
+          if (!isProxyable(capturedValue) || (stackRe !== null && !matchStack(stackRe))) {
+            return capturedValue;
+          }
+          if (proxyCache?.capturedValue === capturedValue) {
+            // Ensure object equality between different access operations.
+            // Fixes https://github.com/anfragment/zen/issues/224
+            return proxyCache.proxy;
+          }
+          const proxy = new Proxy(capturedValue, {
+            get: get(rootChain.slice(i)),
+          });
+          proxyCache = { capturedValue, proxy };
+          return proxy;
+        },
+        set:
+          typeof odesc?.set === 'function'
+            ? odesc?.set.bind(prev)
+            : (v) => {
+                localValue = v;
+              },
+      });
+      return;
+    }
+
+    prev = current;
+    current = current[part];
+  }
+  // For debugging purposes.
+  logger.warn('Hit an invariant in setConstant', { property, value, stack });
+  throw new Error('Invariant hit');
 }
