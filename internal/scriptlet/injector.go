@@ -81,8 +81,11 @@ func (inj *Injector) Inject(req *http.Request, res *http.Response) error {
 	ruleInjection.WriteString("})();")
 	ruleInjection.Write(scriptClosingTag)
 
-	if err := htmlrewrite.PrependHeadContents(res, bytes.Join([][]byte{inj.bundle, ruleInjection.Bytes()}, nil)); err != nil {
-		return fmt.Errorf("prepend head contents: %w", err)
+	// Appending the scriptlets bundle to the head of the document aligns with the behavior of uBlock Origin:
+	// - https://github.com/gorhill/uBlock/blob/d7ae3a185eddeae0f12d07149c1f0ddd11fd0c47/platform/firefox/vapi-background-ext.js#L373-L375
+	// - https://github.com/gorhill/uBlock/blob/d7ae3a185eddeae0f12d07149c1f0ddd11fd0c47/platform/chromium/vapi-background-ext.js#L223-L226
+	if err := htmlrewrite.AppendHeadContents(res, bytes.Join([][]byte{inj.bundle, ruleInjection.Bytes()}, nil)); err != nil {
+		return fmt.Errorf("append head contents: %w", err)
 	}
 
 	return nil
