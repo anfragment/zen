@@ -6,7 +6,7 @@ import { GetLocale } from '../wailsjs/go/cfg/Config';
 
 import App from './App';
 import ErrorBoundary from './ErrorBoundary';
-import { initI18n } from './i18n';
+import { FALLBACK_LANG, initI18n } from './i18n';
 import './style.css';
 
 (function polyfillCountryFlagEmojis() {
@@ -24,7 +24,7 @@ import './style.css';
 })();
 
 async function bootstrap() {
-  let locale = 'en';
+  let locale = FALLBACK_LANG;
   try {
     locale = await GetLocale();
   } catch {
