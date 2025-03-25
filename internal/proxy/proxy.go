@@ -305,8 +305,8 @@ func (p *Proxy) shouldMITM(host string) bool {
 	p.transparentHostsMu.RLock()
 	defer p.transparentHostsMu.RUnlock()
 
-	for _, ignoredHost := range p.transparentHosts {
-		if strings.HasSuffix(host, ignoredHost) {
+	for _, transparentHost := range p.transparentHosts {
+		if host == transparentHost || strings.HasSuffix(host, "."+transparentHost) {
 			return false
 		}
 	}
