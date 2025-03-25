@@ -60,6 +60,7 @@ var migrations = map[string]func(c *Config) error{
 		defer c.Unlock()
 
 		c.UpdatePolicy = UpdatePolicyPrompt
+		c.Locale = "en"
 		if err := c.Save(); err != nil {
 			return fmt.Errorf("save config: %v", err)
 		}

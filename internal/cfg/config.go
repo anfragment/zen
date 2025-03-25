@@ -65,6 +65,8 @@ type Config struct {
 	} `json:"proxy"`
 	UpdatePolicy UpdatePolicyType `json:"updatePolicy"`
 
+	Locale string `json:"locale"`
+
 	// firstLaunch is true if the application is being run for the first time.
 	firstLaunch bool
 }
@@ -339,8 +341,8 @@ func (c *Config) GetCAInstalled() bool {
 
 // SetCAInstalled sets whether the CA is installed.
 func (c *Config) SetCAInstalled(caInstalled bool) {
-	c.RLock()
-	defer c.RUnlock()
+	c.Lock()
+	defer c.Unlock()
 
 	c.Certmanager.CAInstalled = caInstalled
 	if err := c.Save(); err != nil {
@@ -353,8 +355,8 @@ func (c *Config) GetVersion() string {
 }
 
 func (c *Config) GetUpdatePolicy() UpdatePolicyType {
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	return c.UpdatePolicy
 }
@@ -364,6 +366,23 @@ func (c *Config) SetUpdatePolicy(p UpdatePolicyType) {
 	defer c.Unlock()
 
 	c.UpdatePolicy = p
+	if err := c.Save(); err != nil {
+		log.Printf("failed to save config: %v", err)
+	}
+}
+
+func (c *Config) GetLocale() string {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.Locale
+}
+
+func (c *Config) SetLocale(l string) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Locale = l
 	if err := c.Save(); err != nil {
 		log.Printf("failed to save config: %v", err)
 	}

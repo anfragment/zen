@@ -12,9 +12,9 @@ import { ProxyState } from '../types';
 import { AutostartSwitch } from './AutostartSwitch';
 import { ExportLogsButton } from './ExportLogsButton';
 import { IgnoredHostsInput } from './IgnoredHostsInput';
+import { LanguageSelector } from './LanguageSelector';
 import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
-import { LanguageSelector } from './LanguageSelector';
 import { UpdatePolicyRadioGroup } from './UpdatePolicyRadioGroup';
 
 export interface SettingsManagerProps {
@@ -49,13 +49,8 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
         <div className="settings-manager__section-body">
           <LanguageSelector />
-        </div>
-        <div className="settings-manager__section-body">
           <AutostartSwitch />
           {state.showUpdateRadio && <UpdatePolicyRadioGroup />}
-        </div>
-
-        <div className="settings-manager__section-body">
           <ExportLogsButton />
         </div>
       </div>
@@ -74,7 +69,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
 
       <div className="settings-manager__about bp5-text-muted">
         <div>
-          <strong>{t('app.title')}</strong>
+          <strong>Zen</strong>
         </div>
         <div>{t('settings.about.tagline')}</div>
         <div>

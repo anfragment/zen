@@ -2,10 +2,12 @@ import { isEmojiSupported } from 'is-emoji-supported';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-import './style.css';
+import { GetLocale } from '../wailsjs/go/cfg/Config';
+
 import App from './App';
 import ErrorBoundary from './ErrorBoundary';
-import './i18n'
+import { initI18n } from './i18n';
+import './style.css';
 
 (function polyfillCountryFlagEmojis() {
   if (!isEmojiSupported('😊') || isEmojiSupported('🇨🇭')) {
@@ -21,14 +23,26 @@ import './i18n'
   document.head.appendChild(style);
 })();
 
-const container = document.getElementById('root');
+async function bootstrap() {
+  let locale = 'en';
+  try {
+    locale = await GetLocale();
+  } catch {
+    console.warn('Failed to fetch locale, falling back to "en"');
+  }
 
-const root = createRoot(container!);
+  await initI18n(locale);
 
-root.render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>,
-);
+  const container = document.getElementById('root');
+  const root = createRoot(container!);
+
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>,
+  );
+}
+
+bootstrap();

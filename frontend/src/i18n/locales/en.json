@@ -9,8 +9,7 @@
       "home": "Home",
       "myRules": "My rules",
       "settings": "Settings"
-    },
-    "title": "ZEN"
+    }
   },
   "autoStartSwitch": {
     "description": "Start Zen automatically when you log in",

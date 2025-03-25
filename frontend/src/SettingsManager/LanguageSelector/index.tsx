@@ -1,7 +1,8 @@
 import { Button, FormGroup, MenuItem } from '@blueprintjs/core';
 import { ItemRenderer, Select } from '@blueprintjs/select';
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { SetLocale } from '../../../wailsjs/go/cfg/Config';
 
 interface LanguageItem {
   value: string;
@@ -10,20 +11,10 @@ interface LanguageItem {
 
 export function LanguageSelector() {
   const { t, i18n } = useTranslation();
-  const [language, setLanguage] = useState<string>(localStorage.getItem('language') || 'en');
 
-  useEffect(() => {
-    const savedLanguage = localStorage.getItem('language');
-    if (savedLanguage) {
-      i18n.changeLanguage(savedLanguage);
-      setLanguage(savedLanguage);
-    }
-  }, [i18n]);
-
-  const handleLanguageChange = (item: LanguageItem): void => {
+  const handleLanguageChange = async (item: LanguageItem) => {
     i18n.changeLanguage(item.value);
-    localStorage.setItem('language', item.value);
-    setLanguage(item.value);
+    SetLocale(item.value);
   };
 
   const items: LanguageItem[] = [
@@ -44,7 +35,7 @@ export function LanguageSelector() {
     );
   };
 
-  const currentLanguage = items.find((item) => item.value === language) || items[0];
+  const currentLanguage = items.find((item) => item.value === i18n.language) || items[0];
 
   return (
     <FormGroup label={t('settings.language.label')} helperText={t('settings.language.helper')}>

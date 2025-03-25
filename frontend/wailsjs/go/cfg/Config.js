@@ -22,6 +22,10 @@ export function GetIgnoredHosts() {
   return window['go']['cfg']['Config']['GetIgnoredHosts']();
 }
 
+export function GetLocale() {
+  return window['go']['cfg']['Config']['GetLocale']();
+}
+
 export function GetMyRules() {
   return window['go']['cfg']['Config']['GetMyRules']();
 }
@@ -76,6 +80,10 @@ export function SetCAInstalled(arg1) {
 
 export function SetIgnoredHosts(arg1) {
   return window['go']['cfg']['Config']['SetIgnoredHosts'](arg1);
+}
+
+export function SetLocale(arg1) {
+  return window['go']['cfg']['Config']['SetLocale'](arg1);
 }
 
 export function SetMyRules(arg1) {
