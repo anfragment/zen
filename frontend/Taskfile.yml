@@ -15,3 +15,8 @@ tasks:
     desc: Installs the complete set of dependencies.
     dir: frontend
     cmd: npm ci
+
+  extract-translations:
+    desc: Extract i18n translation keys from source code.
+    dir: frontend
+    cmd: npm run extract-translations
