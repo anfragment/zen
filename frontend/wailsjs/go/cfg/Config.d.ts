@@ -15,6 +15,8 @@ export function GetIgnoredHosts():Promise<Array<string>>;
 
 export function GetMyRules():Promise<Array<string>>;
 
+export function GetPACPort():Promise<number>;
+
 export function GetPort():Promise<number>;
 
 export function GetTargetTypeFilterLists(arg1:cfg.FilterListType):Promise<Array<cfg.FilterList>>;

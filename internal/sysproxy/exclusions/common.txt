@@ -1,0 +1,83 @@
+# This file contains hostnames that Zen will not MITM on all platforms.
+
+# Government websites
+egov.kz
+gov.kz
+gov.uk
+gov.ua
+usa.gov
+state.gov
+whitehouse.gov
+gov.ph
+gov.au
+e-estonia.com
+eesti.ee
+
+# Password managers
+1password.com
+pastpass.com
+passwords.google.com
+passwords.google
+bitwarden.com
+dashlane.com
+
+# Banks & financial institutions
+bankofamerica.com
+chase.com
+wellsfargo.com
+citibank.com
+usbank.com
+capitalone.com
+pnc.com
+revolut.com
+monzo.com
+kaspi.kz
+halykbank.kz
+bcc.kz
+bankffin.kz
+jusan.kz
+onlinebank.kz
+
+# Payment processors
+paypal.com
+stripe.com
+square.com
+venmo.com
+
+# Messengers
+whatsapp.net
+whatsapp.com
+telegram.org
+signal.org
+discord.com
+slack.com
+messenger.com
+
+# Digital infrastructure
+cloudflare.com
+aws.amazon.com
+azure.microsoft.com
+cloud.google.com
+hetzner.com
+digitalocean.com
+linode.com
+vultr.com
+heroku.com
+netlify.com
+vercel.com
+fastly.com
+akamai.com
+ps.kz
+github.com
+gitlab.com
+bitbucket.org
+docker.com
+kubernetes.io
+npmjs.com
+pypi.org
+crates.io
+rubygems.org
+
+# Issues
+# https://github.com/anfragment/zen/pull/223
+account.booking.com

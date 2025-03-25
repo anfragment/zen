@@ -62,6 +62,7 @@ type Config struct {
 	Proxy struct {
 		Port         int      `json:"port"`
 		IgnoredHosts []string `json:"ignoredHosts"`
+		PACPort      int      `json:"pacPort"`
 	} `json:"proxy"`
 	UpdatePolicy UpdatePolicyType `json:"updatePolicy"`
 
@@ -346,6 +347,13 @@ func (c *Config) SetCAInstalled(caInstalled bool) {
 	if err := c.Save(); err != nil {
 		log.Printf("failed to save config: %v", err)
 	}
+}
+
+func (c *Config) GetPACPort() int {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.Proxy.PACPort
 }
 
 func (c *Config) GetVersion() string {

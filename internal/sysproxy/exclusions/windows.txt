@@ -1,0 +1,29 @@
+# This file contains Windows-specific hostnames that Zen will not MITM.
+
+# Windows Update and Microsoft services
+eus-streaming-video-msn.com
+akamaized.net
+wns.windows.com
+live.com
+clientconfig.passport.net
+wustat.windows.com
+windowsupdate.com
+msftncsi.com
+microsoft.com
+msftconnecttest.com
+
+
+# Xbox Live
+device.ra.live.com
+login.live.com
+accounts.live.com
+device.auth.xboxlive.com
+title.mgt.xboxlive.com
+title.auth.xboxlive.com
+user.auth.xboxlive.com
+xsts.auth.xboxlive.com
+dlassets.xboxlive.com
+images-eds.xboxlive.com
+pf.directory.live.com
+privacy.xboxlive.com
+profile.xboxlive.com

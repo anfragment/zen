@@ -1,6 +1,7 @@
-package proxy
+package sysproxy
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -9,16 +10,14 @@ import (
 )
 
 var (
-	exclusionListURLs = []string{
-		"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/common.txt",
-		"https://raw.githubusercontent.com/anfragment/zen/main/proxy/exclusions/apple.txt",
-	}
 	reInterfaceName = regexp.MustCompile(`^[\w\d]+$`)
 	networkService  string
+	//go:embed exclusions/darwin.txt
+	platformSpecificExcludedHosts []byte
 )
 
 // setSystemProxy sets the system proxy to the proxy address.
-func (p *Proxy) setSystemProxy() error {
+func setSystemProxy(pacURL string) error {
 	cmd := exec.Command("sh", "-c", "scutil --nwi | grep 'Network interfaces' | cut -d ' ' -f 3")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -44,32 +43,34 @@ func (p *Proxy) setSystemProxy() error {
 		return errors.New("no network service found")
 	}
 
-	cmd = exec.Command("networksetup", "-setwebproxy", networkService, "127.0.0.1", fmt.Sprint(p.port))
-	if out, err = cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("set web proxy (network service: %s, port: %d): %v\n%s", networkService, p.port, err, out)
-	}
-
-	cmd = exec.Command("networksetup", "-setsecurewebproxy", networkService, "127.0.0.1", fmt.Sprint(p.port))
-	if out, err = cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("set secure web proxy (network service: %s, port: %d): %v\n%s", networkService, p.port, err, out)
-	}
-
-	return nil
-}
-
-func (p *Proxy) unsetSystemProxy() error {
-	if networkService == "" {
-		return fmt.Errorf("trying to unset system proxy without setting it first")
-	}
-
-	cmd := exec.Command("networksetup", "-setwebproxystate", networkService, "off")
+	cmd = exec.Command("networksetup", "-setwebproxystate", networkService, "off")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("unset web proxy (network service: %s): %v\n%s", networkService, err, out)
+		return fmt.Errorf("unset web proxy for network service %q: %v (%q)", networkService, err, out)
 	}
 
 	cmd = exec.Command("networksetup", "-setsecurewebproxystate", networkService, "off")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("unset secure web proxy (network service: %s): %v\n%s", networkService, err, out)
+		return fmt.Errorf("unset secure web proxy for network service %q: %v (%q)", networkService, err, out)
+	}
+
+	cmd = exec.Command("networksetup", "-setautoproxyurl", networkService, pacURL)
+	if out, err = cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("set autoproxyurl to %q for network service %q: %v (%q)", pacURL, networkService, err, out)
+	}
+
+	// There's no need to set autoproxystate to on, as setting the URL already does that.
+
+	return nil
+}
+
+func unsetSystemProxy() error {
+	if networkService == "" {
+		return errors.New("trying to unset system proxy without setting it first")
+	}
+
+	cmd := exec.Command("networksetup", "-setautoproxystate", networkService, "off")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("set autoproxystate to off for network service %q: %v (%q)", networkService, err, out)
 	}
 
 	networkService = ""

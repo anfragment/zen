@@ -54,8 +54,8 @@
     "regional": "Regional"
   },
   "ignoredHostsInput": {
-    "description": "Hosts for transparent proxying, used for services with certificate pinning or those disrupted by proxying. Still subject to ad-blocking at the domain level.",
-    "helper": "One host per line.",
+    "description": "Hosts to exclude from proxying. Use this for services with certificate pinning or those disrupted by proxying.",
+    "helper": "Enter one host per line.",
     "label": "Ignored Hosts"
   },
   "importFilterList": {
