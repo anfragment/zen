@@ -7,8 +7,10 @@ import './index.css';
 import { AddFilterList } from '../../../wailsjs/go/cfg/Config';
 import { AppToaster } from '../../common/toaster';
 import { FilterListType } from '../types';
+import { useTranslation } from 'react-i18next';
 
 export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
+  const { t } = useTranslation();
   const urlRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const [trusted, setTrusted] = useState(false);
@@ -29,9 +31,9 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
           <Tooltip
             content={
               <span className={Classes.TEXT_SMALL}>
-                Trusted lists can use powerful blocking capabilities, such as <code>trusted-</code> scriptlets and
-                JavaScript rules but <strong>may disrupt privacy and security</strong> if hijacked by a malicious party.
-                Only enable this option for lists from sources you trust.
+                {t('createFilterList.trustedCapabilities')} <code>trusted-</code>{' '}
+                {t('createFilterList.trustedScriptlets')} <strong>{t('createFilterList.privacyWarning')}</strong>{' '}
+                {t('createFilterList.ifHijacked')} {t('createFilterList.onlyEnable')}
               </span>
             }
             placement="top"
@@ -39,7 +41,7 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
             matchTargetWidth
           >
             <span className="create-filter-list__trusted-label">
-              <span>Trusted</span>
+              <span>{t('filterLists.trusted')}</span>
               <InfoSign className={Classes.TEXT_MUTED} size={12} />
             </span>
           </Tooltip>
@@ -78,7 +80,7 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
           });
           if (err) {
             AppToaster.show({
-              message: `Failed to add filter list: ${err}`,
+              message: t('createFilterList.addError', { error: err }),
               intent: 'danger',
             });
           }
@@ -90,7 +92,7 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
         }}
         loading={loading}
       >
-        Add filter list
+        {t('createFilterList.addList')}
       </Button>
     </div>
   );

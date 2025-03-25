@@ -1,5 +1,6 @@
 import { CardList, Card, Tag, Collapse, HTMLTable, Intent } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // eslint-disable-next-line import/no-relative-packages
 import { EventsOn } from '../../wailsjs/runtime';
@@ -29,6 +30,7 @@ type FilterAction = {
 };
 
 export function RequestLog() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<FilterAction[]>([]);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export function RequestLog() {
   return (
     <div className="request-log">
       {logs.length === 0 ? (
-        <p className="request-log__empty">Start browsing to see blocked requests.</p>
+        <p className="request-log__empty">{t('requestLog.emptyState')}</p>
       ) : (
         <CardList compact>
           {logs.map((log) => (
@@ -66,6 +68,7 @@ export function RequestLog() {
 }
 
 function RequestLogCard({ log }: { log: FilterAction }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const { hostname } = new URL(log.url, 'http://foo'); // Setting the base url somehow helps with parsing //hostname:port URLs
@@ -96,32 +99,32 @@ function RequestLogCard({ log }: { log: FilterAction }) {
       <Collapse isOpen={isOpen}>
         <Card className="request-log__card__details">
           <p className="request-log__card__details__value">
-            <strong>Method: </strong>
+            <strong>{t('requestLog.method')}: </strong>
             <Tag minimal intent="primary">
               {log.method}
             </Tag>
           </p>
           <p className="request-log__card__details__value">
-            <strong>URL: </strong>
+            <strong>{t('requestLog.url')}: </strong>
             {log.url}
           </p>
           {log.kind === FilterActionKind.Redirect && (
             <p className="request-log__card__details__value">
-              <strong>Redirected to: </strong>
+              <strong>{t('requestLog.redirectedTo')}: </strong>
               {log.to}
             </p>
           )}
           {log.referer && (
             <p className="request-log__card__details__value">
-              <strong>Referer: </strong>
+              <strong>{t('requestLog.referer')}: </strong>
               {log.referer}
             </p>
           )}
           <HTMLTable bordered compact striped className="request-log__card__details__rules">
             <thead>
               <tr>
-                <th>Filter name</th>
-                <th>Rule</th>
+                <th>{t('requestLog.filterName')}</th>
+                <th>{t('requestLog.rule')}</th>
               </tr>
             </thead>
             <tbody>

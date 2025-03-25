@@ -1,10 +1,12 @@
 import { FormGroup, NumericInput } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
+import { useTranslation } from 'react-i18next';
 
 import { GetPort, SetPort } from '../../wailsjs/go/cfg/Config';
 
 export function PortInput() {
+  const { t } = useTranslation();
   const [state, setState] = useState({
     port: 0,
     loading: true,
@@ -23,12 +25,13 @@ export function PortInput() {
 
   return (
     <FormGroup
-      label="Port"
+      label={t('portInput.label')}
       labelFor="port"
       helperText={
         <>
-          The port the proxy server will listen on (0 for random). <br />
-          Using a port below 1024 may require elevated privileges.
+          {t('portInput.description')}
+          <br />
+          {t('portInput.helper')}
         </>
       }
     >

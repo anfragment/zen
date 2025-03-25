@@ -1,5 +1,6 @@
 import { Button, TextArea } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDebouncedCallback } from 'use-debounce';
 
 import './index.css';
@@ -9,6 +10,7 @@ import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 const HELP_URL = 'https://github.com/anfragment/zen/blob/master/docs/external/how-to-rules.md';
 
 export function MyRules() {
+  const { t } = useTranslation();
   const [state, setState] = useState({
     rules: '',
     loading: true,
@@ -34,12 +36,12 @@ export function MyRules() {
     <div className="my-rules">
       <div>
         <Button outlined icon="help" className="my-rules__help-button" onClick={() => BrowserOpenURL(HELP_URL)}>
-          Help
+          {t('myRules.help')}
         </Button>
       </div>
       <TextArea
         fill
-        placeholder="Add your custom rules here..."
+        placeholder={t('myRules.placeholder') as string}
         className="my-rules__textarea"
         value={state.rules}
         onChange={(e) => {

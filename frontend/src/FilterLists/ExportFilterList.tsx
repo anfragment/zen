@@ -1,10 +1,12 @@
 import { MenuItem } from '@blueprintjs/core';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ExportCustomFilterLists } from '../../wailsjs/go/app/App';
 import { AppToaster } from '../common/toaster';
 
 export function ExportFilterList() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
@@ -12,12 +14,12 @@ export function ExportFilterList() {
     try {
       await ExportCustomFilterLists();
       AppToaster.show({
-        message: 'Custom filter lists exported successfully',
+        message: t('exportFilterList.successMessage'),
         intent: 'success',
       });
     } catch (error) {
       AppToaster.show({
-        message: `${error}`,
+        message: t('exportFilterList.errorMessage', { error }),
         intent: 'danger',
       });
     } finally {
@@ -25,5 +27,5 @@ export function ExportFilterList() {
     }
   };
 
-  return <MenuItem icon="upload" text="Export" onClick={handleExport} disabled={loading} />;
+  return <MenuItem icon="upload" text={t('exportFilterList.export')} onClick={handleExport} disabled={loading} />;
 }
