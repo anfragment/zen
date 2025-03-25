@@ -1,13 +1,13 @@
 import { Button, Classes, FormGroup, InputGroup, Switch, Tooltip } from '@blueprintjs/core';
 import { InfoSign } from '@blueprintjs/icons';
-import { useState, useRef } from 'react';
-
-import './index.css';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { AddFilterList } from '../../../wailsjs/go/cfg/Config';
 import { AppToaster } from '../../common/toaster';
 import { FilterListType } from '../types';
-import { useTranslation } from 'react-i18next';
+
+import './index.css';
 
 export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
   const { t } = useTranslation();

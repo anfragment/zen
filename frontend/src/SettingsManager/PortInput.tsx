@@ -1,7 +1,7 @@
 import { FormGroup, NumericInput } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
-import { useDebouncedCallback } from 'use-debounce';
 import { useTranslation } from 'react-i18next';
+import { useDebouncedCallback } from 'use-debounce';
 
 import { GetPort, SetPort } from '../../wailsjs/go/cfg/Config';
 

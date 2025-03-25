@@ -1,9 +1,9 @@
 import { Switch, FormGroup } from '@blueprintjs/core';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { IsEnabled, Enable, Disable } from '../../../wailsjs/go/autostart/Manager';
 import { AppToaster } from '../../common/toaster';
-import { useTranslation } from 'react-i18next';
 
 export function AutostartSwitch() {
   const { t } = useTranslation();
