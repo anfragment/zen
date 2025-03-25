@@ -1,0 +1,131 @@
+{
+  "app": {
+    "proxy": {
+      "description": "The proxy is not active. Click the button below to activate it.",
+      "inactive": "Activate the proxy to see blocked requests"
+    },
+    "tabs": {
+      "filterLists": "Filter lists",
+      "home": "Home",
+      "myRules": "My rules",
+      "settings": "Settings"
+    },
+    "title": "ZEN"
+  },
+  "autoStartSwitch": {
+    "description": "Start Zen automatically when you log in",
+    "disableError": "Failed to disable autostart: {{error}}",
+    "enableError": "Failed to enable autostart: {{error}}",
+    "label": "Autostart"
+  },
+  "createFilterList": {
+    "addError": "Failed to add filter list: {{error}}",
+    "addList": "Add filter list",
+    "example": "Example filter list",
+    "ifHijacked": "if hijacked by a malicious party.",
+    "onlyEnable": "Only enable this option for lists from sources you trust.",
+    "privacyWarning": "may disrupt privacy and security",
+    "trustedCapabilities": "Trusted lists can use powerful blocking capabilities, such as",
+    "trustedScriptlets": "scriptlets and JavaScript rules but"
+  },
+  "exportFilterList": {
+    "errorMessage": "Failed to export filter lists: {{error}}",
+    "export": "Export",
+    "successMessage": "Custom filter lists exported successfully"
+  },
+  "exportLogsButton": {
+    "label": "Export logs",
+    "openError": "Failed to open logs directory: {{error}}",
+    "tooltip": "Open logs directory"
+  },
+  "filterLists": {
+    "delete": "Delete",
+    "more": "More",
+    "removeError": "Failed to remove filter list: {{error}}",
+    "toggleError": "Failed to toggle filter list: {{error}}",
+    "trusted": "Trusted"
+  },
+  "filterTypes": {
+    "ads": "Ads",
+    "custom": "Custom",
+    "general": "General",
+    "malware": "Malware",
+    "privacy": "Privacy",
+    "regional": "Regional"
+  },
+  "ignoredHostsInput": {
+    "description": "Hosts for transparent proxying, used for services with certificate pinning or those disrupted by proxying. Still subject to ad-blocking at the domain level.",
+    "helper": "One host per line.",
+    "label": "Ignored Hosts"
+  },
+  "importFilterList": {
+    "errorMessage": "Failed to import filter lists: {{error}}",
+    "import": "Import",
+    "successMessage": "Custom filter lists imported successfully"
+  },
+  "myRules": {
+    "help": "Help",
+    "placeholder": "Add your custom rules here..."
+  },
+  "portInput": {
+    "description": "The port the proxy server will listen on (0 for random).",
+    "helper": "Using a port below 1024 may require elevated privileges.",
+    "label": "Port"
+  },
+  "requestLog": {
+    "emptyState": "Start browsing to see blocked requests.",
+    "filterName": "Filter name",
+    "method": "Method",
+    "redirectedTo": "Redirected to",
+    "referer": "Referer",
+    "rule": "Rule",
+    "url": "URL"
+  },
+  "settings": {
+    "about": {
+      "github": "GitHub",
+      "tagline": "Your Comprehensive Ad-Blocker and Privacy Guard",
+      "version": "Version"
+    },
+    "ca": {
+      "confirmTitle": "Are you sure you want to uninstall the CA?",
+      "errorMessage": "Failed to uninstall CA: {{error}}",
+      "reasons": {
+        "malfunctioning": "You suspect that your CA installation is malfunctioning. This issue may manifest as a browser error when visiting HTTPS websites, or as other applications being unable to connect to the internet.",
+        "uninstall": "You want to uninstall Zen completely."
+      },
+      "reinstallInfo": "If you start Zen again, a new CA will be installed.",
+      "stopProxyTooltip": "Stop the proxy to uninstall the CA",
+      "successMessage": "CA uninstalled successfully",
+      "uninstallButton": "Uninstall CA",
+      "uninstallConfirm": "Uninstall",
+      "usefulIf": "This can be useful if"
+    },
+    "language": {
+      "helper": "Select your preferred language",
+      "label": "Language"
+    },
+    "sections": {
+      "advanced": "Advanced",
+      "app": "App"
+    },
+    "updates": {
+      "automatic": "Automatic updates",
+      "choosePolicy": "Choose how updates are installed",
+      "description": "If \"Automatic updates\" is selected, the app will automatically check for and apply updates on launch.",
+      "disabled": "Disable updates",
+      "prompt": "Ask before updating",
+      "title": "Updates"
+    }
+  },
+  "startStopButton": {
+    "followGuide": "Follow",
+    "gnomeNote": "System proxy configuration is currently only supported on GNOME.",
+    "perAppBasis": "to set the proxy on a per-app basis.",
+    "start": "Start",
+    "startError": "Failed to start proxy: {{error}}",
+    "stop": "Stop",
+    "stopError": "Failed to stop proxy: {{error}}",
+    "thisGuide": "this guide"
+  }
+}

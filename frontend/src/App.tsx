@@ -1,5 +1,6 @@
 import { Button, ButtonGroup, Icon, IconSize, FocusStyleManager, NonIdealState } from '@blueprintjs/core';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import './App.css';
 
@@ -11,6 +12,7 @@ import { StartStopButton } from './StartStopButton';
 import { ProxyState } from './types';
 
 function App() {
+  const { t } = useTranslation();
   useEffect(() => {
     FocusStyleManager.onlyShowFocusOnTabs();
   }, []);
@@ -28,16 +30,16 @@ function App() {
       </div>
       <ButtonGroup fill minimal className="tabs">
         <Button icon="circle" active={activeTab === 'home'} onClick={() => setActiveTab('home')}>
-          Home
+          {t('app.tabs.home')}
         </Button>
         <Button icon="filter" active={activeTab === 'filterLists'} onClick={() => setActiveTab('filterLists')}>
-          Filter lists
+          {t('app.tabs.filterLists')}
         </Button>
         <Button icon="code" active={activeTab === 'myRules'} onClick={() => setActiveTab('myRules')}>
-          My rules
+          {t('app.tabs.myRules')}
         </Button>
         <Button icon="settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
-          Settings
+          {t('app.tabs.settings')}
         </Button>
       </ButtonGroup>
 
@@ -46,8 +48,8 @@ function App() {
           {proxyState === 'off' ? (
             <NonIdealState
               icon="lightning"
-              title="Activate the proxy to see blocked requests"
-              description="The proxy is not active. Click the button below to activate it."
+              title={t('app.proxy.inactive')}
+              description={t('app.proxy.description') as string}
               className="request-log__non-ideal-state"
             />
           ) : (

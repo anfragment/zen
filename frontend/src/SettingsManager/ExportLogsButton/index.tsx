@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { OpenLogsDirectory } from '../../../wailsjs/go/app/App';
 import './index.css';
 import { AppToaster } from '../../common/toaster';
+import { useTranslation } from 'react-i18next';
 
 export function ExportLogsButton() {
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   return (
-    <Tooltip content="Open logs directory">
+    <Tooltip content={t('exportLogsButton.tooltip') as string}>
       <Button
         loading={loading}
         onClick={async () => {
@@ -18,7 +20,7 @@ export function ExportLogsButton() {
             await OpenLogsDirectory();
           } catch (err) {
             AppToaster.show({
-              message: `Failed to open logs directory: ${err}`,
+              message: t('exportLogsButton.openError', { error: err }),
               intent: 'danger',
             });
           } finally {
@@ -27,7 +29,7 @@ export function ExportLogsButton() {
         }}
         className="export-logs__button"
       >
-        Export logs
+        {t('exportLogsButton.label')}
       </Button>
     </Tooltip>
   );

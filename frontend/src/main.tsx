@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import './style.css';
 import App from './App';
 import ErrorBoundary from './ErrorBoundary';
+import './i18n'
 
 (function polyfillCountryFlagEmojis() {
   if (!isEmojiSupported('😊') || isEmojiSupported('🇨🇭')) {
