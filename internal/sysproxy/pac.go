@@ -9,14 +9,14 @@ import (
 var (
 	pacTemplate = template.Must(
 		template.New("pac").Parse(`function FindProxyForURL(url, host) {
-			var excludedHosts = [{{range $index, $host := .ExcludedHosts}}{{if $index}}, {{end}}"{{$host}}"{{end}}];
-			for (var i = 0; i < excludedHosts.length; i++) {
-				if (dnsDomainIs(host, excludedHosts[i])) {
-					return "DIRECT";
-				}
-			}
-			return "PROXY 127.0.0.1:{{.ProxyPort}}; DIRECT";
-		}`))
+	var excludedHosts = [{{range $index, $host := .ExcludedHosts}}{{if $index}},{{end}}"{{$host}}"{{end}}];
+	for (var i = 0; i < excludedHosts.length; i++) {
+		if (dnsDomainIs(host, excludedHosts[i])) {
+			return "DIRECT";
+		}
+	}
+	return "PROXY 127.0.0.1:{{.ProxyPort}}; DIRECT";
+}`))
 
 	//go:embed exclusions/common.txt
 	commonExcludedHosts []byte
