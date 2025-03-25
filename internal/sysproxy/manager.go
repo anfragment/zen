@@ -5,6 +5,9 @@
 // of characters that can be specified. For example, the ProxyOverride registry key on Windows is limited to
 // approximately 2000 characters, and the equivalent setting on macOS has a limit of around 650 characters.
 // In contrast, PAC files can typically be up to 1MB in size, which is more than sufficient for our use case.
+//
+// To discover more about PAC, see:
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Proxy_servers_and_tunneling/Proxy_Auto-Configuration_PAC_file
 package sysproxy
 
 import (
