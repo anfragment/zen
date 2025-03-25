@@ -8,7 +8,6 @@
 package sysproxy
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
 	"log"
