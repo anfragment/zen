@@ -2,11 +2,11 @@ import { isEmojiSupported } from 'is-emoji-supported';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { GetLocale } from '../wailsjs/go/cfg/Config';
+import { GetLocale, SetLocale } from '../wailsjs/go/cfg/Config';
 
 import App from './App';
 import ErrorBoundary from './ErrorBoundary';
-import { FALLBACK_LANG, initI18n } from './i18n';
+import { detectSystemLocale, initI18n } from './i18n';
 import './style.css';
 
 (function polyfillCountryFlagEmojis() {
@@ -24,11 +24,11 @@ import './style.css';
 })();
 
 async function bootstrap() {
-  let locale = FALLBACK_LANG;
-  try {
-    locale = await GetLocale();
-  } catch {
-    console.warn('Failed to fetch locale, falling back to "en"');
+  let locale = await GetLocale();
+  if (locale === '') {
+    const detected = detectSystemLocale();
+    await SetLocale(detected);
+    locale = detected;
   }
 
   await initI18n(locale);

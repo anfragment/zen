@@ -12,7 +12,7 @@ import { ProxyState } from '../types';
 import { AutostartSwitch } from './AutostartSwitch';
 import { ExportLogsButton } from './ExportLogsButton';
 import { IgnoredHostsInput } from './IgnoredHostsInput';
-import { LanguageSelector } from './LanguageSelector';
+import { LocaleSelector } from './LocaleSelector';
 import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
 import { UpdatePolicyRadioGroup } from './UpdatePolicyRadioGroup';
@@ -48,7 +48,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
         </Tag>
 
         <div className="settings-manager__section-body">
-          <LanguageSelector />
+          <LocaleSelector />
           <AutostartSwitch />
           {state.showUpdateRadio && <UpdatePolicyRadioGroup />}
           <ExportLogsButton />
