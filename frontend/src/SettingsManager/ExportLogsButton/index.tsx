@@ -1,10 +1,10 @@
 import { Button, Tooltip } from '@blueprintjs/core';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { OpenLogsDirectory } from '../../../wailsjs/go/app/App';
 import './index.css';
 import { AppToaster } from '../../common/toaster';
-import { useTranslation } from 'react-i18next';
 
 export function ExportLogsButton() {
   const [loading, setLoading] = useState(false);

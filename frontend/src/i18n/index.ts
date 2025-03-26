@@ -1,31 +1,56 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { detectSystemLanguage } from '../utils/detectSystemLanguage';
 
-import enTranslation from './locales/en.json';
-import ruTranslation from './locales/ru.json';
+import { GetLocale, SetLocale } from '../../wailsjs/go/cfg/Config';
 
-const initialLanguage = detectSystemLanguage();
+import enUS from './locales/en-US.json';
+import ruRU from './locales/ru-RU.json';
 
-i18n.use(initReactI18next).init({
-  resources: {
-    en: {
-      translation: enTranslation,
+export const SUPPORTED_LOCALES = ['en', 'en-US', 'ru', 'ru-RU'] as const;
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export const FALLBACK_LOCALE: SupportedLocale = 'en-US';
+
+export function detectSystemLocale(): SupportedLocale {
+  const browserLang = navigator.language;
+  const detected = SUPPORTED_LOCALES.includes(browserLang as any) ? (browserLang as SupportedLocale) : FALLBACK_LOCALE;
+
+  return detected;
+}
+
+export function getCurrentLocale(): SupportedLocale {
+  return (i18n.language as SupportedLocale) || FALLBACK_LOCALE;
+}
+
+export async function changeLocale(locale: SupportedLocale) {
+  const normalized = SUPPORTED_LOCALES.includes(locale) ? locale : FALLBACK_LOCALE;
+  await i18n.changeLanguage(normalized);
+  await SetLocale(normalized);
+}
+
+export async function initI18n() {
+  let locale = await GetLocale();
+  if (locale === '') {
+    const detected = detectSystemLocale();
+    await SetLocale(detected);
+    locale = detected;
+  }
+
+  return i18n.use(initReactI18next).init({
+    resources: {
+      en: { translation: enUS },
+      'en-US': { translation: enUS },
+      ru: { translation: ruRU },
+      'ru-RU': { translation: ruRU },
     },
-    ru: {
-      translation: ruTranslation,
+    lng: locale,
+    fallbackLng: FALLBACK_LOCALE,
+    returnNull: false,
+    returnEmptyString: false,
+    interpolation: {
+      escapeValue: false,
     },
-  },
-  lng: initialLanguage,
-  fallbackLng: 'en',
-  returnNull: false,
-  returnEmptyString: false,
-  interpolation: {
-    escapeValue: false,
-  },
-  react: {
-    useSuspense: false,
-  },
-});
-
-export default i18n;
+    react: {
+      useSuspense: false,
+    },
+  });
+}

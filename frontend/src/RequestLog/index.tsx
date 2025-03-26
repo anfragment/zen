@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 // eslint-disable-next-line import/no-relative-packages
 import { EventsOn } from '../../wailsjs/runtime';
-
+import { getCurrentLocale } from '../i18n';
 import './index.css';
 
 type Rule = {
@@ -93,7 +93,9 @@ function RequestLogCard({ log }: { log: FilterAction }) {
         <Tag minimal intent={tagIntent}>
           {hostname}
         </Tag>
-        <div className="bp5-text-muted">{log.createdAt.toLocaleTimeString([], { timeStyle: 'short' })}</div>
+        <div className="bp5-text-muted">
+          {log.createdAt.toLocaleTimeString(getCurrentLocale(), { timeStyle: 'short' })}
+        </div>
       </Card>
 
       <Collapse isOpen={isOpen}>

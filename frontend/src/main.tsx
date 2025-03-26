@@ -2,10 +2,10 @@ import { isEmojiSupported } from 'is-emoji-supported';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-import './style.css';
 import App from './App';
 import ErrorBoundary from './ErrorBoundary';
-import './i18n'
+import { initI18n } from './i18n';
+import './style.css';
 
 (function polyfillCountryFlagEmojis() {
   if (!isEmojiSupported('😊') || isEmojiSupported('🇨🇭')) {
@@ -21,14 +21,19 @@ import './i18n'
   document.head.appendChild(style);
 })();
 
-const container = document.getElementById('root');
+async function bootstrap() {
+  await initI18n();
 
-const root = createRoot(container!);
+  const container = document.getElementById('root');
+  const root = createRoot(container!);
 
-root.render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>,
-);
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>,
+  );
+}
+
+bootstrap();
