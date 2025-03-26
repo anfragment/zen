@@ -6,7 +6,7 @@ export default {
   output: 'src/i18n/locales/$LOCALE.json',
 
   // Your languages
-  locales: ['en_US', 'ru_RU'],
+  locales: ['en-US', 'ru-RU'],
 
   // Set to false to disable saving old catalogs
   createOldCatalogs: false,

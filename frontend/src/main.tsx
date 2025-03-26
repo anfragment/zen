@@ -2,11 +2,9 @@ import { isEmojiSupported } from 'is-emoji-supported';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { GetLocale, SetLocale } from '../wailsjs/go/cfg/Config';
-
 import App from './App';
 import ErrorBoundary from './ErrorBoundary';
-import { detectSystemLocale, initI18n } from './i18n';
+import { initI18n } from './i18n';
 import './style.css';
 
 (function polyfillCountryFlagEmojis() {
@@ -24,14 +22,7 @@ import './style.css';
 })();
 
 async function bootstrap() {
-  let locale = await GetLocale();
-  if (locale === '') {
-    const detected = detectSystemLocale();
-    await SetLocale(detected);
-    locale = detected;
-  }
-
-  await initI18n(locale);
+  await initI18n();
 
   const container = document.getElementById('root');
   const root = createRoot(container!);

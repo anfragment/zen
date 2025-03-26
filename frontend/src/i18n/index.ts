@@ -1,38 +1,46 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import { SetLocale } from '../../wailsjs/go/cfg/Config';
+import { GetLocale, SetLocale } from '../../wailsjs/go/cfg/Config';
 
-import enUS from './locales/en_US.json';
-import ruRU from './locales/ru_RU.json';
+import enUS from './locales/en-US.json';
+import ruRU from './locales/ru-RU.json';
 
-export const FALLBACK_LOCALE = 'en_US';
-export const supportedLocales = ['en_US', 'ru_RU'];
+export const SUPPORTED_LOCALES = ['en', 'en-US', 'ru', 'ru-RU'] as const;
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export const FALLBACK_LOCALE: SupportedLocale = 'en-US';
 
-export function detectSystemLocale(): string {
+export function detectSystemLocale(): SupportedLocale {
   const browserLang = navigator.language;
-  const detected = supportedLocales.includes(browserLang) ? browserLang : FALLBACK_LOCALE;
+  const detected = SUPPORTED_LOCALES.includes(browserLang as any) ? (browserLang as SupportedLocale) : FALLBACK_LOCALE;
 
   return detected;
 }
 
-export function getCurrentLocale(): string {
-  return i18n.language || FALLBACK_LOCALE;
+export function getCurrentLocale(): SupportedLocale {
+  return (i18n.language as SupportedLocale) || FALLBACK_LOCALE;
 }
 
-export async function changeLocale(locale: string) {
-  const normalized = supportedLocales.includes(locale) ? locale : FALLBACK_LOCALE;
+export async function changeLocale(locale: SupportedLocale) {
+  const normalized = SUPPORTED_LOCALES.includes(locale) ? locale : FALLBACK_LOCALE;
   await i18n.changeLanguage(normalized);
   await SetLocale(normalized);
 }
 
-export async function initI18n(locale: string) {
+export async function initI18n() {
+  let locale = await GetLocale();
+  if (locale === '') {
+    const detected = detectSystemLocale();
+    await SetLocale(detected);
+    locale = detected;
+  }
+
   return i18n.use(initReactI18next).init({
     resources: {
       en: { translation: enUS },
-      en_US: { translation: enUS },
+      'en-US': { translation: enUS },
       ru: { translation: ruRU },
-      ru_RU: { translation: ruRU },
+      'ru-RU': { translation: ruRU },
     },
     lng: locale,
     fallbackLng: FALLBACK_LOCALE,

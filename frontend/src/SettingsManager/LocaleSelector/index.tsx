@@ -2,16 +2,16 @@ import { Button, FormGroup, MenuItem } from '@blueprintjs/core';
 import { ItemRenderer, Select } from '@blueprintjs/select';
 import { useTranslation } from 'react-i18next';
 
-import { changeLocale, getCurrentLocale } from '../../i18n';
+import { changeLocale, getCurrentLocale, SupportedLocale } from '../../i18n';
 
 interface LocaleItem {
-  value: string;
+  value: SupportedLocale;
   label: string;
 }
 
 const items: LocaleItem[] = [
-  { value: 'en_US', label: 'English' },
-  { value: 'ru_RU', label: 'Русский' },
+  { value: 'en-US', label: 'English' },
+  { value: 'ru-RU', label: 'Русский' },
 ];
 
 export function LocaleSelector() {
