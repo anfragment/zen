@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/anfragment/zen/internal/autostart"
 	"github.com/blang/semver"
@@ -64,16 +65,18 @@ var migrations = map[string]func(c *Config) error{
 			return fmt.Errorf("save config: %v", err)
 		}
 
-		autostart := autostart.Manager{}
-		if enabled, err := autostart.IsEnabled(); err != nil {
-			return fmt.Errorf("check enabled: %w", err)
-		} else if enabled {
-			// Re-enable to change autostart command
-			if err := autostart.Disable(); err != nil {
-				return fmt.Errorf("disable autostart: %w", err)
-			}
-			if err := autostart.Enable(); err != nil {
-				return fmt.Errorf("enable autostart: %w", err)
+		if runtime.GOOS != "darwin" {
+			autostart := autostart.Manager{}
+			if enabled, err := autostart.IsEnabled(); err != nil {
+				return fmt.Errorf("check enabled: %w", err)
+			} else if enabled {
+				// Re-enable to change autostart command
+				if err := autostart.Disable(); err != nil {
+					return fmt.Errorf("disable autostart: %w", err)
+				}
+				if err := autostart.Enable(); err != nil {
+					return fmt.Errorf("enable autostart: %w", err)
+				}
 			}
 		}
 
