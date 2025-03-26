@@ -30,6 +30,10 @@ export function GetMyRules() {
   return window['go']['cfg']['Config']['GetMyRules']();
 }
 
+export function GetPACPort() {
+  return window['go']['cfg']['Config']['GetPACPort']();
+}
+
 export function GetPort() {
   return window['go']['cfg']['Config']['GetPort']();
 }
