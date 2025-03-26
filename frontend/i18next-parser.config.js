@@ -1,14 +1,12 @@
 export default {
   // Where to look for keys
-  input: [
-    'src/**/*.{js,jsx,ts,tsx}',
-  ],
+  input: ['src/**/*.{js,jsx,ts,tsx}'],
 
   // Where to write the translations
   output: 'src/i18n/locales/$LOCALE.json',
 
   // Your languages
-  locales: ['en', 'ru', 'kz'],
+  locales: ['en_US', 'ru_RU'],
 
   // Set to false to disable saving old catalogs
   createOldCatalogs: false,
@@ -29,31 +27,39 @@ export default {
 
   // Functions to look for
   lexers: {
-    js: [{
-      lexer: 'JsxLexer',
-      functions: ['t'], // Look for t() function
-      namespaceFunctions: ['useTranslation', 'withTranslation'] // Also track these
-    }],
-    jsx: [{
-      lexer: 'JsxLexer',
-      functions: ['t'],
-      namespaceFunctions: ['useTranslation', 'withTranslation']
-    }],
-    ts: [{
-      lexer: 'JsxLexer',
-      functions: ['t'],
-      namespaceFunctions: ['useTranslation', 'withTranslation']
-    }],
-    tsx: [{
-      lexer: 'JsxLexer',
-      functions: ['t'],
-      namespaceFunctions: ['useTranslation', 'withTranslation']
-    }],
+    js: [
+      {
+        lexer: 'JsxLexer',
+        functions: ['t'], // Look for t() function
+        namespaceFunctions: ['useTranslation', 'withTranslation'], // Also track these
+      },
+    ],
+    jsx: [
+      {
+        lexer: 'JsxLexer',
+        functions: ['t'],
+        namespaceFunctions: ['useTranslation', 'withTranslation'],
+      },
+    ],
+    ts: [
+      {
+        lexer: 'JsxLexer',
+        functions: ['t'],
+        namespaceFunctions: ['useTranslation', 'withTranslation'],
+      },
+    ],
+    tsx: [
+      {
+        lexer: 'JsxLexer',
+        functions: ['t'],
+        namespaceFunctions: ['useTranslation', 'withTranslation'],
+      },
+    ],
   },
 
   // Default value handling - for English, use the key itself
   defaultValue: function (locale, namespace, key) {
-    if (locale === 'en') {
+    if (locale === 'en_US') {
       return key;
     }
     return ''; // Empty string for other languages
@@ -66,5 +72,5 @@ export default {
   lineEnding: 'auto',
 
   // Verbose output
-  verbose: true
-}
+  verbose: true,
+};
