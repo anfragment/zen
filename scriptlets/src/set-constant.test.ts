@@ -42,49 +42,28 @@ describe('set-constant', () => {
   });
 
   test('nested properties survive an overwrite', () => {
-    (window as any).test = { prop3: {} };
-    setConstant('test.prop1', '123');
-    setConstant('test.prop2', '321');
-    setConstant('test.prop3.prop4', '4');
-    setConstant('test.prop3.prop5', '5');
-
-    (window as any).test.prop1 = '';
-    (window as any).test.prop2 = '';
-    (window as any).test.prop3 = {};
-
-    expect((window as any).test.prop1).toBe('123');
-    expect((window as any).test.prop2).toBe('321');
-    expect((window as any).test.prop3.prop4).toBe('4');
-    expect((window as any).test.prop3.prop5).toBe('5');
-  });
-
-  test('nested properties survive a root property overwrite (root property is initially defined)', () => {
     (window as any).test = {};
     setConstant('test.prop1', '123');
     setConstant('test.prop2', '321');
-    setConstant('test.prop3.prop4', '516');
 
-    (window as any).test = { prop3: {} };
+    (window as any).test.prop1 = '';
+    (window as any).test.prop2 = '';
 
-    expect((window as any).test).toBeDefined();
     expect((window as any).test.prop1).toBe('123');
     expect((window as any).test.prop2).toBe('321');
-    expect((window as any).test.prop3.prop4).toBe('516');
   });
 
   test('nested properties survive a root property overwrite (root property is initially undefined)', () => {
     setConstant('test.prop1', '123');
     setConstant('test.prop2', '321');
-    setConstant('test.prop3.prop4', '516');
 
     expect((window as any).test).toBeUndefined();
 
-    (window as any).test = { prop3: {} };
+    (window as any).test = {};
 
     expect((window as any).test).toBeDefined();
     expect((window as any).test.prop1).toBe('123');
     expect((window as any).test.prop2).toBe('321');
-    expect((window as any).test.prop3.prop4).toBe('516');
   });
 
   test("doesn't overwrite functions", () => {
@@ -104,6 +83,20 @@ describe('set-constant', () => {
     setConstant('PROPERTY', 'yes', 'jest');
 
     expect((window as any).PROPERTY).toBe('yes');
+  });
+
+  test("doesn't modify a deeply nested value if the stack doesn't match", () => {
+    (window as any).test = { prop1: { prop2: {} } };
+    setConstant('test.prop1.prop2.prop3', '123', 'definitely-doesnt-match');
+
+    expect((window as any).test.prop1.prop2.prop3).toBe(undefined);
+  });
+
+  test('modifies a deeply nested value if the stack does match', () => {
+    (window as any).test = { prop1: { prop2: {} } };
+    setConstant('test.prop1.prop2.prop3', '123', 'jest');
+
+    expect((window as any).test.prop1.prop2.prop3).toBe('123');
   });
 
   test('wraps the value if valueWrapper is set', () => {

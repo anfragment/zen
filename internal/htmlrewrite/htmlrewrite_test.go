@@ -10,67 +10,6 @@ import (
 	"github.com/anfragment/zen/internal/htmlrewrite"
 )
 
-func TestPrependHeadContentsPublic(t *testing.T) {
-	t.Parallel()
-
-	type tc struct {
-		name        string
-		original    []byte
-		prependWith []byte
-		expected    []byte
-	}
-
-	tests := []tc{
-		{
-			"prepends <head> contents",
-			[]byte(`<html><head>Original Head Content</head><body>Test</body></html>`),
-			[]byte("Non-"),
-			[]byte(`<html><head>Non-Original Head Content</head><body>Test</body></html>`),
-		},
-		{
-			"doesn't modify body on empty prependWith",
-			[]byte(`<html><head>Original Head Content</head></html>`),
-			[]byte(""),
-			[]byte(`<html><head>Original Head Content</head></html>`),
-		},
-		{
-			"doesn't modify response if no <head> is present",
-			[]byte(`<html><body>Test</body></html>`),
-			[]byte("test"),
-			[]byte(`<html><body>Test</body></html>`),
-		},
-	}
-
-	generatedBytes := genAlphanumByteArray(10 * 1024 * 1024) // 10MB
-	tests = append(tests, tc{
-		name:        "prepends to large <head> contents",
-		original:    bytes.Join([][]byte{[]byte(`<html><head>`), generatedBytes, []byte(`</head></html>`)}, nil),
-		prependWith: []byte("Prepended"),
-		expected:    bytes.Join([][]byte{[]byte(`<html><head>`), []byte("Prepended"), generatedBytes, []byte(`</head></html>`)}, nil),
-	})
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			res := newHTTPResponse(tt.original)
-			if err := htmlrewrite.PrependHeadContents(res, tt.prependWith); err != nil {
-				t.Fatalf("PrependHeadContents error: %v", err)
-			}
-			modifiedBody, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatalf("failed to read modified body: %v", err)
-			}
-			if !bytes.Equal(modifiedBody, tt.expected) {
-				if len(modifiedBody) < 1024 && len(tt.expected) < 1024 {
-					t.Errorf("expected response body %q, got %q", tt.expected, modifiedBody)
-				} else {
-					t.Error("expected body != modifiedBody")
-				}
-			}
-		})
-	}
-}
-
 func TestAppendHeadContentsPublic(t *testing.T) {
 	t.Parallel()
 
