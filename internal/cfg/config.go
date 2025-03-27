@@ -200,6 +200,12 @@ func (c *Config) AddFilterList(list FilterList) string {
 	c.Lock()
 	defer c.Unlock()
 
+	for _, existingList := range c.Filter.FilterLists {
+		if existingList.URL == list.URL {
+			return fmt.Sprintf("filter list with the URL '%s' already exists", list.URL)
+		}
+	}
+
 	c.Filter.FilterLists = append(c.Filter.FilterLists, list)
 	if err := c.Save(); err != nil {
 		log.Printf("failed to save config: %v", err)
