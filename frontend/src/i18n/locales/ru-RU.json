@@ -122,6 +122,5 @@
     "stop": "Остановить",
     "stopError": "Не удалось остановить прокси: {{error}}",
     "thisGuide": "этому руководству"
-  },
-  "trustedListWarning": ""
+  }
 }
