@@ -1,21 +1,21 @@
 # Localization Guide
 
-This guide will help you contribute translations to the Zen.
+This guide will help you contribute translations to Zen.
 
 ## Overview of the localization system
 
 - Zen uses the [i18next](https://www.i18next.com/) framework for localization, as well as [react-i18next](https://react.i18next.com/) for easy integration with React.
-- Translation files are stored as JSON files in the [`frontend/src/i18n/locales`](https://github.com/anfragment/zen/tree/master/frontend/src/i18n/locales) directory.
+- Translation files are stored as JSON files in the [`frontend/src/i18n/locales`](/frontend/src/i18n/locales) directory.
 - The main language is English, and the default locale is `en-US`.
-- Zen uses locales rather than languages. [Learn more about the difference](https://poeditor.com/blog/locale-vs-language/).
+- Internally, Zen uses locales rather than languages. [Learn more about the difference](https://poeditor.com/blog/locale-vs-language/).
 
 ## Currently supported locales
 
-Currently supported locales can be found in the `SUPPORTED_LOCALES` array in the [`frontend/src/i18n/index.ts`](https://github.com/anfragment/zen/blob/master/frontend/src/i18n/index.ts#L9) file.
+Currently supported locales can be found in the `SUPPORTED_LOCALES` array in the [`frontend/src/i18n/index.ts`](/frontend/src/i18n/index.ts#L9) file.
 
-## Adding a new language
+## Adding a new locale
 
-To add a new language to Zen, you'll need to:
+To add a new locale to Zen, you'll need to:
 
 1. Fork the repository
 2. Set up your development environment
@@ -36,40 +36,51 @@ Follow [these instructions](https://docs.github.com/en/pull-requests/collaborati
 
 ### Step 3: Create a Translation File
 
-1. Copy the English template at [`en-US.json`](https://github.com/anfragment/zen/blob/master/frontend/src/i18n/locales/en-US.json) to a new file named according to your language code (e.g., `de-DE.json` for German)
+1. Copy the English template at [`en-US.json`](/frontend/src/i18n/locales/en-US.json) to a new file named according to your locale code (e.g., `de-DE.json` for German)
 2. Translate all strings in the new file, keeping the JSON structure intact
 
 ### Step 4: Update the i18n Configuration
 
 You'll need to modify two files:
 
-1. In [`frontend/i18next-parser.config.js`](https://github.com/anfragment/zen/blob/master/frontend/i18next-parser.config.js#L9), add your language code to the `locales` array:
+1. In [`frontend/i18next-parser.config.js`](/frontend/i18next-parser.config.js#L9), add your locale code to the `locales` array:
 
-  ```js
+  ```typescript
   locales: ['en-US', 'ru-RU', 'your-locale-code'],
   ```
 
-2. In [`frontend/src/i18n/index.ts`](https://github.com/anfragment/zen/blob/master/frontend/src/i18n/index.ts):
+2. In [`frontend/src/i18n/index.ts`](/frontend/src/i18n/index.ts):
 
-- Add an [import for your translation file](https://github.com/anfragment/zen/blob/master/frontend/src/i18n/index.ts#L6-L7)
-- Add your locale to the [`SUPPORTED_LOCALES` array](https://github.com/anfragment/zen/blob/master/frontend/src/i18n/index.ts#L9)
-- Add your translation to the [`resources`](https://github.com/anfragment/zen/blob/master/frontend/src/i18n/index.ts#L39-L44) in the `initI18n` function
+- Add an [import for your translation file](/frontend/src/i18n/index.ts#L6).
+- Add your locale to the [`SUPPORTED_LOCALES` array](/frontend/src/i18n/index.ts#L9).
+- Add your translation to the [`resources`](/frontend/src/i18n/index.ts#L39) object in the `initI18n` function. Since a user's preferred locale [may not include a region code](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/language#value), you should also provide a fallback for the base language (e.g., `de` for `de-DE`).
+
+  ```typescript
+  resources: {
+    en: { translation: enUS },
+    'en-US': { translation: enUS },
+    ru: { translation: ruRU },
+    'ru-RU': { translation: ruRU },
+    de: { translation: deDE },
+    'de-DE': { translation: deDE },
+  },
+  ```
 
 ### Step 5: Update the Language Selector
 
-Update the [`LocaleSelector` component](https://github.com/anfragment/zen/blob/master/frontend/src/SettingsManager/LocaleSelector/index.tsx#L12-L15) to include your language in the dropdown menu.
+Update the [`LocaleSelector` component](/frontend/src/SettingsManager/LocaleSelector/index.tsx#L12) to include your locale in the dropdown menu.
 
 ### Step 6: Test your translations
 
-1. Navigate to Settings > Language to switch to your language
-2. Test the application thoroughly with your language enabled
+1. Navigate to Settings > Language to switch to your locale
+2. Test the application thoroughly with your locale enabled
 
 ### Step 7: Submit a Pull Request
 
 Follow [this guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) to submit a Pull Request with your changes.
 
-> [!IMPORTANT]  
-> By contributing translations, you agree that your work will be licensed under the MIT License as [used by the project](https://github.com/anfragment/zen/blob/master/LICENSE).
+> [!IMPORTANT]
+> By contributing translations, you agree that your work will be licensed under the MIT License as [used by the project](/LICENSE).
 
 ## Translation best practices
 
