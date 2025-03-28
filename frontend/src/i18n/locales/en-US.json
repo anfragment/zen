@@ -21,11 +21,7 @@
     "addError": "Failed to add filter list: {{error}}",
     "addList": "Add filter list",
     "example": "Example filter list",
-    "ifHijacked": "if hijacked by a malicious party.",
-    "onlyEnable": "Only enable this option for lists from sources you trust.",
-    "privacyWarning": "may disrupt privacy and security",
-    "trustedCapabilities": "Trusted lists can use powerful blocking capabilities, such as",
-    "trustedScriptlets": "scriptlets and JavaScript rules but"
+    "trustedListsWarning": "Trusted lists can use powerful blocking capabilities, such as <code>trusted-</code> scriptlets and JavaScript rules but <strong>may disrupt privacy and security</strong> if hijacked by a malicious party. Only enable this option for lists from sources you trust."
   },
   "exportFilterList": {
     "errorMessage": "Failed to export filter lists: {{error}}",
