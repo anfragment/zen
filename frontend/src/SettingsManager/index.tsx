@@ -74,6 +74,23 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
         <div>{t('settings.about.tagline')}</div>
         <div>
           {t('settings.about.version')}: {state.version}
+          <span className="settings-manager__about-changelog">
+            ({/* eslint-disable-next-line jsx-a11y/anchor-is-valid  */}
+            <a
+              onClick={() => BrowserOpenURL('https://github.com/anfragment/zen/blob/master/CHANGELOG.md')}
+              tabIndex={0}
+              role="button"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  BrowserOpenURL('https://github.com/anfragment/zen/blob/master/CHANGELOG.md');
+                }
+              }}
+            >
+              changelog
+            </a>
+            )
+          </span>
         </div>
         <div>© 2025 Ansar Smagulov</div>
         <Button
