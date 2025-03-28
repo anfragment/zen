@@ -45,6 +45,7 @@ Unsure which version to download? Learn at [Apple's website](https://support.app
 
 - AUR: [👾 zen-adblocker-bin](https://aur.archlinux.org/packages/zen-adblocker-bin)
 - x64: [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_linux_amd64.tar.gz)
+- ARM64: [📦 Portable](https://github.com/anfragment/zen/releases/latest/download/Zen_linux_arm64.tar.gz)
 
 On Linux, automatic proxy configuration is currently only supported on GNOME-based desktop environments.
 
