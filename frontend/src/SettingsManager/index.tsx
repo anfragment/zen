@@ -17,6 +17,9 @@ import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
 import { UpdatePolicyRadioGroup } from './UpdatePolicyRadioGroup';
 
+const CHANGELOG_URL = 'https://github.com/anfragment/zen/blob/master/CHANGELOG.md';
+const GITHUB_URL = 'https://github.com/anfragment/zen';
+
 export interface SettingsManagerProps {
   proxyState: ProxyState;
 }
@@ -77,13 +80,13 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
           <span className="settings-manager__about-changelog">
             ({/* eslint-disable-next-line jsx-a11y/anchor-is-valid  */}
             <a
-              onClick={() => BrowserOpenURL('https://github.com/anfragment/zen/blob/master/CHANGELOG.md')}
+              onClick={() => BrowserOpenURL(CHANGELOG_URL)}
               tabIndex={0}
               role="button"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  BrowserOpenURL('https://github.com/anfragment/zen/blob/master/CHANGELOG.md');
+                  BrowserOpenURL(CHANGELOG_URL);
                 }
               }}
             >
@@ -98,7 +101,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
           small
           icon="git-branch"
           className="settings-manager__about-github-button"
-          onClick={() => BrowserOpenURL('https://github.com/anfragment/zen')}
+          onClick={() => BrowserOpenURL(GITHUB_URL)}
         >
           {t('settings.about.github')}
         </Button>
