@@ -1,7 +1,7 @@
 import { Button, Classes, FormGroup, InputGroup, Switch, Tooltip } from '@blueprintjs/core';
 import { InfoSign } from '@blueprintjs/icons';
 import { useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 import { AddFilterList } from '../../../wailsjs/go/cfg/Config';
 import { AppToaster } from '../../common/toaster';
@@ -31,9 +31,13 @@ export function CreateFilterList({ onAdd }: { onAdd: () => void }) {
           <Tooltip
             content={
               <span className={Classes.TEXT_SMALL}>
-                {t('createFilterList.trustedCapabilities')} <code>trusted-</code>{' '}
-                {t('createFilterList.trustedScriptlets')} <strong>{t('createFilterList.privacyWarning')}</strong>{' '}
-                {t('createFilterList.ifHijacked')} {t('createFilterList.onlyEnable')}
+                <Trans
+                  i18nKey="createFilterList.trustedListsWarning"
+                  components={{
+                    code: <code />,
+                    strong: <strong />,
+                  }}
+                />
               </span>
             }
             placement="top"
