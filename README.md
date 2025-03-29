@@ -80,7 +80,7 @@ Follow the [getting started guide](docs/internal/index.md#getting-started) to be
 
 ## Contributing
 
-Zen needs your help! You can file bug reports, suggest features, and submit pull requests. Please refer to the [Contributing Guidelines](CONTRIBUTING.md) for more information.
+Zen needs your help! You can report bugs, suggest and implement features, improve the codebase, or help translate Zen into your language. Please refer to the [Contributing Guidelines](CONTRIBUTING.md) for more information.
 
 ## License
 
