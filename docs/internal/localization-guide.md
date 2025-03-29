@@ -1,4 +1,4 @@
-# Localization Guide
+# Localization guide
 
 This guide will help you contribute translations to Zen.
 
@@ -34,12 +34,12 @@ Follow [these instructions](https://docs.github.com/en/pull-requests/collaborati
 1. Install all dependencies as described in [requirements.md](requirements.md)
 2. Run `task` in the project root directory to start the development server
 
-### Step 3: Create a Translation File
+### Step 3: Create a translation file
 
 1. Copy the English template at [`en-US.json`](/frontend/src/i18n/locales/en-US.json) to a new file named according to your locale code (e.g., `de-DE.json` for German)
 2. Translate all strings in the new file, keeping the JSON structure intact
 
-### Step 4: Update the i18n Configuration
+### Step 4: Update the i18n configuration
 
 You'll need to modify two files:
 
@@ -66,7 +66,7 @@ You'll need to modify two files:
   },
   ```
 
-### Step 5: Update the Language Selector
+### Step 5: Update the language selector
 
 Update the [`LocaleSelector` component](/frontend/src/SettingsManager/LocaleSelector/index.tsx#L12) to include your locale in the dropdown menu.
 
@@ -89,7 +89,7 @@ Follow [this guide](https://docs.github.com/en/pull-requests/collaborating-with-
 3. **Test your translations**: Run the application to verify your translations appear correctly
 4. **Keep similar length**: Try to keep translations similar in length to the original
 
-## Extracting Translation Keys
+## Extracting translation keys
 
 If you're a developer adding new text to the application, you can run:
 
@@ -99,6 +99,6 @@ task frontend:extract-translations
 
 This will scan the source code and update the translation files with new keys.
 
-## Need Help?
+## Need help?
 
 If you have any questions about the translation process, feel free to ask in the [Discussions](https://github.com/anfragment/zen/discussions/categories/contributor-q-a) section of the GitHub repository, join our [Discord server](https://discord.gg/jSzEwby7JY), or contact one of the project leads directly via email.
