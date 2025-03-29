@@ -27,12 +27,12 @@ To add a new locale to Zen, you'll need to:
 
 ### Step 1: Fork the repository
 
-Follow [these instructions](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) to create a fork of Zen.
+Follow [these instructions](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) to create a fork of Zen.
 
 ### Step 2: Set up your development environment
 
-1. Install all dependencies as described in [requirements.md](requirements.md)
-2. Run `task` in the project root directory to start the development server
+1. Install Go, Node.js with npm, Wails, and optionally Task as described in [requirements.md](requirements.md)
+2. In the project root directory, run `wails dev` (or `task` if you have Task installed) to start the development server
 
 ### Step 3: Create a translation file
 
