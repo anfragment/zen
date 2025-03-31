@@ -43,9 +43,10 @@ type App struct {
 	proxyOn            bool
 	systemProxyManager *sysproxy.Manager
 	// proxyMu ensures that proxy is only started or stopped once at a time.
-	proxyMu    sync.Mutex
-	certStore  *certstore.DiskCertStore
-	systrayMgr *systray.Manager
+	proxyMu         sync.Mutex
+	certStore       *certstore.DiskCertStore
+	systrayMgr      *systray.Manager
+	filterListCache *filter.FilterListCache
 }
 
 // NewApp initializes the app.
@@ -71,6 +72,7 @@ func NewApp(name string, config *cfg.Config, startOnDomReady bool) (*App, error)
 		certStore:          certStore,
 		startOnDomReady:    startOnDomReady,
 		systemProxyManager: systemProxyManager,
+		filterListCache:    filter.NewFilterListCache(),
 	}, nil
 }
 
@@ -179,7 +181,7 @@ func (a *App) StartProxy() (err error) {
 	cssRulesInjector := cssrule.NewInjector()
 	jsRuleInjector := jsrule.NewInjector()
 
-	filter, err := filter.NewFilter(a.config, networkRules, scriptletInjector, cosmeticRulesInjector, cssRulesInjector, jsRuleInjector, a.eventsHandler)
+	filter, err := filter.NewFilter(a.config, networkRules, scriptletInjector, cosmeticRulesInjector, cssRulesInjector, jsRuleInjector, a.eventsHandler, a.filterListCache)
 	if err != nil {
 		return fmt.Errorf("create filter: %v", err)
 	}

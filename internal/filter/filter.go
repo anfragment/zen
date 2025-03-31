@@ -2,6 +2,7 @@ package filter
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -75,6 +76,7 @@ type Filter struct {
 	cssRulesInjector      cssRulesInjector
 	jsRuleInjector        jsRuleInjector
 	eventsEmitter         filterEventsEmitter
+	filterListCache       *FilterListCache
 }
 
 var (
@@ -85,7 +87,7 @@ var (
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, networkRules networkRules, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, networkRules networkRules, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter, filterListCache *FilterListCache) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -107,6 +109,9 @@ func NewFilter(config config, networkRules networkRules, scriptletsInjector scri
 	if jsRuleInjector == nil {
 		return nil, errors.New("jsRuleInjector is nil")
 	}
+	if filterListCache == nil {
+		return nil, errors.New("filterListCache is nil")
+	}
 
 	f := &Filter{
 		config:                config,
@@ -116,6 +121,7 @@ func NewFilter(config config, networkRules networkRules, scriptletsInjector scri
 		cssRulesInjector:      cssRulesInjector,
 		jsRuleInjector:        jsRuleInjector,
 		eventsEmitter:         eventsEmitter,
+		filterListCache:       filterListCache,
 	}
 	f.init()
 
@@ -134,18 +140,38 @@ func (f *Filter) init() {
 		wg.Add(1)
 		go func(filterList cfg.FilterList) {
 			defer wg.Done()
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, filterList.URL, nil)
-			if err != nil {
-				log.Printf("filter initialization error: %v", err)
-				return
+
+			content, ok := f.filterListCache.Get(filterList.URL)
+			if !ok {
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, filterList.URL, nil)
+				if err != nil {
+					log.Printf("filter initialization error: %v", err)
+					return
+				}
+
+				client := &http.Client{
+					Timeout: 10 * time.Second,
+				}
+				resp, err := client.Do(req)
+				if err != nil {
+					log.Printf("filter initialization error: %v", err)
+					return
+				}
+				defer resp.Body.Close()
+
+				content, err = io.ReadAll(resp.Body)
+				if err != nil {
+					log.Printf("filter initialization error: %v", err)
+					return
+				}
+
+				f.filterListCache.Set(filterList.URL, content)
+				log.Printf("filter initialization: downloaded and cached content for %q", filterList.URL)
+			} else {
+				log.Printf("filter initialization: used cached content for %q", filterList.URL)
 			}
-			resp, err := http.DefaultClient.Do(req) // FIXME: use a custom client with a timeout
-			if err != nil {
-				log.Printf("filter initialization error: %v", err)
-				return
-			}
-			defer resp.Body.Close()
-			rules, exceptions := f.ParseAndAddRules(resp.Body, &filterList.Name, filterList.Trusted)
+
+			rules, exceptions := f.ParseAndAddRules(bytes.NewReader(content), &filterList.Name, filterList.Trusted)
 			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, filterList.URL)
 		}(filterList)
 	}
