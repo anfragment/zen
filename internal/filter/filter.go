@@ -18,6 +18,7 @@ import (
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/cosmetic"
 	"github.com/anfragment/zen/internal/cssrule"
+	"github.com/anfragment/zen/internal/filter/filterListStore"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/networkrules/rule"
@@ -76,7 +77,6 @@ type Filter struct {
 	cssRulesInjector      cssRulesInjector
 	jsRuleInjector        jsRuleInjector
 	eventsEmitter         filterEventsEmitter
-	filterListCache       *FilterListCache
 }
 
 var (
@@ -87,7 +87,7 @@ var (
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, networkRules networkRules, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter, filterListCache *FilterListCache) (*Filter, error) {
+func NewFilter(config config, networkRules networkRules, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -109,9 +109,6 @@ func NewFilter(config config, networkRules networkRules, scriptletsInjector scri
 	if jsRuleInjector == nil {
 		return nil, errors.New("jsRuleInjector is nil")
 	}
-	if filterListCache == nil {
-		return nil, errors.New("filterListCache is nil")
-	}
 
 	f := &Filter{
 		config:                config,
@@ -121,7 +118,6 @@ func NewFilter(config config, networkRules networkRules, scriptletsInjector scri
 		cssRulesInjector:      cssRulesInjector,
 		jsRuleInjector:        jsRuleInjector,
 		eventsEmitter:         eventsEmitter,
-		filterListCache:       filterListCache,
 	}
 	f.init()
 
@@ -141,37 +137,13 @@ func (f *Filter) init() {
 		go func(filterList cfg.FilterList) {
 			defer wg.Done()
 
-			content, ok := f.filterListCache.Get(filterList.URL)
-			if !ok {
-				req, err := http.NewRequestWithContext(ctx, http.MethodGet, filterList.URL, nil)
-				if err != nil {
-					log.Printf("filter initialization error: %v", err)
-					return
-				}
-
-				client := &http.Client{
-					Timeout: 10 * time.Second,
-				}
-				resp, err := client.Do(req)
-				if err != nil {
-					log.Printf("filter initialization error: %v", err)
-					return
-				}
-				defer resp.Body.Close()
-
-				content, err = io.ReadAll(resp.Body)
-				if err != nil {
-					log.Printf("filter initialization error: %v", err)
-					return
-				}
-
-				f.filterListCache.Set(filterList.URL, content)
-				log.Printf("filter initialization: downloaded and cached content for %q", filterList.URL)
-			} else {
-				log.Printf("filter initialization: used cached content for %q", filterList.URL)
+			content, err := filterListStore.Get(ctx, filterList.URL)
+			if err != nil {
+				log.Printf("failed to fetch filter list: %v", err)
+				return
 			}
-
 			rules, exceptions := f.ParseAndAddRules(bytes.NewReader(content), &filterList.Name, filterList.Trusted)
+
 			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, filterList.URL)
 		}(filterList)
 	}
@@ -179,9 +151,22 @@ func (f *Filter) init() {
 
 	myRules := f.config.GetMyRules()
 	filterName := "My rules"
+
+	var ruleCount, exceptionCount int
 	for _, rule := range myRules {
-		f.AddRule(rule, &filterName, true)
+		isException, err := f.AddRule(rule, &filterName, true)
+		if err != nil {
+			log.Printf("failed to add rule from %q: %v", filterName, err)
+			continue
+		}
+		if isException {
+			exceptionCount++
+		} else {
+			ruleCount++
+		}
 	}
+
+	log.Printf("filter initialization: added %d rules and %d exceptions from %q", ruleCount, exceptionCount, filterName)
 }
 
 // ParseAndAddRules parses the rules from the given reader and adds them to the filter.
