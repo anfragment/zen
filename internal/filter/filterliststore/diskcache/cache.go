@@ -1,7 +1,7 @@
 package diskcache
 
 import (
-	"crypto/md5"
+	"crypto/md5" // #nosec G501 -- MD5 is used to hash data, not for cryptographic purposes.
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -15,7 +15,7 @@ import (
 const cacheTTL = 24 * time.Hour
 
 func getCacheDir() (string, error) {
-	base, err := os.UserCacheDir()
+	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
@@ -23,7 +23,7 @@ func getCacheDir() (string, error) {
 }
 
 func hashURL(url string) string {
-	sum := md5.Sum([]byte(url))
+	sum := md5.Sum([]byte(url)) // #nosec G401
 	return hex.EncodeToString(sum[:])
 }
 
