@@ -17,6 +17,7 @@ import (
 	"github.com/anfragment/zen/internal/cosmetic"
 	"github.com/anfragment/zen/internal/cssrule"
 	"github.com/anfragment/zen/internal/filter"
+	"github.com/anfragment/zen/internal/filter/filterListStore"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/networkrules"
@@ -179,7 +180,8 @@ func (a *App) StartProxy() (err error) {
 	cssRulesInjector := cssrule.NewInjector()
 	jsRuleInjector := jsrule.NewInjector()
 
-	filter, err := filter.NewFilter(a.config, networkRules, scriptletInjector, cosmeticRulesInjector, cssRulesInjector, jsRuleInjector, a.eventsHandler)
+	filterListStore := filterListStore.NewFilterListStore()
+	filter, err := filter.NewFilter(a.config, networkRules, scriptletInjector, cosmeticRulesInjector, cssRulesInjector, jsRuleInjector, a.eventsHandler, filterListStore)
 	if err != nil {
 		return fmt.Errorf("create filter: %v", err)
 	}

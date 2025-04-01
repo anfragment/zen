@@ -1,7 +1,6 @@
 package filterListStore
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,12 +13,18 @@ var httpClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
-func Get(ctx context.Context, url string) ([]byte, error) {
+type FilterListStore struct{}
+
+func NewFilterListStore() *FilterListStore {
+	return &FilterListStore{}
+}
+
+func (st *FilterListStore) Get(url string) ([]byte, error) {
 	if content, ok := diskcache.Load(url); ok {
 		return content, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}

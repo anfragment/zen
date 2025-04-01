@@ -3,7 +3,6 @@ package filter
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,12 +12,10 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/anfragment/zen/internal/cfg"
 	"github.com/anfragment/zen/internal/cosmetic"
 	"github.com/anfragment/zen/internal/cssrule"
-	"github.com/anfragment/zen/internal/filter/filterListStore"
 	"github.com/anfragment/zen/internal/jsrule"
 	"github.com/anfragment/zen/internal/logger"
 	"github.com/anfragment/zen/internal/networkrules/rule"
@@ -66,6 +63,10 @@ type jsRuleInjector interface {
 	Inject(*http.Request, *http.Response) error
 }
 
+type filterListStore interface {
+	Get(url string) ([]byte, error)
+}
+
 // Filter is capable of parsing Adblock-style filter lists and hosts rules and matching URLs against them.
 //
 // Safe for concurrent use.
@@ -77,6 +78,7 @@ type Filter struct {
 	cssRulesInjector      cssRulesInjector
 	jsRuleInjector        jsRuleInjector
 	eventsEmitter         filterEventsEmitter
+	filterListStore       filterListStore
 }
 
 var (
@@ -87,7 +89,7 @@ var (
 )
 
 // NewFilter creates and initializes a new filter.
-func NewFilter(config config, networkRules networkRules, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter) (*Filter, error) {
+func NewFilter(config config, networkRules networkRules, scriptletsInjector scriptletsInjector, cosmeticRulesInjector cosmeticRulesInjector, cssRulesInjector cssRulesInjector, jsRuleInjector jsRuleInjector, eventsEmitter filterEventsEmitter, filterListStore filterListStore) (*Filter, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -109,6 +111,9 @@ func NewFilter(config config, networkRules networkRules, scriptletsInjector scri
 	if jsRuleInjector == nil {
 		return nil, errors.New("jsRuleInjector is nil")
 	}
+	if filterListStore == nil {
+		return nil, errors.New("filterListStore is nil")
+	}
 
 	f := &Filter{
 		config:                config,
@@ -118,6 +123,7 @@ func NewFilter(config config, networkRules networkRules, scriptletsInjector scri
 		cssRulesInjector:      cssRulesInjector,
 		jsRuleInjector:        jsRuleInjector,
 		eventsEmitter:         eventsEmitter,
+		filterListStore:       filterListStore,
 	}
 	f.init()
 
@@ -127,8 +133,6 @@ func NewFilter(config config, networkRules networkRules, scriptletsInjector scri
 // init initializes the filter by downloading and parsing the filter lists.
 func (f *Filter) init() {
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 	for _, filterList := range f.config.GetFilterLists() {
 		if !filterList.Enabled {
 			continue
@@ -137,7 +141,7 @@ func (f *Filter) init() {
 		go func(filterList cfg.FilterList) {
 			defer wg.Done()
 
-			content, err := filterListStore.Get(ctx, filterList.URL)
+			content, err := f.filterListStore.Get(filterList.URL)
 			if err != nil {
 				log.Printf("failed to fetch filter list: %v", err)
 				return
