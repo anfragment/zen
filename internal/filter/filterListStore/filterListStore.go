@@ -1,4 +1,4 @@
-package filterListStore
+package filterliststore
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anfragment/zen/internal/filter/filterListStore/diskcache"
+	"github.com/anfragment/zen/internal/filter/filterliststore/diskcache"
 )
 
 var httpClient = &http.Client{
