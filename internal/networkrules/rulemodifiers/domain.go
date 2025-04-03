@@ -97,8 +97,8 @@ func (m *domainModifierEntry) Parse(entry string) error {
 		return nil
 	}
 
-	if entry[len(entry)-1] == '*' {
-		m.tld = entry[:len(entry)-1]
+	if strings.HasSuffix(entry, ".*") {
+		m.tld = strings.TrimSuffix(entry, ".*")
 		if len(m.tld) == 0 {
 			return errors.New("tld is empty")
 		}
@@ -114,7 +114,8 @@ func (m *domainModifierEntry) MatchDomain(domain string) bool {
 	case m.regular != "":
 		return m.regular == domain || strings.HasSuffix(domain, "."+m.regular)
 	case m.tld != "":
-		return strings.HasPrefix(domain, m.tld) || strings.Contains(domain, "."+m.tld)
+		segments := strings.Split(domain, ".")
+		return (len(segments) > 1 && segments[len(segments)-2] == m.tld) || (len(segments) > 2 && segments[len(segments)-3] == m.tld)
 	case m.regexp != nil:
 		return m.regexp.MatchString(domain)
 	default:

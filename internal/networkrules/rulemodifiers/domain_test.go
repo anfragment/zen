@@ -24,6 +24,7 @@ func TestDomainModifier(t *testing.T) {
 		{"TLD - match", "domain=example.*", "http://example.com/", true},
 		{"TLD - subdomain and path match", "domain=example.*", "https://www.example.co.uk/some/path", true},
 		{"TLD - no match with unrelated domain ending with tld", "domain=example.*", "https://testexample.com", false},
+		{"TLD - no match with subdomain", "domain=example.*", "http://example.test1.test2.com", false},
 		{"TLD - no match with unrelated domain", "domain=example.*", "http://test.com", false},
 		{"Regex - match com", `domain=/^example\.(com|org)$/`, "http://example.com/", true},
 		{"Regex - match org", `domain=/^example\.(com|org)$/`, "http://example.org/", true},
