@@ -2,6 +2,7 @@ package rule
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -52,7 +53,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		}
 
 		var modifier rulemodifiers.Modifier
-		isOr := false
+		var isOr bool // true if modifier belongs to OrModifiers; false if it belongs to AndModifiers
 		switch {
 		case isKind("domain"):
 			modifier = &rulemodifiers.DomainModifier{}
@@ -82,7 +83,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 			// TODO: should act as "popup" modifier once it gets implemented
 			continue
 		default:
-			return fmt.Errorf("unknown modifier %s", m)
+			return fmt.Errorf("unknown modifier %q", m)
 		}
 
 		if err := modifier.Parse(m); err != nil {
@@ -98,7 +99,7 @@ func (rm *Rule) ParseModifiers(modifiers string) error {
 		} else if modifyingModifier, ok := modifier.(rulemodifiers.ModifyingModifier); ok {
 			rm.ModifyingModifiers = append(rm.ModifyingModifiers, modifyingModifier)
 		} else {
-			panic(fmt.Sprintf("got unknown modifier type %T for modifier %s", modifier, m))
+			log.Fatalf("got unknown modifier type %T for modifier %s", modifier, m)
 		}
 	}
 
