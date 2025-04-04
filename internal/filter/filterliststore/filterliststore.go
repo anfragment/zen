@@ -3,6 +3,7 @@ package filterliststore
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -13,14 +14,23 @@ var httpClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
-type FilterListStore struct{}
+type FilterListStore struct {
+	cache *diskcache.Cache
+}
 
 func NewFilterListStore() *FilterListStore {
-	return &FilterListStore{}
+	cache, err := diskcache.New()
+	if err != nil {
+		log.Fatalf("failed to init diskcache: %v", err)
+	}
+
+	return &FilterListStore{
+		cache: cache,
+	}
 }
 
 func (st *FilterListStore) Get(url string) ([]byte, error) {
-	if content, ok := diskcache.Load(url); ok {
+	if content, ok := st.cache.Load(url); ok {
 		return content, nil
 	}
 
@@ -44,7 +54,7 @@ func (st *FilterListStore) Get(url string) ([]byte, error) {
 		return nil, fmt.Errorf("read body: %w", err)
 	}
 
-	if err := diskcache.Save(url, body); err != nil {
+	if err := st.cache.Save(url, body); err != nil {
 		return nil, fmt.Errorf("cache save: %w", err)
 	}
 
