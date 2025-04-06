@@ -29,8 +29,8 @@ const PLATFORM_ASSETS = {
         arm64: 'Zen_linux_arm64.tar.gz',
     },
 };
-const MANIFESTS_BASE_URL = 'https://zenprivacy.net/update-manifests/stable';
-const BUCKET_BASE_KEY = 'update-manifests/stable';
+const MANIFESTS_BASE_URL = 'https://update-manifests.zenprivacy.net/stable';
+const BUCKET_BASE_KEY = 'stable';
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const S3_API_ENDPOINT = process.env.S3_API_ENDPOINT;
 const S3_API_REGION = process.env.S3_API_REGION || 'auto';
@@ -85,7 +85,7 @@ const s3Client = new S3Client({
     }
 }))();
 function fetchAndCompareManifest(_a) {
-    return __awaiter(this, arguments, void 0, function* ({ platform, arch, releaseVersion }) {
+    return __awaiter(this, arguments, void 0, function* ({ platform, arch, releaseVersion, }) {
         const url = `${MANIFESTS_BASE_URL}/${platform}/${arch}/manifest.json`;
         const res = yield fetch(url);
         if (res.status === 404) {
@@ -102,7 +102,7 @@ function fetchAndCompareManifest(_a) {
     });
 }
 function createManifestForSysArch(_a) {
-    return __awaiter(this, arguments, void 0, function* ({ releaseVersion, releaseBody, asset }) {
+    return __awaiter(this, arguments, void 0, function* ({ releaseVersion, releaseBody, asset, }) {
         return {
             assetURL: asset.browser_download_url,
             description: yield markdownToPlaintext(releaseBody),

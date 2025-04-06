@@ -2,7 +2,7 @@
  * upload-manifest.ts is a script that fetches the latest release from a GitHub repository and uploads manifests for each
  * platform/architecture. The manifest contains the version, description, asset URL, and the SHA256 hash of the asset.
  * The manifest is uploaded to an S3 bucket that serves as the update server for Zen.
- * 
+ *
  * Usage:
  *   npm run build
  *   npm run upload-manifest
@@ -30,8 +30,8 @@ const PLATFORM_ASSETS = {
     arm64: 'Zen_linux_arm64.tar.gz',
   },
 };
-const MANIFESTS_BASE_URL = 'https://zenprivacy.net/update-manifests/stable'; // Hardcoding the release track for now.
-const BUCKET_BASE_KEY = 'update-manifests/stable'; // Here too.
+const MANIFESTS_BASE_URL = 'https://update-manifests.zenprivacy.net/stable'; // Hardcoding the release track for now.
+const BUCKET_BASE_KEY = 'stable'; // Here too.
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const S3_API_ENDPOINT = process.env.S3_API_ENDPOINT;
 const S3_API_REGION = process.env.S3_API_REGION || 'auto';
@@ -47,13 +47,12 @@ const s3Client = new S3Client({
   },
 });
 
-
 type Manifest = {
   version: string;
   description: string;
   assetURL: string;
   sha256: string;
-}
+};
 
 (async () => {
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -89,10 +88,13 @@ type Manifest = {
 
   for (const platform of Object.keys(PLATFORM_ASSETS)) {
     for (const arch of Object.keys(PLATFORM_ASSETS[platform as keyof typeof PLATFORM_ASSETS])) {
-      const assetName = PLATFORM_ASSETS[platform as keyof typeof PLATFORM_ASSETS][arch as keyof typeof PLATFORM_ASSETS[keyof typeof PLATFORM_ASSETS]];
+      const assetName =
+        PLATFORM_ASSETS[platform as keyof typeof PLATFORM_ASSETS][
+          arch as keyof (typeof PLATFORM_ASSETS)[keyof typeof PLATFORM_ASSETS]
+        ];
       const asset = release.assets.find((a) => a.name === assetName);
       if (asset === undefined) {
-        throw new Error(`${assetName} missing from release assets`)
+        throw new Error(`${assetName} missing from release assets`);
       }
 
       const manifest = await createManifestForSysArch({ releaseBody, releaseVersion, asset });
@@ -106,7 +108,15 @@ type Manifest = {
  * fetchAndCompareManifest fetches the manifest for a given platform/arch and compares it against the release version.
  * If the manifest version is newer or equal to the release version, it throws an error.
  */
-async function fetchAndCompareManifest({ platform, arch, releaseVersion }: { platform: string; arch: string; releaseVersion: string }): Promise<void> {
+async function fetchAndCompareManifest({
+  platform,
+  arch,
+  releaseVersion,
+}: {
+  platform: string;
+  arch: string;
+  releaseVersion: string;
+}): Promise<void> {
   const url = `${MANIFESTS_BASE_URL}/${platform}/${arch}/manifest.json`;
   const res = await fetch(url);
   if (res.status === 404) {
@@ -118,25 +128,27 @@ async function fetchAndCompareManifest({ platform, arch, releaseVersion }: { pla
 
   const manifest: Manifest = await res.json();
   if (semver.lte(releaseVersion, manifest.version)) {
-    throw new Error(`${platform}/${arch} manifest version is ${manifest.version}, release version is ${releaseVersion}`);
+    throw new Error(
+      `${platform}/${arch} manifest version is ${manifest.version}, release version is ${releaseVersion}`,
+    );
   }
 }
 
 async function createManifestForSysArch({
   releaseVersion,
   releaseBody,
-  asset
+  asset,
 }: {
   releaseVersion: string;
   releaseBody: string;
-  asset: { browser_download_url: string; name: string }
+  asset: { browser_download_url: string; name: string };
 }): Promise<Manifest> {
   return {
     assetURL: asset.browser_download_url,
     description: await markdownToPlaintext(releaseBody),
     sha256: await sha256RemoteAsset(asset.browser_download_url),
     version: releaseVersion,
-  }
+  };
 }
 
 async function sha256RemoteAsset(url: string) {
@@ -157,9 +169,9 @@ async function printManifestS3OpDryRun({
   arch,
   platform,
 }: {
-  manifest: Manifest,
+  manifest: Manifest;
   arch: string;
-  platform: string,
+  platform: string;
 }): Promise<string> {
   const key = `${BUCKET_BASE_KEY}/${platform}/${arch}/manifest.json`;
   const data = JSON.stringify(manifest, null, 2);
@@ -173,21 +185,23 @@ async function uploadManifestToBucket({
   arch,
   platform,
 }: {
-  manifest: Manifest,
-  arch: string,
-  platform: string,
+  manifest: Manifest;
+  arch: string;
+  platform: string;
 }): Promise<string> {
   const key = `${BUCKET_BASE_KEY}/${platform}/${arch}/manifest.json`;
   const data = JSON.stringify(manifest);
-  
+
   console.log(`Uploading ${data} to ${key}`);
-  await s3Client.send(new PutObjectCommand({
-    Bucket: S3_BUCKET_NAME,
-    Key: key,
-    Body: data,
-    ContentType: 'application/json',
-    ACL: 'public-read',
-  }));
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: S3_BUCKET_NAME,
+      Key: key,
+      Body: data,
+      ContentType: 'application/json',
+      ACL: 'public-read',
+    }),
+  );
   return key;
 }
 
