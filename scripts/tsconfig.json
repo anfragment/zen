@@ -1,10 +1,9 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "ES2023",
     "experimentalDecorators": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "lib": ["es2016", "esnext", "dom"],
+    "module": "Node16",
+    "lib": ["es2023"],
     "outDir": "build",
     "strict": true,
     "strictNullChecks": true,
