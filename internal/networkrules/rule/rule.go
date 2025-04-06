@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/anfragment/zen/internal/networkrules/rulemodifiers"
+	"github.com/ZenPrivacy/zen-desktop/internal/networkrules/rulemodifiers"
 )
 
 // Rule represents modifiers of a rule.

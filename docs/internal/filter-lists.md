@@ -2,7 +2,7 @@
 
 ## Which lists get a "trusted" status
 
-> [Originally discussed here](https://github.com/anfragment/zen/issues/147#issuecomment-2521317897)
+> [Originally discussed here](https://github.com/ZenPrivacy/zen-desktop/issues/147#issuecomment-2521317897)
 
 1. This problem should be approached in a manner similar to the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege). This means that **only lists that use trusted scriptlets (and use scriptlets at all) should be granted a trusted status**.
 2. We should **keep the number of trusted filter lists to a minimum**. I suggest setting a limit of 5 for now.

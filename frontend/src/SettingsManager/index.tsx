@@ -17,7 +17,7 @@ import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
 import { UpdatePolicyRadioGroup } from './UpdatePolicyRadioGroup';
 
-const GITHUB_URL = 'https://github.com/anfragment/zen';
+const GITHUB_URL = 'https://github.com/ZenPrivacy/zen-desktop';
 const CHANGELOG_URL = `${GITHUB_URL}/blob/master/CHANGELOG.md`;
 
 export interface SettingsManagerProps {
@@ -95,7 +95,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
             )
           </span>
         </div>
-        <div>© 2025 Ansar Smagulov</div>
+        <div>© 2025 Zen Privacy Project Developers</div>
         <Button
           minimal
           small

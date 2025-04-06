@@ -16,10 +16,10 @@
 
 ### New Contributors
 
-- @kamalovk made their first contribution: <https://github.com/anfragment/zen/pull/269>
-- @TobseF made their first contribution: <https://github.com/anfragment/zen/pull/267>
+- @kamalovk made their first contribution: <https://github.com/ZenPrivacy/zen-desktop/pull/269>
+- @TobseF made their first contribution: <https://github.com/ZenPrivacy/zen-desktop/pull/267>
 
-**Full Changelog**: <https://github.com/anfragment/zen/compare/v0.8.0...v0.9.0>
+**Full Changelog**: <https://github.com/ZenPrivacy/zen-desktop/compare/v0.8.0...v0.9.0>
 
 ## v0.8.0
 
@@ -30,7 +30,7 @@
 
 Thank you for using Zen!
 
-**Full Changelog**: <https://github.com/anfragment/zen/compare/v0.7.2...v0.8.0>
+**Full Changelog**: <https://github.com/ZenPrivacy/zen-desktop/compare/v0.7.2...v0.8.0>
 
 ## v0.7.2
 
@@ -40,7 +40,7 @@ Thank you for using Zen!
 
 Thank you for using Zen!
 
-**Full Changelog**: <https://github.com/anfragment/zen/compare/v0.7.1...v0.7.2>
+**Full Changelog**: <https://github.com/ZenPrivacy/zen-desktop/compare/v0.7.1...v0.7.2>
 
 ## v0.7.1
 
@@ -50,7 +50,7 @@ Thank you for using Zen!
 
 Thank you for using Zen!
 
-**Full Changelog**: <https://github.com/anfragment/zen/compare/v0.7.0...v0.7.1>
+**Full Changelog**: <https://github.com/ZenPrivacy/zen-desktop/compare/v0.7.0...v0.7.1>
 
 ## v0.7.0
 
@@ -63,7 +63,7 @@ Thank you for using Zen!
 
 Happy 2025 and thank you for using Zen!
 
-**Full Changelog**: <https://github.com/anfragment/zen/compare/v0.6.1...v0.7.0>
+**Full Changelog**: <https://github.com/ZenPrivacy/zen-desktop/compare/v0.6.1...v0.7.0>
 
 ## v0.6.0
 
@@ -82,4 +82,4 @@ Warning: On macOS, the app will not function properly after the update. Please v
 
 Thank you for using Zen!
 
-**Full Changelog**: <https://github.com/anfragment/zen/compare/v0.5.0...v0.6.0>
+**Full Changelog**: <https://github.com/ZenPrivacy/zen-desktop/compare/v0.5.0...v0.6.0>

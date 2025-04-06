@@ -164,7 +164,7 @@ export function setConstant(
       ) {
         // Native functions frequently expect to be bounded to their original, **unproxied** object.
         // See https://stackoverflow.com/a/57580096 for more details.
-        // Fixes https://github.com/anfragment/zen/issues/201
+        // Fixes https://github.com/ZenPrivacy/zen-desktop/issues/201
         if (boundFnCache !== undefined && boundFnCache[key]) {
           // Like with proxyCache, store the bound function to ensure object equality between different access operations.
           link = boundFnCache[key];
@@ -182,7 +182,7 @@ export function setConstant(
 
       if (proxyCache?.link === link) {
         // Ensure object equality between different access operations.
-        // Fixes https://github.com/anfragment/zen/issues/224
+        // Fixes https://github.com/ZenPrivacy/zen-desktop/issues/224
         return proxyCache.proxy;
       }
       const proxy = new Proxy(link, {
@@ -238,7 +238,7 @@ export function setConstant(
           }
           if (proxyCache?.capturedValue === capturedValue) {
             // Ensure object equality between different access operations.
-            // Fixes https://github.com/anfragment/zen/issues/224
+            // Fixes https://github.com/ZenPrivacy/zen-desktop/issues/224
             return proxyCache.proxy;
           }
           const proxy = new Proxy(capturedValue, {

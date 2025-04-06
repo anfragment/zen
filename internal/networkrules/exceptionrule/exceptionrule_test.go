@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/anfragment/zen/internal/networkrules/rule"
+	"github.com/ZenPrivacy/zen-desktop/internal/networkrules/rule"
 )
 
 func TestExceptionRule(t *testing.T) {

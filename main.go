@@ -7,10 +7,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/anfragment/zen/internal/app"
-	"github.com/anfragment/zen/internal/autostart"
-	"github.com/anfragment/zen/internal/cfg"
-	"github.com/anfragment/zen/internal/logger"
+	"github.com/ZenPrivacy/zen-desktop/internal/app"
+	"github.com/ZenPrivacy/zen-desktop/internal/autostart"
+	"github.com/ZenPrivacy/zen-desktop/internal/cfg"
+	"github.com/ZenPrivacy/zen-desktop/internal/logger"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -74,7 +74,7 @@ func main() {
 		Mac: &mac.Options{
 			About: &mac.AboutInfo{
 				Title:   appName,
-				Message: fmt.Sprintf("Your Comprehensive Ad-Blocker and Privacy Guard\nVersion: %s\n© 2025 Ansar Smagulov", cfg.Version),
+				Message: fmt.Sprintf("Your Comprehensive Ad-Blocker and Privacy Guard\nVersion: %s\n© 2025 Zen Privacy Project Developers", cfg.Version),
 			},
 		},
 		HideWindowOnClose: runtime.GOOS == "darwin" || runtime.GOOS == "windows",

@@ -7,7 +7,7 @@ import './index.css';
 import { GetMyRules, SetMyRules } from '../../wailsjs/go/cfg/Config';
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 
-const HELP_URL = 'https://github.com/anfragment/zen/blob/master/docs/external/how-to-rules.md';
+const HELP_URL = 'https://github.com/ZenPrivacy/zen-desktop/blob/master/docs/external/how-to-rules.md';
 
 export function MyRules() {
   const { t } = useTranslation();

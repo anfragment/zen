@@ -101,4 +101,4 @@ This will scan the source code and update the translation files with new keys.
 
 ## Need help?
 
-If you have any questions about the translation process, feel free to ask in the [Discussions](https://github.com/anfragment/zen/discussions/categories/contributor-q-a) section of the GitHub repository, join our [Discord server](https://discord.gg/jSzEwby7JY), or contact one of the project leads directly via email.
+If you have any questions about the translation process, feel free to ask in the [Discussions](https://github.com/ZenPrivacy/zen-desktop/discussions/categories/contributor-q-a) section of the GitHub repository, join our [Discord server](https://discord.gg/jSzEwby7JY), or contact one of the project leads directly via email.

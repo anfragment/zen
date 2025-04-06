@@ -9,12 +9,12 @@ tasks:
   prod:
     desc: Create a production build of the application.
     cmds:
-      - wails build -o Zen -platform "linux/{{default .ARCH64 .ARCH}}" -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version={{.GIT_TAG}}'" -m -skipbindings -tags prod,webkit2_41
+      - wails build -o Zen -platform "linux/{{default .ARCH64 .ARCH}}" -ldflags "-X 'github.com/ZenPrivacy/zen-desktop/internal/cfg.Version={{.GIT_TAG}}'" -m -skipbindings -tags prod,webkit2_41
 
   prod-noupdate:
     desc: Create a production build of the application with self-updates disabled.
     cmds:
-      - wails build -o Zen -platform "linux/{{default .ARCH64 .ARCH}}" -ldflags "-X 'github.com/anfragment/zen/internal/cfg.Version={{.GIT_TAG}}' -X 'github.com/anfragment/zen/internal/selfupdate.NoSelfUpdate=true'" -m -skipbindings -tags prod,webkit2_41
+      - wails build -o Zen -platform "linux/{{default .ARCH64 .ARCH}}" -ldflags "-X 'github.com/ZenPrivacy/zen-desktop/internal/cfg.Version={{.GIT_TAG}}' -X 'github.com/ZenPrivacy/zen-desktop/internal/selfupdate.NoSelfUpdate=true'" -m -skipbindings -tags prod,webkit2_41
 
   deps:
     desc: Install the apt dependencies required to create a production build.
