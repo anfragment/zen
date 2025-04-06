@@ -9,7 +9,7 @@ import { AppToaster } from './common/toaster';
 import { ProxyState } from './types';
 
 const PROXY_CHANNEL = 'proxy:action';
-const LINUX_PROXY_GUIDE_URL = 'https://github.com/anfragment/zen/blob/master/docs/external/linux-proxy-conf.md';
+const LINUX_PROXY_GUIDE_URL = 'https://github.com/ZenPrivacy/zen-desktop/blob/master/docs/external/linux-proxy-conf.md';
 
 export interface StartStopButtonProps {
   proxyState: ProxyState;

@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anfragment/zen/internal/cfg"
+	"github.com/ZenPrivacy/zen-desktop/internal/cfg"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 

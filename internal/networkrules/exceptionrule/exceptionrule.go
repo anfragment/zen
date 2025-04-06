@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/anfragment/zen/internal/networkrules/rule"
-	"github.com/anfragment/zen/internal/networkrules/rulemodifiers"
+	"github.com/ZenPrivacy/zen-desktop/internal/networkrules/rule"
+	"github.com/ZenPrivacy/zen-desktop/internal/networkrules/rulemodifiers"
 )
 
 type ExceptionRule struct {

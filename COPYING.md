@@ -1,9 +1,11 @@
 # Copyright and Licenses
+
 ## Zen
+
 Zen, including its source code and all attached documentation, is licensed under the MIT License.
 
 ```
-Copyright (c) 2025 Ansar Smagulov
+Copyright (c) 2025 Zen Privacy Project Developers
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +28,10 @@ SOFTWARE.
 
 ## 3rd party code and assets
 
-Some code and other assets used in Zen are licensed under different terms. This section attempts to attribute some of them. If you believe that your work is used in Zen without proper attribution, please open an issue or contact me at [me@anfragment.net](mailto:me@anfragment.net).
+Some code and other assets used in Zen are licensed under different terms. This section attempts to attribute some of them. If you believe that your work is used in Zen without proper attribution, please open an issue or contact us at [contact@zenprivacy.net](mailto:contact@zenprivacy.net).
 
 ### Wails
+
 [Wails](https://wails.io) provides the framework for Zen, and is licensed under the [MIT License](https://github.com/wailsapp/wails/blob/master/LICENSE).
 
 ```
@@ -56,6 +59,7 @@ SOFTWARE.
 ```
 
 ### Blueprint
+
 UI and logo design is based on [Blueprint](https://blueprintjs.com), which is licensed under the [Apache License 2.0](https://github.com/palantir/blueprint/blob/develop/LICENSE).
 
 ```
@@ -238,6 +242,7 @@ END OF TERMS AND CONDITIONS
 ```
 
 ### mkcert
+
 Certificate generation is based on [mkcert](https://github.com/FiloSottile/mkcert), which is licensed under the [BSD 3-Clause License](https://github.com/FiloSottile/mkcert/blob/master/LICENSE).
 
 ```
@@ -271,6 +276,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 ### goproxy
+
 Proxy implementation is partially based on [goproxy](https://github.com/elazarl/goproxy), which is licensed under the [BSD-3-Clause license terms](https://github.com/elazarl/goproxy/blob/master/LICENSE).
 
 ```
@@ -304,6 +310,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 ### uBlock Origin
+
 Most built-in filters are from [uBlock Origin](https://github.com/gorhill/uBlock), which is licensed under the [GPLv3 license](https://github.com/gorhill/uBlock/blob/master/LICENSE.txt).
 
 ```
@@ -984,6 +991,7 @@ Public License instead of this License.  But first, please read
 ```
 
 ### Twemoji
+
 The Emoji art in the "Twemoji Country Flags" font comes from [Twemoji](https://twitter.github.io/twemoji),
 which is licensed under the [CC-BY-4.0 license](https://github.com/twitter/twemoji#license).
 
@@ -1386,6 +1394,7 @@ Creative Commons may be contacted at creativecommons.org.
 ```
 
 ### elevate
+
 [Elevate](https://github.com/getlantern/elevate) is used to authorize Zen to install the root certificate on macOS. It is licensed under the [Apache License 2.0](https://github.com/getlantern/elevate/blob/main/LICENSE).
 
 ```
@@ -1593,6 +1602,7 @@ limitations under the License.
 ```
 
 ### go-acl
+
 [Go-acl](https://github.com/hectane/go-acl) is used to set the ACLs on the certificate files on Windows. It is licensed under the [MIT license](https://github.com/hectane/go-acl/blob/master/LICENSE.txt).
 
 ```
@@ -1608,6 +1618,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ```
 
 ### go-plist
+
 [Go-plist](https://github.com/DHowett/go-plist) is used to parse the plist files on macOS. It is licensed under the [BSD 2-Clause license](https://github.com/DHowett/go-plist/blob/main/LICENSE).
 
 ```
@@ -1639,6 +1650,7 @@ either expressed or implied, of the FreeBSD Project.
 ```
 
 ### systray
+
 [getlantern/systray](https://github.com/getlantern/systray) is used to manage the system tray icon on Windows. It is licensed under the [Apache license](https://github.com/getlantern/systray/blob/master/LICENSE).
 
 ```

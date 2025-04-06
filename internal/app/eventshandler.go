@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/anfragment/zen/internal/networkrules/rule"
+	"github.com/ZenPrivacy/zen-desktop/internal/networkrules/rule"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 

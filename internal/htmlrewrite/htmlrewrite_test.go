@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/anfragment/zen/internal/htmlrewrite"
+	"github.com/ZenPrivacy/zen-desktop/internal/htmlrewrite"
 )
 
 func TestAppendHeadContentsPublic(t *testing.T) {

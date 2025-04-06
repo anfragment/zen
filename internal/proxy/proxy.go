@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anfragment/zen/internal/logger"
+	"github.com/ZenPrivacy/zen-desktop/internal/logger"
 )
 
 // certGenerator is an interface capable of generating certificates for the proxy.

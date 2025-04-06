@@ -1,4 +1,4 @@
-module github.com/anfragment/zen
+module github.com/ZenPrivacy/zen-desktop
 
 // Note: Always set the patch version when updating the Go version.
 // Omitting the patch version may cause some Go commands to fail.
