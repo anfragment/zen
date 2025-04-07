@@ -51,9 +51,9 @@ func main() {
 		if err := app.UninstallCA(); err != nil {
 			// UninstallCA logs the error internally
 			os.Exit(1)
-		} else {
-			log.Println("CA uninstalled successfully")
 		}
+
+		log.Println("CA uninstalled successfully")
 		return
 	}
 
