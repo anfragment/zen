@@ -1,51 +1,47 @@
-# Refer to golangci-lint's example config file for more options and information:
-# https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
-
-linters:
-  enable:
-    - gosec
-    - gosimple
-    - govet
-    - importas
-    - ineffassign
-    - misspell
-    - revive
-    - staticcheck
-    - typecheck
-    - unconvert
-    - unused
-    - gocritic
-    - stylecheck
-    - unparam
-    - asciicheck
-    - prealloc
-    - predeclared
-    - makezero
-    - bidichk
-    - godot
-    - tparallel
-  disable:
-    - errcheck
-    - goimports # Gives false positives on Windows.
+version: "2"
 
 run:
   modules-download-mode: readonly
   timeout: 5m
 
-linters-settings:
-  gosec:
-    config:
-      # Maximum allowed permissions mode for os.OpenFile and os.Chmod
-      # Default: "0600"
-      G302: "0644"
-      # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
-      # Default: "0600" 
-      G306: "0644"
+linters:
+  enable:
+    - asciicheck
+    - bidichk
+    - gocritic
+    - godot
+    - gosec
+    - importas
+    - makezero
+    - misspell
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - tparallel
+    - unconvert
+    - unparam
+  disable:
+    - errcheck
+  settings:
+    gosec:
+      config:
+        G302: "0644"
+        G306: "0644"
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          # These give false positives for Windows API-related identifier names.
+          - revive
+          - staticcheck
+        path: (.+)_windows.go
 
-issues:
-  exclude-rules:
-    - path: (.+)_windows.go
-      linters:
-        # These give false positives for Windows API-related identifier names.
-        - revive
-        - stylecheck
+formatters:
+  exclusions:
+    generated: lax
