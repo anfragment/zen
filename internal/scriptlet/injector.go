@@ -8,9 +8,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/anfragment/zen/internal/hostmatch"
-	"github.com/anfragment/zen/internal/htmlrewrite"
-	"github.com/anfragment/zen/internal/logger"
+	"github.com/ZenPrivacy/zen-desktop/internal/hostmatch"
+	"github.com/ZenPrivacy/zen-desktop/internal/htmlrewrite"
+	"github.com/ZenPrivacy/zen-desktop/internal/logger"
 )
 
 var (

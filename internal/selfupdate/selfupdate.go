@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anfragment/zen/internal/cfg"
+	"github.com/ZenPrivacy/zen-desktop/internal/cfg"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -29,7 +29,7 @@ var NoSelfUpdate = "false"
 var releaseTrack = "stable"
 
 // manifestsBaseURL is the base URL for fetching update manifests.
-const manifestsBaseURL = "https://zenprivacy.net/update-manifests"
+const manifestsBaseURL = "https://update-manifests.zenprivacy.net"
 
 type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)

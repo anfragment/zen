@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/anfragment/zen/internal/logger"
+	"github.com/ZenPrivacy/zen-desktop/internal/logger"
 )
 
 func (p *Proxy) proxyWebsocketTLS(req *http.Request, tlsConfig *tls.Config, clientConn *tls.Conn) {

@@ -17,6 +17,9 @@ import { PortInput } from './PortInput';
 import { UninstallCADialog } from './UninstallCADialog';
 import { UpdatePolicyRadioGroup } from './UpdatePolicyRadioGroup';
 
+const GITHUB_URL = 'https://github.com/ZenPrivacy/zen-desktop';
+const CHANGELOG_URL = `${GITHUB_URL}/blob/master/CHANGELOG.md`;
+
 export interface SettingsManagerProps {
   proxyState: ProxyState;
 }
@@ -74,14 +77,31 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
         <div>{t('settings.about.tagline')}</div>
         <div>
           {t('settings.about.version')}: {state.version}
+          <span className="settings-manager__about-changelog">
+            ({/* eslint-disable-next-line jsx-a11y/anchor-is-valid  */}
+            <a
+              onClick={() => BrowserOpenURL(CHANGELOG_URL)}
+              tabIndex={0}
+              role="button"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  BrowserOpenURL(CHANGELOG_URL);
+                }
+              }}
+            >
+              changelog
+            </a>
+            )
+          </span>
         </div>
-        <div>© 2025 Ansar Smagulov</div>
+        <div>© 2025 Zen Privacy Project Developers</div>
         <Button
           minimal
           small
           icon="git-branch"
           className="settings-manager__about-github-button"
-          onClick={() => BrowserOpenURL('https://github.com/anfragment/zen')}
+          onClick={() => BrowserOpenURL(GITHUB_URL)}
         >
           {t('settings.about.github')}
         </Button>

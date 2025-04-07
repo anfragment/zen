@@ -45,15 +45,15 @@ func (m *DomainModifier) Parse(modifier string) error {
 
 		m.entries[i] = domainModifierEntry{}
 		if err := m.entries[i].Parse(entry); err != nil {
-			return fmt.Errorf("parse entry (%s): %w", entry, err)
+			return fmt.Errorf("parse entry %q: %w", entry, err)
 		}
 	}
 	return nil
 }
 
-// ShouldMatchReq can omit "Referer" header for inverted domains.
 func (m *DomainModifier) ShouldMatchReq(req *http.Request) bool {
 	var hostname string
+	// Allow empty "Referer" header to make inverted rules work.
 	if referer := req.Header.Get("Referer"); referer != "" {
 		url, err := url.Parse(referer)
 		if err != nil {
@@ -90,17 +90,18 @@ func (m *domainModifierEntry) Parse(entry string) error {
 		return errors.New("entry is empty")
 	}
 
-	regexp, err := parseRegexp(entry)
-	if err != nil {
+	var err error
+	if m.regexp, err = parseRegexp(entry); err != nil {
 		return fmt.Errorf("parse regexp: %w", err)
-	}
-	if regexp != nil {
-		m.regexp = regexp
+	} else if m.regexp != nil {
 		return nil
 	}
 
-	if entry[len(entry)-1] == '*' {
-		m.tld = entry[:len(entry)-1]
+	if strings.HasSuffix(entry, ".*") {
+		m.tld = strings.TrimSuffix(entry, ".*")
+		if len(m.tld) == 0 {
+			return errors.New("tld is empty")
+		}
 		return nil
 	}
 
@@ -111,9 +112,10 @@ func (m *domainModifierEntry) Parse(entry string) error {
 func (m *domainModifierEntry) MatchDomain(domain string) bool {
 	switch {
 	case m.regular != "":
-		return strings.HasSuffix(domain, m.regular)
+		return m.regular == domain || strings.HasSuffix(domain, "."+m.regular)
 	case m.tld != "":
-		return strings.HasPrefix(domain, m.tld)
+		segments := strings.Split(domain, ".")
+		return (len(segments) > 1 && segments[len(segments)-2] == m.tld) || (len(segments) > 2 && segments[len(segments)-3] == m.tld)
 	case m.regexp != nil:
 		return m.regexp.MatchString(domain)
 	default:

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anfragment/zen/internal/scriptlet"
+	"github.com/ZenPrivacy/zen-desktop/internal/scriptlet"
 	"golang.org/x/net/html"
 )
 

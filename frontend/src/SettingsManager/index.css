@@ -1,5 +1,5 @@
 .settings-manager {
-  margin-top: 4px;
+  margin: 0.25rem 0 0.5rem 0;
 }
 
 .settings-manager__section-header {
@@ -31,9 +31,13 @@
 .settings-manager__about {
   margin-top: 16px;
   text-align: center;
-  font-size: .8rem;
+  font-size: 0.8rem;
+}
+
+.settings-manager__about-changelog::before {
+  content: ' ';
 }
 
 .settings-manager__about-github-button {
-  font-size: .8rem;
+  font-size: 0.8rem;
 }

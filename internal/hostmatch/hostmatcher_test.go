@@ -3,7 +3,7 @@ package hostmatch_test
 import (
 	"testing"
 
-	"github.com/anfragment/zen/internal/hostmatch"
+	"github.com/ZenPrivacy/zen-desktop/internal/hostmatch"
 )
 
 func TestHostMatcherPublic(t *testing.T) {

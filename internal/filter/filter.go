@@ -13,12 +13,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/anfragment/zen/internal/cfg"
-	"github.com/anfragment/zen/internal/cosmetic"
-	"github.com/anfragment/zen/internal/cssrule"
-	"github.com/anfragment/zen/internal/jsrule"
-	"github.com/anfragment/zen/internal/logger"
-	"github.com/anfragment/zen/internal/networkrules/rule"
+	"github.com/ZenPrivacy/zen-desktop/internal/cfg"
+	"github.com/ZenPrivacy/zen-desktop/internal/cosmetic"
+	"github.com/ZenPrivacy/zen-desktop/internal/cssrule"
+	"github.com/ZenPrivacy/zen-desktop/internal/jsrule"
+	"github.com/ZenPrivacy/zen-desktop/internal/logger"
+	"github.com/ZenPrivacy/zen-desktop/internal/networkrules/rule"
 )
 
 // filterEventsEmitter emits filter events.

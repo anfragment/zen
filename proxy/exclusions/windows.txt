@@ -2,5 +2,5 @@
 # The proxy will not attempt to MITM hosts in this file.
 # If you find a host that doesn't work, add it here and submit a pull request.
 
-# https://github.com/anfragment/zen/issues/106
+# https://github.com/ZenPrivacy/zen-desktop/issues/106
 storeedgefd.dsx.mp.microsoft.com

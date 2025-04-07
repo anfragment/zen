@@ -79,5 +79,5 @@ crates.io
 rubygems.org
 
 # Issues
-# https://github.com/anfragment/zen/pull/223
+# https://github.com/ZenPrivacy/zen-desktop/pull/223
 account.booking.com
