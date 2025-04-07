@@ -1,20 +1,20 @@
 package diskcache
 
 import (
+	"bytes"
 	"crypto/md5" // #nosec G501 -- MD5 is used to hash data, not for cryptographic purposes.
 	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
-
-const cacheTTL = 24 * time.Hour
 
 type cacheEntry struct {
 	Timestamp time.Time
@@ -56,7 +56,7 @@ func getCacheDir() (string, error) {
 		panic("unsupported platform")
 	}
 
-	base, err := os.UserConfigDir()
+	base, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
 	}
@@ -66,6 +66,45 @@ func getCacheDir() (string, error) {
 func hashURL(url string) string {
 	sum := md5.Sum([]byte(url)) // #nosec G401
 	return hex.EncodeToString(sum[:])
+}
+
+func extractExpiryTimestamp(content []byte, now time.Time) time.Time {
+	defaultExpiry := now.Add(24 * time.Hour)
+	lines := bytes.Split(content, []byte("\n"))
+
+	// Match examples:
+	// ! Expires: 4 days
+	// ! Expires: 12 hours
+	// ! Expires: 5d
+	// ! Expires: 18h
+	re := regexp.MustCompile(`(?i)! Expires:\s*(\d+)\s*(days?|hours?|d|h)?`)
+
+	for _, line := range lines {
+		matches := re.FindSubmatch(line)
+		if len(matches) >= 2 {
+			amount, err := strconv.Atoi(string(matches[1]))
+			if err != nil {
+				continue
+			}
+			if amount == 0 {
+				continue
+			}
+
+			unit := "days"
+			if len(matches) >= 3 {
+				unit = strings.ToLower(strings.TrimSpace(string(matches[2])))
+			}
+
+			switch unit {
+			case "day", "days", "d":
+				return now.Add(time.Duration(amount) * 24 * time.Hour)
+			case "hour", "hours", "h":
+				return now.Add(time.Duration(amount) * time.Hour)
+			}
+		}
+	}
+
+	return defaultExpiry
 }
 
 func (c *Cache) loadFromDisk() error {
@@ -91,7 +130,7 @@ func (c *Cache) loadFromDisk() error {
 			continue
 		}
 
-		if time.Since(time.Unix(timestamp, 0)) > cacheTTL {
+		if time.Unix(timestamp, 0).Before(time.Now()) {
 			continue
 		}
 
@@ -114,9 +153,9 @@ func (c *Cache) Save(url string, content []byte) error {
 	defer c.mu.Unlock()
 
 	hash := hashURL(url)
-	timestamp := time.Now()
-	filename := fmt.Sprintf("%s-%d.cache.txt", hash, timestamp.Unix())
+	expiry := extractExpiryTimestamp(content, time.Now())
 
+	filename := fmt.Sprintf("%s-%d.cache.txt", hash, expiry.Unix())
 	if err := os.MkdirAll(c.dir, 0755); err != nil {
 		return err
 	}
@@ -127,7 +166,7 @@ func (c *Cache) Save(url string, content []byte) error {
 	}
 
 	c.entries[hash] = cacheEntry{
-		Timestamp: timestamp,
+		Timestamp: expiry,
 		Content:   content,
 	}
 
@@ -144,7 +183,7 @@ func (c *Cache) Load(url string) ([]byte, bool) {
 		return nil, false
 	}
 
-	if time.Since(entry.Timestamp) > cacheTTL {
+	if entry.Timestamp.Before(time.Now()) {
 		return nil, false
 	}
 

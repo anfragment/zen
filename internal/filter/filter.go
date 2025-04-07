@@ -170,7 +170,9 @@ func (f *Filter) init() {
 		}
 	}
 
-	log.Printf("filter initialization: added %d rules and %d exceptions from %q", ruleCount, exceptionCount, filterName)
+	if len(myRules) > 0 {
+		log.Printf("filter initialization: added %d rules and %d exceptions from %q", ruleCount, exceptionCount, filterName)
+	}
 }
 
 // ParseAndAddRules parses the rules from the given reader and adds them to the filter.
