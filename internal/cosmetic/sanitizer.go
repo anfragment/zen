@@ -85,9 +85,10 @@ func hasBalancedQuotesAndBrackets(s string) bool {
 			continue
 		}
 
-		if c == '(' || c == '[' || c == '{' {
+		switch c {
+		case '(', '[', '{':
 			stack = append(stack, c)
-		} else if c == ')' || c == ']' || c == '}' {
+		case ')', ']', '}':
 			if len(stack) == 0 {
 				return false
 			}
