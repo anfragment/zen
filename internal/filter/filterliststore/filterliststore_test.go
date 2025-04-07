@@ -1,4 +1,4 @@
-package diskcache
+package filterliststore
 
 import (
 	"testing"
@@ -19,8 +19,18 @@ func TestExtractExpiryTimestamp(t *testing.T) {
 			expected: now.Add(4 * 24 * time.Hour),
 		},
 		{
+			name:     "4 day",
+			input:    "! Expires: 4 day",
+			expected: now.Add(4 * 24 * time.Hour),
+		},
+		{
 			name:     "12 hours",
 			input:    "! Expires: 12 hours",
+			expected: now.Add(12 * time.Hour),
+		},
+		{
+			name:     "12 hour",
+			input:    "! Expires: 12 hour",
 			expected: now.Add(12 * time.Hour),
 		},
 		{

@@ -82,8 +82,6 @@ type Filter struct {
 }
 
 var (
-	// ignoreLineRegex matches comments and [Adblock Plus 2.0]-style headers.
-	ignoreLineRegex = regexp.MustCompile(`^(?:!|\[|#([^#%]|$))`)
 	// scriptletRegex matches scriptlet rules.
 	scriptletRegex = regexp.MustCompile(`(?:#%#\/\/scriptlet)|(?:##\+js)`)
 )
@@ -181,10 +179,6 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterListName *string, filt
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || ignoreLineRegex.MatchString(line) {
-			continue
-		}
-
 		if isException, err := f.AddRule(line, filterListName, filterListTrusted); err != nil { // nolint:revive
 			// log.Printf("error adding rule: %v", err)
 		} else if isException {
