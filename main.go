@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 
 	"github.com/ZenPrivacy/zen-desktop/internal/app"
@@ -47,7 +48,10 @@ func main() {
 	}
 
 	if *uninstallCA {
-		if err := app.UninstallCA(); err == nil {
+		if err := app.UninstallCA(); err != nil {
+			// UninstallCA logs the error internally
+			os.Exit(1)
+		} else {
 			log.Println("CA uninstalled successfully")
 		}
 		return
