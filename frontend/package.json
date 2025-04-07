@@ -28,7 +28,7 @@
     "@types/react-dom": "^18.0.6",
     "@typescript-eslint/eslint-plugin": "^6.6.0",
     "@typescript-eslint/parser": "^6.6.0",
-    "@vitejs/plugin-react": "^2.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^8.48.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-airbnb-typescript": "^17.1.0",
@@ -37,6 +37,6 @@
     "i18next-parser": "^9.3.0",
     "prettier": "^3.0.3",
     "typescript": "^4.6.4",
-    "vite": "^3.2.11"
+    "vite": "^6.2.5"
   }
 }
