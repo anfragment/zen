@@ -189,3 +189,13 @@ func (c *Cache) Load(url string) ([]byte, bool) {
 
 	return entry.Content, true
 }
+
+func (c *Cache) AddEntry(hash string, timestamp time.Time, content []byte) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.entries[hash] = cacheEntry{
+		Timestamp: timestamp,
+		Content:   content,
+	}
+}

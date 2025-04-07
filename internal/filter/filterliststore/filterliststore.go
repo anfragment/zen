@@ -1,18 +1,24 @@
 package filterliststore
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/anfragment/zen/internal/filter/filterliststore/diskcache"
 )
 
-var httpClient = &http.Client{
-	Timeout: 10 * time.Second,
-}
+var (
+	httpClient = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	ignoreLineRegex = regexp.MustCompile(`^(?:!|\[|#([^#%]|$))`)
+)
 
 type FilterListStore struct {
 	cache *diskcache.Cache
@@ -49,14 +55,26 @@ func (st *FilterListStore) Get(url string) ([]byte, error) {
 		return nil, fmt.Errorf("non-200 response: %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
+	var comments [][]byte
+	var bodyLines [][]byte
+
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := bytes.TrimSpace(scanner.Bytes())
+		if len(line) == 0 {
+			continue
+		}
+		if ignoreLineRegex.Match(line) {
+			comments = append(comments, append([]byte(nil), line...))
+		} else {
+			bodyLines = append(bodyLines, append([]byte(nil), line...))
+		}
 	}
 
-	if err := st.cache.Save(url, body); err != nil {
+	bodyBytes := bytes.Join(bodyLines, []byte("\n"))
+	if err := st.cache.Save(url, bodyBytes); err != nil {
 		return nil, fmt.Errorf("cache save: %w", err)
 	}
 
-	return body, nil
+	return bodyBytes, nil
 }
