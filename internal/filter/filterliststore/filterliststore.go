@@ -13,7 +13,7 @@ import (
 
 	"slices"
 
-	"github.com/anfragment/zen/internal/filter/filterliststore/diskcache"
+	"github.com/ZenPrivacy/zen-desktop/internal/filter/filterliststore/diskcache"
 )
 
 var (
