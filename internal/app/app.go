@@ -267,7 +267,6 @@ func (a *App) StopProxy() (err error) {
 
 // UninstallCA uninstalls the CA.
 func (a *App) UninstallCA() error {
-	<-a.startupDone
 	if err := a.certStore.UninstallCA(); err != nil {
 		log.Printf("failed to uninstall CA: %v", err)
 		return err

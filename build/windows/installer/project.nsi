@@ -28,7 +28,7 @@ Unicode true
 ## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"
 ## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Default "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
 ####
-!define REQUEST_EXECUTION_LEVEL "user"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
+## !define REQUEST_EXECUTION_LEVEL "user"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
 ####
 ## Include the wails tools
 ####
@@ -115,12 +115,14 @@ SectionEnd
 Section "uninstall" 
     !insertmacro wails.setShellContext
 
+    # Run the executable with --uninstall-ca flag before removing it
+    ExecWait '"$INSTDIR\${PRODUCT_EXECUTABLE}" --uninstall-ca'
+
     RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
 
     RMDir /r $INSTDIR
 
-    ReadEnvStr $0 "LOCALAPPDATA"
-    RMDir /r "$0\${INFO_PRODUCTNAME}"
+    RMDir /r "$LOCALAPPDATA\${INFO_PRODUCTNAME}"
 
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
