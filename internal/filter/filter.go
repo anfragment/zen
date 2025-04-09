@@ -140,13 +140,13 @@ func (f *Filter) init() {
 		go func(filterList cfg.FilterList) {
 			defer wg.Done()
 
-			content, err := f.filterListStore.Get(filterList.URL)
+			contents, err := f.filterListStore.Get(filterList.URL)
 			if err != nil {
-				log.Printf("failed to fetch filter list: %v", err)
+				log.Printf("failed to get filter list from store: %v", err)
 				return
 			}
-			rules, exceptions := f.ParseAndAddRules(content, &filterList.Name, filterList.Trusted)
-			if err := content.Close(); err != nil {
+			rules, exceptions := f.ParseAndAddRules(contents, &filterList.Name, filterList.Trusted)
+			if err := contents.Close(); err != nil {
 				log.Printf("failed to close filter list: %v", err)
 			}
 
