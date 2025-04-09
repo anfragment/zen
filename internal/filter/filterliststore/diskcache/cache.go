@@ -107,6 +107,7 @@ func (c *Cache) Save(url string, content []byte, expiresAt time.Time) error {
 
 	c.entries[hash] = cacheEntry{
 		expiresAt: expiresAt,
+		filename:  filename,
 	}
 
 	return nil
