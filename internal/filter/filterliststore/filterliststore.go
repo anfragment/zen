@@ -8,20 +8,19 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ZenPrivacy/zen-desktop/internal/filter/filterliststore/diskcache"
 )
 
+const defaultExpiry = 24 * time.Hour
+
 var (
 	httpClient = &http.Client{
 		Timeout: 10 * time.Second,
 	}
-
-	// expiresRegex matches lines like "! Expires: 4 days", supporting formats such as: "4 days", "12 hours", "5d", and "18h".
-	expiresRegex = regexp.MustCompile(`(?i)^! Expires:\s*(\d+)\s*(days?|hours?|d|h)?$`)
+	// headerRegex matches comments prefixed with a hash and [Adblock Plus 2.0]-style headers.
+	headerRegex = regexp.MustCompile(`^(?:!|\[|#[^#%@$])`)
 )
 
 type FilterListStore struct {
@@ -43,7 +42,7 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 	if content, err := st.cache.Load(url); err != nil {
 		log.Printf("failed to load from cache: %v", err)
 	} else if content != nil {
-		log.Printf("loaded %q from cache", url)
+		log.Printf("loading %q from cache", url)
 		return content, nil
 	}
 
@@ -71,23 +70,23 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 		Closer: resp.Body,
 	}
 
-	now := time.Now()
-	expiry := now.Add(24 * time.Hour) // Default to 1 day
+	var cacheTTL time.Duration
 	scanner := bufio.NewScanner(resp.Body)
 
 	for scanner.Scan() {
+		// TODO: move this into a cache-handling goroutine.
 		line := scanner.Bytes()
-		if len(line) > 0 && line[0] != '!' {
+
+		if len(line) != 0 && !headerRegex.Match(line) {
+			// Stop scanning for "! Expires" if we encounter a non-comment line.
 			break
 		}
 
-		if !expiresRegex.Match(line) {
-			continue
-		}
-
-		expiry, err = extractExpiryTimestamp(line, now)
+		cacheTTL, err = parseExpires(line)
 		if err != nil {
-			log.Printf("failed to parse expiry timestamp, assuming default: %v", err)
+			log.Printf("failed to parse expiry timestamp %q, assuming default: %v", line, err)
+			break
+		} else if cacheTTL != 0 {
 			break
 		}
 	}
@@ -95,6 +94,12 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 		resp.Body.Close()
 		return nil, fmt.Errorf("read response header comments: %v", err)
 	}
+
+	if cacheTTL == 0 {
+		// Default to 24 hours if no expiry is found.
+		cacheTTL = defaultExpiry
+	}
+	expiresAt := time.Now().Add(cacheTTL) // time.Now() might deviate from the time the request was received, but it isn't critical.
 
 	var notifyCh <-chan struct{}
 	resp.Body, notifyCh = newNotifyReadCloser(resp.Body)
@@ -114,7 +119,7 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 		cacheContent := make([]byte, len(header)+len(remaining))
 		copy(cacheContent, header)
 		copy(cacheContent[len(header):], remaining)
-		if err := st.cache.Save(url, cacheContent, expiry); err != nil {
+		if err := st.cache.Save(url, cacheContent, expiresAt); err != nil {
 			log.Printf("failed to store in cache: %v", err)
 		}
 	}()
@@ -126,26 +131,4 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 		Reader: io.MultiReader(bytes.NewReader(header), resp.Body),
 		Closer: resp.Body,
 	}, nil
-}
-
-func extractExpiryTimestamp(line []byte, now time.Time) (time.Time, error) {
-	matches := expiresRegex.FindSubmatch(line)
-	amount, err := strconv.Atoi(string(matches[1]))
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid amount: %v", err)
-	}
-
-	unit := "days"
-	if len(matches) >= 3 {
-		unit = strings.ToLower(strings.TrimSpace(string(matches[2])))
-	}
-
-	switch unit {
-	case "day", "days", "d":
-		return now.Add(time.Duration(amount) * 24 * time.Hour), nil
-	case "hour", "hours", "h":
-		return now.Add(time.Duration(amount) * time.Hour), nil
-	default:
-		return time.Time{}, fmt.Errorf("invalid unit: %q", unit)
-	}
 }
