@@ -1,16 +1,16 @@
 import { createLogger } from './helpers/logger';
 import { shouldPrevent } from './helpers/shouldPrevent';
 
-const logger = createLogger('prevent-set-timeout');
+const logger = createLogger('prevent-set-interval');
 
-export function preventSetTimeout(search = '', delay = '') {
+export function preventSetInterval(search = '', delay = '') {
   if (typeof Proxy === 'undefined') {
     logger.warn('Proxy not available in this environment');
     return;
   }
 
-  window.setTimeout = new Proxy(window.setTimeout, {
-    apply: (target: typeof setTimeout, thisArg: typeof window, args: Parameters<typeof fetch>) => {
+  window.setInterval = new Proxy(window.setInterval, {
+    apply: (target: typeof setInterval, thisArg: typeof window, args: Parameters<typeof fetch>) => {
       const [callback, timer] = args;
 
       if (
@@ -21,7 +21,7 @@ export function preventSetTimeout(search = '', delay = '') {
           matchDelay: delay,
         })
       ) {
-        logger.info(`Prevented setTimeout(${String(callback)}, ${timer})"`);
+        logger.info(`Prevented setInterval(${String(callback)}, ${timer})"`);
         return 0;
       }
 

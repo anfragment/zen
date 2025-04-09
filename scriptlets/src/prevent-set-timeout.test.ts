@@ -1,6 +1,6 @@
 import { preventSetTimeout } from './prevent-set-timeout';
 
-describe('preventSetTimeout behavior', () => {
+describe('prevent-set-timeout', () => {
   let originalSetTimeout: typeof setTimeout;
   let context: Record<string, any>;
 
@@ -52,7 +52,7 @@ describe('preventSetTimeout behavior', () => {
     expect(context.test).toBeUndefined();
   });
 
-  test('should not prevent setTimeout callback execution when search parameter is not a string', () => {
+  test('should not prevent callback execution when search parameter is not a string', () => {
     preventSetTimeout({} as any, '100');
 
     setTimeout(function () {
@@ -96,7 +96,7 @@ describe('preventSetTimeout behavior', () => {
     expect(context.test).toBe('test');
   });
 
-  test('should prevent when timeout matches blocked value', () => {
+  test('should prevent when delay matches blocked value', () => {
     preventSetTimeout('!value', '!300');
 
     setTimeout(function () {
