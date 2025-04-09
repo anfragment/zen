@@ -62,73 +62,60 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 	}
 
 	var teeBuffer bytes.Buffer
-	resp.Body = struct {
+	var notifyCh <-chan struct{}
+	var errCh <-chan struct{}
+	resp.Body, notifyCh, errCh = newNotifyReadCloser(struct {
 		io.Reader
 		io.Closer
 	}{
 		Reader: io.TeeReader(resp.Body, &teeBuffer),
 		Closer: resp.Body,
-	}
-
-	var cacheTTL time.Duration
-	scanner := bufio.NewScanner(resp.Body)
-
-	for scanner.Scan() {
-		// TODO: move this into a cache-handling goroutine.
-		line := scanner.Bytes()
-
-		if len(line) != 0 && !headerRegex.Match(line) {
-			// Stop scanning for "! Expires" if we encounter a non-comment line.
-			break
-		}
-
-		cacheTTL, err = parseExpires(line)
-		if err != nil {
-			log.Printf("failed to parse expiry timestamp %q, assuming default: %v", line, err)
-			break
-		} else if cacheTTL != 0 {
-			break
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		resp.Body.Close()
-		return nil, fmt.Errorf("read response header comments: %v", err)
-	}
-
-	if cacheTTL == 0 {
-		// Default to 24 hours if no expiry is found.
-		cacheTTL = defaultExpiry
-	}
-	expiresAt := time.Now().Add(cacheTTL) // time.Now() might deviate from the time the request was received, but it isn't critical.
-
-	var notifyCh <-chan struct{}
-	resp.Body, notifyCh = newNotifyReadCloser(resp.Body)
-
-	// Read everything scanned so far from teeBuffer.
-	header, _ := io.ReadAll(&teeBuffer) // err is always nil since (*bytes.Buffer).Read only returns io.EOF.
+	})
 
 	go func() {
-		// The intention here is to make caching non-blocking. Data from the response body is cloned into teeBuffer,
+		// The goal here is to make caching non-blocking. Data from the response body is cloned into teeBuffer,
 		// and the cache is saved in a separate goroutine.
 		// This allows the consumer of Get to start reading the response body without waiting for the entire response to be fetched.
+		select {
+		case <-errCh:
+			// An error occurred while reading the response body, so the response should not be cached.
+			return
+		case <-notifyCh:
+			// The response body has been closed, and we can proceed to cache the content.
+		}
 
-		<-notifyCh
+		cacheContent, _ := io.ReadAll(&teeBuffer) // err is always nil with bytes.Buffer.
 
-		// Read the remaining content from the response body.
-		remaining, _ := io.ReadAll(&teeBuffer)
-		cacheContent := make([]byte, len(header)+len(remaining))
-		copy(cacheContent, header)
-		copy(cacheContent[len(header):], remaining)
+		var cacheTTL time.Duration
+		scanner := bufio.NewScanner(bytes.NewReader(cacheContent))
+
+		for scanner.Scan() {
+			line := scanner.Bytes()
+
+			if len(line) != 0 && !headerRegex.Match(line) {
+				// Stop scanning for "! Expires" if we encounter a non-comment line.
+				break
+			}
+
+			cacheTTL, err = parseExpires(line)
+			if err != nil {
+				log.Printf("failed to parse expiry timestamp %q, assuming default: %v", line, err)
+				break
+			} else if cacheTTL != 0 {
+				break
+			}
+		}
+
+		if cacheTTL == 0 {
+			// Default to 24 hours if no expiry is found.
+			cacheTTL = defaultExpiry
+		}
+		expiresAt := time.Now().Add(cacheTTL) // time.Now() might deviate from the time the request was received, but it isn't critical.
+
 		if err := st.cache.Save(url, cacheContent, expiresAt); err != nil {
 			log.Printf("failed to store in cache: %v", err)
 		}
 	}()
 
-	return struct {
-		io.Reader
-		io.Closer
-	}{
-		Reader: io.MultiReader(bytes.NewReader(header), resp.Body),
-		Closer: resp.Body,
-	}, nil
+	return resp.Body, nil
 }
