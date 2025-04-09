@@ -40,7 +40,6 @@ func New() (*FilterListStore, error) {
 }
 
 func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
-	// Try to load from cache first
 	if content, err := st.cache.Load(url); err != nil {
 		log.Printf("failed to load from cache: %v", err)
 	} else if content != nil {
@@ -48,7 +47,6 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 		return content, nil
 	}
 
-	// Make HTTP request to fetch the filter list
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %v", err)
@@ -64,11 +62,18 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("non-200 response: %q", resp.Status)
 	}
 
-	var headerBuffer bytes.Buffer
-	tee := io.TeeReader(resp.Body, &headerBuffer)
+	var teeBuffer bytes.Buffer
+	resp.Body = struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: io.TeeReader(resp.Body, &teeBuffer),
+		Closer: resp.Body,
+	}
+
 	now := time.Now()
 	expiry := now.Add(24 * time.Hour) // Default to 1 day
-	scanner := bufio.NewScanner(tee)
+	scanner := bufio.NewScanner(resp.Body)
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -91,18 +96,36 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("read response header comments: %v", err)
 	}
 
-	header := headerBuffer.Bytes()
+	var notifyCh <-chan struct{}
+	resp.Body, notifyCh = newNotifyReadCloser(resp.Body)
 
-	wrappedBody, resCh := newEavesdropReadCloser(resp.Body)
+	// Read everything scanned so far from teeBuffer.
+	header, _ := io.ReadAll(&teeBuffer) // err is always nil since (*bytes.Buffer).Read only returns io.EOF.
 
 	go func() {
-		contents := <-resCh
-		if err := st.cache.Save(url, bytes.Join([][]byte{header, contents}, nil), expiry); err != nil {
+		// The intention here is to make caching non-blocking. Data from the response body is cloned into teeBuffer,
+		// and the cache is saved in a separate goroutine.
+		// This allows the consumer of Get to start reading the response body without waiting for the entire response to be fetched.
+
+		<-notifyCh
+
+		// Read the remaining content from the response body.
+		remaining, _ := io.ReadAll(&teeBuffer)
+		cacheContent := make([]byte, len(header)+len(remaining))
+		copy(cacheContent, header)
+		copy(cacheContent[len(header):], remaining)
+		if err := st.cache.Save(url, cacheContent, expiry); err != nil {
 			log.Printf("failed to store in cache: %v", err)
 		}
 	}()
 
-	return newReadThenCloseReadCloser(bytes.NewReader(header), wrappedBody), nil
+	return struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: io.MultiReader(bytes.NewReader(header), resp.Body),
+		Closer: resp.Body,
+	}, nil
 }
 
 func extractExpiryTimestamp(line []byte, now time.Time) (time.Time, error) {
