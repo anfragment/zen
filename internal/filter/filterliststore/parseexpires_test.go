@@ -9,9 +9,10 @@ func TestParseExpires(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		input      string
-		wantOffset time.Duration
+		name        string
+		input       string
+		wantOffset  time.Duration
+		errExpected bool
 	}{
 		{
 			name:       "4 days",
@@ -44,9 +45,9 @@ func TestParseExpires(t *testing.T) {
 			wantOffset: 18 * time.Hour,
 		},
 		{
-			name:       "invalid input, no match",
-			input:      "no expires here",
-			wantOffset: 0,
+			name:        "invalid input, no match",
+			input:       "no expires here",
+			errExpected: true,
 		},
 		{
 			name:       "zero duration",
@@ -54,14 +55,14 @@ func TestParseExpires(t *testing.T) {
 			wantOffset: 0,
 		},
 		{
-			name:       "unsupported unit",
-			input:      "! Expires: 10 weeks",
-			wantOffset: 0,
+			name:        "unsupported unit",
+			input:       "! Expires: 10 weeks",
+			errExpected: true,
 		},
 		{
-			name:       "whitespace and mixed case",
-			input:      "   ! expires: 2 HOURS   ",
-			wantOffset: 0,
+			name:        "whitespace and mixed case",
+			input:       "   ! expires: 2 HOURS   ",
+			errExpected: true,
 		},
 	}
 
@@ -72,11 +73,18 @@ func TestParseExpires(t *testing.T) {
 			gotTime, err := parseExpires([]byte(tt.input))
 
 			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+				if tt.errExpected {
+					return
+				}
+				t.Errorf("expected no error, got %v", err)
+			}
+
+			if tt.errExpected {
+				t.Error("expected error, got nil")
 			}
 
 			if gotTime != tt.wantOffset {
-				t.Fatalf("expected %v, got %v", tt.wantOffset, gotTime)
+				t.Errorf("expected %v, got %v", tt.wantOffset, gotTime)
 			}
 		})
 	}

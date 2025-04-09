@@ -9,14 +9,17 @@ import (
 	"time"
 )
 
-// expiresRegex matches lines like "! Expires: 4 days", supporting formats such as: "4 days", "12 hours", "5d", and "18h".
-var expiresRegex = regexp.MustCompile(`(?i)^! Expires:\s*(\d+)\s*(days?|hours?|d|h)?`)
+var (
+	// expiresRegex matches lines like "! Expires: 4 days", supporting formats such as: "4 days", "12 hours", "5d", and "18h".
+	expiresRegex  = regexp.MustCompile(`(?i)^! Expires:\s*(\d+)\s*(days?|hours?|d|h)?`)
+	errNotExpires = errors.New("not an expires line")
+)
 
 // parseExpires parses the line and returns the duration if it matches the expected format.
 func parseExpires(line []byte) (time.Duration, error) {
 	matches := expiresRegex.FindSubmatch(line)
 	if matches == nil {
-		return time.Duration(0), nil
+		return time.Duration(0), errNotExpires
 	}
 
 	amount, err := strconv.Atoi(string(matches[1]))

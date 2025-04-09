@@ -3,6 +3,7 @@ package filterliststore
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -89,6 +90,7 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 		var cacheTTL time.Duration
 		scanner := bufio.NewScanner(bytes.NewReader(cacheContent))
 
+	outer:
 		for scanner.Scan() {
 			line := scanner.Bytes()
 
@@ -98,11 +100,14 @@ func (st *FilterListStore) Get(url string) (io.ReadCloser, error) {
 			}
 
 			cacheTTL, err = parseExpires(line)
-			if err != nil {
-				log.Printf("failed to parse expiry timestamp %q, assuming default: %v", line, err)
-				break
-			} else if cacheTTL != 0 {
-				break
+			switch {
+			case errors.Is(err, errNotExpires):
+				continue
+			case err != nil:
+				log.Printf("failed to parse cache TTL from %q, assuming default: %v", line, err)
+				break outer
+			default:
+				break outer
 			}
 		}
 
