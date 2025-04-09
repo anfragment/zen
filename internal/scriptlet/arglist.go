@@ -75,10 +75,11 @@ func isValidJSString(s string) bool {
 			// We accept anything here, then reset `escaped`.
 			escaped = false
 		} else {
-			if c == '\\' {
+			switch c {
+			case '\\':
 				// If it's a backslash and not escaped yet, mark next char as escaped.
 				escaped = true
-			} else if c == openingQuote {
+			case openingQuote:
 				// We found an unescaped quote matching the outer quote.
 				return false
 			}

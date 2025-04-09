@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -25,6 +26,11 @@ const (
 var assets embed.FS
 
 func main() {
+	startOnDomReady := flag.Bool("start", false, "Start the service when DOM is ready")
+	startHidden := flag.Bool("hidden", false, "Start the application in hidden mode")
+	uninstallCA := flag.Bool("uninstall-ca", false, "Uninstall the CA and exit")
+	flag.Parse()
+
 	err := logger.SetupLogger()
 	if err != nil {
 		log.Printf("failed to setup logger: %v", err)
@@ -36,19 +42,19 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	var startOnDomReady bool
-	var startHidden bool
-	for _, arg := range os.Args[1:] {
-		if arg == "--start" {
-			startOnDomReady = true
-		}
-		if arg == "--hidden" {
-			startHidden = true
-		}
-	}
-	app, err := app.NewApp(appName, config, startOnDomReady)
+	app, err := app.NewApp(appName, config, *startOnDomReady)
 	if err != nil {
 		log.Fatalf("failed to create app: %v", err)
+	}
+
+	if *uninstallCA {
+		if err := app.UninstallCA(); err != nil {
+			// UninstallCA logs the error internally
+			os.Exit(1)
+		}
+
+		log.Println("CA uninstalled successfully")
+		return
 	}
 
 	autostart := &autostart.Manager{}
@@ -78,7 +84,7 @@ func main() {
 			},
 		},
 		HideWindowOnClose: runtime.GOOS == "darwin" || runtime.GOOS == "windows",
-		StartHidden:       startHidden,
+		StartHidden:       *startHidden,
 	})
 
 	if err != nil {
