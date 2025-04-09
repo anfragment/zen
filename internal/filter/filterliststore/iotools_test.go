@@ -12,10 +12,7 @@ func TestEavesdropReader(t *testing.T) {
 	original := []byte("making rocks think was a mistake")
 	reader := bytes.NewReader(original)
 
-	wrappedReader, resCh, err := newEavesdropReadCloser(io.NopCloser(reader))
-	if err != nil {
-		t.Fatalf("failed to create eavesdrop reader: %v", err)
-	}
+	wrappedReader, resCh := newEavesdropReadCloser(io.NopCloser(reader))
 
 	go func() {
 		readBytes, err := io.ReadAll(wrappedReader)

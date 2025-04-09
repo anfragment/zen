@@ -1,7 +1,6 @@
 package filterliststore
 
 import (
-	"errors"
 	"io"
 )
 
@@ -17,20 +16,14 @@ type eavesdropReadCloser struct {
 	buf []byte
 }
 
-func newEavesdropReadCloser(reader io.ReadCloser) (*eavesdropReadCloser, <-chan []byte, error) {
-	if reader == nil {
-		return nil, nil, errors.New("reader cannot be nil")
-	}
-
+func newEavesdropReadCloser(reader io.ReadCloser) (*eavesdropReadCloser, <-chan []byte) {
 	resCh := make(chan []byte, 1) // Buffered channel to avoid blocking
 	return &eavesdropReadCloser{
 		reader: reader,
 		resCh:  resCh,
 		buf:    make([]byte, 0),
-	}, resCh, nil
+	}, resCh
 }
-
-var _ io.ReadCloser = (*eavesdropReadCloser)(nil)
 
 func (e *eavesdropReadCloser) Read(p []byte) (n int, err error) {
 	n, err = e.reader.Read(p)
@@ -42,4 +35,26 @@ func (e *eavesdropReadCloser) Close() error {
 	err := e.reader.Close()
 	e.resCh <- e.buf
 	return err
+}
+
+// readThenCloseReadCloser is an io.ReadCloser that reads from r1 until EOF,
+// then continues reading from r2. Close only calls r2.Close.
+type readThenCloseReadCloser struct {
+	reader io.Reader
+	closer io.Closer
+}
+
+func newReadThenCloseReadCloser(r1 io.Reader, r2 io.ReadCloser) io.ReadCloser {
+	return &readThenCloseReadCloser{
+		reader: io.MultiReader(r1, r2),
+		closer: r2,
+	}
+}
+
+func (rc *readThenCloseReadCloser) Read(p []byte) (int, error) {
+	return rc.reader.Read(p)
+}
+
+func (rc *readThenCloseReadCloser) Close() error {
+	return rc.closer.Close()
 }

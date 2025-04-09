@@ -2,7 +2,6 @@ package filter
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -64,7 +63,7 @@ type jsRuleInjector interface {
 }
 
 type filterListStore interface {
-	Get(url string) ([]byte, error)
+	Get(url string) (io.ReadCloser, error)
 }
 
 // Filter is capable of parsing Adblock-style filter lists and hosts rules and matching URLs against them.
@@ -144,7 +143,10 @@ func (f *Filter) init() {
 				log.Printf("failed to fetch filter list: %v", err)
 				return
 			}
-			rules, exceptions := f.ParseAndAddRules(bytes.NewReader(content), &filterList.Name, filterList.Trusted)
+			rules, exceptions := f.ParseAndAddRules(content, &filterList.Name, filterList.Trusted)
+			if err := content.Close(); err != nil {
+				log.Printf("failed to close filter list: %v", err)
+			}
 
 			log.Printf("filter initialization: added %d rules and %d exceptions from %q", rules, exceptions, filterList.URL)
 		}(filterList)
@@ -186,6 +188,9 @@ func (f *Filter) ParseAndAddRules(reader io.Reader, filterListName *string, filt
 		} else {
 			ruleCount++
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("error reading rules: %v", err)
 	}
 
 	return ruleCount, exceptionCount

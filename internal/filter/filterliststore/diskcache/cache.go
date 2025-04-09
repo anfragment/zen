@@ -35,7 +35,8 @@ func New() (*Cache, error) {
 	}
 
 	cache := &Cache{
-		dir: dir,
+		dir:     dir,
+		entries: make(map[urlHash]cacheEntry),
 	}
 
 	if err := cache.loadFromDisk(); err != nil {
@@ -92,7 +93,7 @@ func (c *Cache) loadFromDisk() error {
 	return nil
 }
 
-func (c *Cache) Save(url string, expiresAt time.Time, content []byte) error {
+func (c *Cache) Save(url string, content []byte, expiresAt time.Time) error {
 	c.entriesMu.Lock()
 	defer c.entriesMu.Unlock()
 
