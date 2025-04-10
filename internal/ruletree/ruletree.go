@@ -2,7 +2,6 @@ package ruletree
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -91,11 +90,10 @@ func (rt *RuleTree[T]) Add(urlPattern string, data T) error {
 			node = node.findOrAddChild(nodeKey{kind: nodeKindExactMatch, token: token})
 		}
 	}
-	if node == nil {
-		log.Printf("failed to add rule %q: no node found", urlPattern)
-		return fmt.Errorf("no node found")
-	}
+
+	node.dataMu.Lock()
 	node.data = append(node.data, data)
+	node.dataMu.Unlock()
 
 	return nil
 }
