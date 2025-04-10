@@ -142,7 +142,7 @@ func (f *Filter) init() {
 
 			contents, err := f.filterListStore.Get(filterList.URL)
 			if err != nil {
-				log.Printf("failed to get filter list from store: %v", err)
+				log.Printf("failed to get filter list %q from store: %v", filterList.URL, err)
 				return
 			}
 			rules, exceptions := f.ParseAndAddRules(contents, &filterList.Name, filterList.Trusted)
