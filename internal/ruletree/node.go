@@ -46,9 +46,11 @@ const nodeChildrenMaxArrSize = 8
 type node[T Data] struct {
 	childrenArr []arrNode[T]
 	childrenMap map[nodeKey]*node[T]
-	childrenMu  sync.RWMutex
-	// data is the list of data that match the node's subtree.
-	data []T
+	// childrenMu protects childrenArr and childrenMap from concurrent access.
+	childrenMu sync.RWMutex
+	// data holds the rules associated with this node.
+	data   []T
+	dataMu sync.RWMutex
 }
 
 // findOrAddChild finds or adds a child node with the given key.
@@ -170,6 +172,9 @@ func (n *node[T]) TraverseFindMatchingRulesRes(res *http.Response, tokens []stri
 
 // FindMatchingRulesReq returns the rules that match the given request.
 func (n *node[T]) FindMatchingRulesReq(req *http.Request) []T {
+	n.dataMu.RLock()
+	defer n.dataMu.RUnlock()
+
 	var matchingRules []T
 	for _, r := range n.data {
 		if r.ShouldMatchReq(req) {
@@ -181,6 +186,9 @@ func (n *node[T]) FindMatchingRulesReq(req *http.Request) []T {
 
 // FindMatchingRulesRes returns the rules that match the given response.
 func (n *node[T]) FindMatchingRulesRes(res *http.Response) (rules []T) {
+	n.dataMu.RLock()
+	defer n.dataMu.RUnlock()
+
 	for _, r := range n.data {
 		if r.ShouldMatchRes(res) {
 			rules = append(rules, r)
