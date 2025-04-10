@@ -1,6 +1,7 @@
 package ruletree
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -13,10 +14,10 @@ type Data interface {
 	ParseModifiers(modifiers string) error
 }
 
-// RuleTree is a trie-based filter that is capable of parsing
+// RuleTree is a trie-based matcher that is capable of parsing
 // Adblock-style and hosts rules and matching URLs against them.
 //
-// The filter is safe for concurrent use.
+// It is safe for concurrent use.
 type RuleTree[T Data] struct {
 	// root is the root node of the trie that stores the rules.
 	root node[T]
@@ -64,7 +65,7 @@ func (rt *RuleTree[T]) Add(urlPattern string, data T) error {
 		tokens = []string{}
 		modifiers = match[1]
 	} else {
-		return fmt.Errorf("unknown rule format")
+		return errors.New("unknown rule format")
 	}
 
 	if modifiers != "" {
