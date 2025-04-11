@@ -49,6 +49,10 @@ var migrations = map[string]func(c *Config) error{
 				c.Filter.FilterLists[i].URL = "https://easylist.to/easylist/easylist.txt"
 				log.Printf("v0.7.0 migration: updating EasyList's URL")
 			}
+			if list.URL == "https://raw.githubusercontent.com/hufilter/hufilter/master/hufilter.txt" {
+				c.Filter.FilterLists[i].URL = "https://filters.hufilter.hu/hufilter-adguard.txt"
+				log.Printf("v0.7.0 migration: updating Hungarian filter list's URL")
+			}
 		}
 
 		if err := c.Save(); err != nil {
