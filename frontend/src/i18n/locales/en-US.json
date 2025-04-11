@@ -115,13 +115,10 @@
     }
   },
   "startStopButton": {
-    "followGuide": "Follow",
-    "gnomeNote": "System proxy configuration is currently only supported on GNOME.",
-    "perAppBasis": "to set the proxy on a per-app basis.",
     "start": "Start",
     "startError": "Failed to start proxy: {{error}}",
     "stop": "Stop",
     "stopError": "Failed to stop proxy: {{error}}",
-    "thisGuide": "this guide"
+    "unsupportedDEGuide": "Automatic system proxy configuration is currently only supported on GNOME.<br />Please follow <guide-link>this guide</guide-link> to set the proxy on a per-app basis."
   }
 }

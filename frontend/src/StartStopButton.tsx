@@ -1,10 +1,11 @@
-import { Button, Text } from '@blueprintjs/core';
+import { Button } from '@blueprintjs/core';
 import { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 import { StartProxy, StopProxy } from '../wailsjs/go/app/App';
-import { BrowserOpenURL, EventsOn } from '../wailsjs/runtime/runtime';
+import { EventsOn } from '../wailsjs/runtime/runtime';
 
+import { BrowserLink } from './common/BrowserLink';
 import { AppToaster } from './common/toaster';
 import { ProxyState } from './types';
 
@@ -67,15 +68,16 @@ export function StartStopButton({ proxyState, setProxyState }: StartStopButtonPr
           AppToaster.show({
             message: (
               <div>
-                {t('startStopButton.gnomeNote')} <br />
-                {t('startStopButton.followGuide')}{' '}
-                <Text onClick={() => BrowserOpenURL(LINUX_PROXY_GUIDE_URL)} className="inline_text_link">
-                  {t('startStopButton.thisGuide')}
-                </Text>{' '}
-                {t('startStopButton.perAppBasis')}
+                <Trans
+                  i18nKey="startStopButton.unsupportedDEGuide"
+                  components={{
+                    'guide-link': <BrowserLink href={LINUX_PROXY_GUIDE_URL} />,
+                    br: <br />,
+                  }}
+                />
               </div>
             ),
-            intent: 'danger',
+            intent: 'warning',
           });
           break;
 
