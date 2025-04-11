@@ -90,7 +90,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
                 }
               }}
             >
-              changelog
+              {t('settings.about.changelog')}
             </a>
             )
           </span>

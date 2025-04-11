@@ -4,9 +4,10 @@ import { initReactI18next } from 'react-i18next';
 import { GetLocale, SetLocale } from '../../wailsjs/go/cfg/Config';
 
 import enUS from './locales/en-US.json';
+import kkKZ from './locales/kk-KZ.json';
 import ruRU from './locales/ru-RU.json';
 
-export const SUPPORTED_LOCALES = ['en', 'en-US', 'ru', 'ru-RU'] as const;
+export const SUPPORTED_LOCALES = ['en', 'en-US', 'kk', 'kk-KZ', 'ru', 'ru-RU'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export const FALLBACK_LOCALE: SupportedLocale = 'en-US';
 
@@ -39,6 +40,8 @@ export async function initI18n() {
     resources: {
       en: { translation: enUS },
       'en-US': { translation: enUS },
+      kk: { translation: kkKZ },
+      'kk-KZ': { translation: kkKZ },
       ru: { translation: ruRU },
       'ru-RU': { translation: ruRU },
     },
