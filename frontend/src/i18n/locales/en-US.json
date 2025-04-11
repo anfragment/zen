@@ -79,7 +79,6 @@
   "settings": {
     "about": {
       "changelog": "changelog",
-      "github": "GitHub",
       "tagline": "Your Comprehensive Ad-Blocker and Privacy Guard",
       "version": "Version"
     },

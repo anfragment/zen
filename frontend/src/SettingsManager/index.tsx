@@ -90,7 +90,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
           className="settings-manager__about-github-button"
           onClick={() => BrowserOpenURL(GITHUB_URL)}
         >
-          {t('settings.about.github')}
+          GitHub
         </Button>
       </div>
     </div>
