@@ -7,6 +7,7 @@ import './index.css';
 import { IsNoSelfUpdate } from '../../wailsjs/go/app/App';
 import { GetVersion } from '../../wailsjs/go/cfg/Config';
 import { BrowserOpenURL } from '../../wailsjs/runtime';
+import { BrowserLink } from '../common/BrowserLink';
 import { ProxyState } from '../types';
 
 import { AutostartSwitch } from './AutostartSwitch';
@@ -78,21 +79,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
         <div>
           {t('settings.about.version')}: {state.version}
           <span className="settings-manager__about-changelog">
-            ({/* eslint-disable-next-line jsx-a11y/anchor-is-valid  */}
-            <a
-              onClick={() => BrowserOpenURL(CHANGELOG_URL)}
-              tabIndex={0}
-              role="button"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  BrowserOpenURL(CHANGELOG_URL);
-                }
-              }}
-            >
-              {t('settings.about.changelog')}
-            </a>
-            )
+            (<BrowserLink href={CHANGELOG_URL}>{t('settings.about.changelog')}</BrowserLink>)
           </span>
         </div>
         <div>© 2025 Zen Privacy Project Developers</div>
@@ -103,7 +90,7 @@ export function SettingsManager({ proxyState }: SettingsManagerProps) {
           className="settings-manager__about-github-button"
           onClick={() => BrowserOpenURL(GITHUB_URL)}
         >
-          {t('settings.about.github')}
+          GitHub
         </Button>
       </div>
     </div>
