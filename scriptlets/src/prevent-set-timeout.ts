@@ -10,7 +10,7 @@ export function preventSetTimeout(search = '', delay = '') {
   }
 
   window.setTimeout = new Proxy(window.setTimeout, {
-    apply: (target: typeof setTimeout, thisArg: typeof window, args: Parameters<typeof fetch>) => {
+    apply: (target: typeof setTimeout, thisArg: typeof window, args: Parameters<typeof setTimeout>) => {
       const [callback, timer] = args;
 
       if (

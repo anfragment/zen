@@ -10,7 +10,7 @@ export function preventSetInterval(search = '', delay = '') {
   }
 
   window.setInterval = new Proxy(window.setInterval, {
-    apply: (target: typeof setInterval, thisArg: typeof window, args: Parameters<typeof fetch>) => {
+    apply: (target: typeof setInterval, thisArg: typeof window, args: Parameters<typeof setInterval>) => {
       const [callback, timer] = args;
 
       if (
