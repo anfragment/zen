@@ -8,9 +8,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -46,6 +46,10 @@ func New() (*Cache, error) {
 	return cache, nil
 }
 
+var (
+	cacheFileRegex = regexp.MustCompile(`^([^-]+)-(\d+)\.cache\.txt$`)
+)
+
 func (c *Cache) loadFromDisk() error {
 	dirEntries, err := os.ReadDir(c.dir)
 	switch {
@@ -64,23 +68,22 @@ func (c *Cache) loadFromDisk() error {
 		}
 
 		name := e.Name()
-		if !strings.HasSuffix(name, ".cache.txt") {
+		matches := cacheFileRegex.FindStringSubmatch(name)
+		if len(matches) != 2 {
 			continue
 		}
 
-		parts := strings.Split(strings.TrimSuffix(e.Name(), ".cache.txt"), "-")
-		if len(parts) != 2 {
-			continue
-		}
-
-		hash := urlHash(parts[0])
-		timestamp, err := strconv.ParseInt(parts[1], 10, 64)
+		hash := urlHash(matches[1])
+		timestamp, err := strconv.ParseInt(matches[2], 10, 64)
 		if err != nil {
 			continue
 		}
 
 		if time.Unix(timestamp, 0).Before(time.Now()) {
-			// TODO: delete the file
+			filePath := filepath.Join(c.dir, name)
+			if err := os.Remove(filePath); err != nil {
+				log.Printf("error deleting expired cache file %s: %v", filePath, err)
+			}
 			continue
 		}
 
