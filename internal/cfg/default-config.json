@@ -124,7 +124,7 @@
         "type": "regional"
       },
       {
-        "url": "https://raw.githubusercontent.com/hufilter/hufilter/master/hufilter.txt",
+        "url": "https://filters.hufilter.hu/hufilter-adguard.txt",
         "name": "🇭🇺HU: hufilter",
         "enabled": false,
         "type": "regional"
