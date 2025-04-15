@@ -69,7 +69,7 @@ func (c *Cache) loadFromDisk() error {
 
 		name := e.Name()
 		matches := cacheFileRegex.FindStringSubmatch(name)
-		if len(matches) != 2 {
+		if matches == nil {
 			continue
 		}
 
