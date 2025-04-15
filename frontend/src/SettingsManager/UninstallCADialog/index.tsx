@@ -1,6 +1,6 @@
 import { Button, Dialog, DialogBody, DialogFooter, Tooltip } from '@blueprintjs/core';
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 import './index.css';
 
@@ -34,7 +34,14 @@ export function UninstallCADialog({ proxyState }: UninstallCADialogProps) {
       <Dialog
         isOpen={state.isOpen}
         onClose={() => setState((state) => ({ ...state, isOpen: false }))}
-        title={t('settings.ca.confirmTitle')}
+        title={
+          <Trans
+            i18nKey="settings.ca.confirmTitle"
+            components={{
+              br: <br />,
+            }}
+          />
+        }
         isCloseButtonShown={!state.loading}
         className="uninstall-ca-dialog"
       >

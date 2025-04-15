@@ -11,6 +11,7 @@ interface LocaleItem {
 
 const items: LocaleItem[] = [
   { value: 'en-US', label: 'English' },
+  { value: 'de-DE', label: 'Deutsch' },
   { value: 'kk-KZ', label: 'Қазақша' },
   { value: 'ru-RU', label: 'Русский' },
 ];

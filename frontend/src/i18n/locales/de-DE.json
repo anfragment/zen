@@ -1,0 +1,123 @@
+{
+  "app": {
+    "proxy": {
+      "description": "Der Proxy ist nicht aktiv. Klicken Sie auf die Schaltfläche unten, um ihn zu aktivieren.",
+      "inactive": "Aktivieren Sie den Proxy, um blockierte Anfragen zu sehen"
+    },
+    "tabs": {
+      "filterLists": "Filterlisten",
+      "home": "Start",
+      "myRules": "Meine Regeln",
+      "settings": "Einstellungen"
+    }
+  },
+  "autoStartSwitch": {
+    "description": "Zen beim Systemstart starten",
+    "disableError": "Autostart kann nicht deaktiviert werden",
+    "enableError": "Autostart kann nicht aktiviert werden",
+    "label": "Autostart"
+  },
+  "createFilterList": {
+    "addError": "Filterliste kann nicht hinzugefügt werden: {{error}}",
+    "addList": "Filterliste hinzufügen",
+    "example": "Beispiel-Filterliste",
+    "trustedListsWarning": "Vertraute Listen können leistungsstarke Blockierfunktionen wie <code>trusted-</code> Scriptlets und JavaScript-Regeln verwenden, <strong>können jedoch den Datenschutz und die Sicherheit beeinträchtigen</strong>, wenn sie von einer böswilligen Partei missbraucht werden. Aktivieren Sie diese Option nur für Listen aus Quellen, denen Sie vertrauen."
+  },
+  "exportFilterList": {
+    "errorMessage": "Filterliste kann nicht exportiert werden: {{error}}",
+    "export": "Exportieren",
+    "successMessage": "Benutzerdefinierte Filterlisten erfolgreich exportiert"
+  },
+  "exportLogsButton": {
+    "label": "Protokolle exportieren",
+    "openError": "Protokollverzeichnis kann nicht geöffnet werden: {{error}}",
+    "tooltip": "Protokollverzeichnis öffnen"
+  },
+  "filterLists": {
+    "delete": "Löschen",
+    "more": "Mehr",
+    "removeError": "Filterliste kann nicht entfernt werden: {{error}}",
+    "toggleError": "Filterliste kann nicht umgeschaltet werden: {{error}}",
+    "trusted": "Vertraut"
+  },
+  "filterTypes": {
+    "ads": "Anzeigen",
+    "custom": "Eigene",
+    "general": "Allgemein",
+    "malware": "Malware",
+    "privacy": "Datenschutz",
+    "regional": "Regional"
+  },
+  "ignoredHostsInput": {
+    "description": "Hosts, die vom Proxy ausgenommen werden sollen. Verwenden Sie dies für Dienste mit Zertifikats-Pinning oder solche, die durch Proxying gestört werden.",
+    "helper": "Geben Sie einen Host pro Zeile ein.",
+    "label": "Ignorierte Hosts"
+  },
+  "importFilterList": {
+    "errorMessage": "Filterliste kann nicht importiert werden: {{error}}",
+    "import": "Importieren",
+    "successMessage": "Benutzerdefinierte Filterlisten erfolgreich importiert"
+  },
+  "myRules": {
+    "help": "Hilfe",
+    "placeholder": "Fügen Sie hier Ihre eigenen Regeln hinzu..."
+  },
+  "portInput": {
+    "description": "Der Port, auf dem der Proxy-Server lauscht (0 für zufällig).",
+    "helper": "Die Verwendung eines Ports unter 1024 kann erhöhte Rechte erfordern.",
+    "label": "Port"
+  },
+  "requestLog": {
+    "emptyState": "Beginnen Sie mit dem Surfen, um blockierte Anfragen zu sehen.",
+    "filterName": "Filtername",
+    "method": "Methode",
+    "redirectedTo": "Weitergeleitet zu",
+    "referer": "Referer",
+    "rule": "Regel",
+    "url": "URL"
+  },
+  "settings": {
+    "about": {
+      "changelog": "Änderungsprotokoll",
+      "tagline": "Ihr umfassender Werbeblocker und Datenschutzwächter",
+      "version": "Version"
+    },
+    "ca": {
+      "confirmTitle": "Sind Sie sicher, dass Sie das Zertifikat deinstallieren<br />möchten?",
+      "errorMessage": "Zertifikat kann nicht deinstalliert werden: {{error}}",
+      "reasons": {
+        "malfunctioning": "Sie vermuten, dass Ihre Zertifikatsinstallation nicht richtig funktioniert. Dieses Problem kann sich als Browserfehler beim Besuch von HTTPS-Websites oder dadurch äußern, dass andere Anwendungen keine Verbindung zum Internet herstellen können.",
+        "uninstall": "Sie möchten Zen vollständig deinstallieren."
+      },
+      "reinstallInfo": "Wenn Sie Zen erneut starten, wird ein neues Zertifikat installiert.",
+      "stopProxyTooltip": "Stoppen Sie den Proxy, um das Zertifikat zu deinstallieren",
+      "successMessage": "Zertifikat erfolgreich deinstalliert",
+      "uninstallButton": "Zertifikat deinstallieren",
+      "uninstallConfirm": "Deinstallieren",
+      "usefulIf": "Dies kann sinnvoll sein, wenn"
+    },
+    "language": {
+      "helper": "Wählen Sie Ihre bevorzugte Sprache aus",
+      "label": "Sprache"
+    },
+    "sections": {
+      "advanced": "Erweitert",
+      "app": "Anwendung"
+    },
+    "updates": {
+      "automatic": "Automatische Updates",
+      "choosePolicy": "Wählen Sie, wie Updates installiert werden",
+      "description": "Wenn \"Automatische Updates\" ausgewählt ist, sucht die Anwendung beim Start automatisch nach Updates und installiert sie.",
+      "disabled": "Updates deaktivieren",
+      "prompt": "Vor dem Aktualisieren nachfragen",
+      "title": "Updates"
+    }
+  },
+  "startStopButton": {
+    "start": "Starten",
+    "startError": "Proxy kann nicht gestartet werden: {{error}}",
+    "stop": "Stoppen",
+    "stopError": "Proxy kann nicht gestoppt werden: {{error}}",
+    "unsupportedDEGuide": "Die automatische System-Proxy-Konfiguration wird derzeit nur unter GNOME unterstützt.<br />Bitte folgen Sie <guide-link>dieser Anleitung</guide-link>, um den Proxy pro Anwendung festzulegen."
+  }
+}
