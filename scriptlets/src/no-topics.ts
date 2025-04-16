@@ -3,13 +3,13 @@ import { createLogger } from './helpers/logger';
 const logger = createLogger('no-topics');
 
 export function noTopics() {
-  const browerTopicsKey = 'browsingTopics';
+  const browsingTopicsKey = 'browsingTopics';
 
   if (typeof Document !== 'function' || typeof Document.prototype !== 'object') {
     return;
   }
 
-  const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, browerTopicsKey);
+  const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, browsingTopicsKey);
   if (!descriptor || !descriptor.configurable || typeof descriptor.value !== 'function') {
     return;
   }
@@ -28,7 +28,7 @@ export function noTopics() {
     },
   });
 
-  Object.defineProperty(Document.prototype, browerTopicsKey, {
+  Object.defineProperty(Document.prototype, browsingTopicsKey, {
     configurable: true,
     get: () => {
       return fakeFn;
