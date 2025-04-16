@@ -15,31 +15,16 @@ export function noTopics() {
   }
 
   const original = descriptor.value;
-
   const fakeFn = new Proxy(original, {
     apply: () => {
-      const responseBody = '[]';
-      const response = new Response(responseBody, {
-        status: 200,
-        headers: {
-          'Content-Length': responseBody.length.toString(),
-          'Content-Type': 'application/json',
-          Date: new Date().toUTCString(),
-        },
-      });
+      logger.info('Preventing Topics API usage');
 
-      Object.defineProperties(response, {
-        url: { value: '' },
-        type: { value: 'basic' },
-      });
-
-      return Promise.resolve(response);
-    },
-    get(target, prop, receiver) {
-      return Reflect.get(target, prop, receiver);
-    },
-    set() {
-      return true;
+      return Promise.resolve(
+        new Response('', {
+          status: 200,
+          statusText: 'OK',
+        }),
+      );
     },
   });
 
@@ -50,6 +35,4 @@ export function noTopics() {
     },
     set: () => {},
   });
-
-  logger.info('Prevented Topics API usage');
 }
